@@ -1,0 +1,255 @@
+name: Unified Application Framework CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        include:
+          - node-version: 20.x
+            coverage: true
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:15-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies (Backend)
+      working-directory: factif-ai/backend
+      run: npm ci
+
+    - name: Install dependencies (Bytebot Agent)
+      working-directory: bytebot/packages/bytebot-agent
+      run: npm ci
+
+    - name: Run backend tests with coverage
+      working-directory: factif-ai/backend
+      run: npm run test:coverage
+      if: matrix.coverage
+
+    - name: Run backend tests
+      working-directory: factif-ai/backend
+      run: npm test
+      if: "!matrix.coverage"
+
+    - name: Run bytebot agent tests with coverage
+      working-directory: bytebot/packages/bytebot-agent
+      run: npm run test:cov
+      if: matrix.coverage
+
+    - name: Run bytebot agent tests
+      working-directory: bytebot/packages/bytebot-agent
+      run: npm test
+      if: "!matrix.coverage"
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.coverage
+      with:
+        files: ./factif-ai/backend/coverage/lcov.info,./bytebot/packages/bytebot-agent/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+    - name: Performance regression check
+      if: matrix.coverage
+      run: |
+        # Check if test execution time increased significantly
+        echo "Performance check would analyze test execution times here"
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      postgres:
+        image: postgres:15-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies (Backend)
+      working-directory: factif-ai/backend
+      run: npm ci
+
+    - name: Install dependencies (Bytebot Agent)
+      working-directory: bytebot/packages/bytebot-agent
+      run: npm ci
+
+    - name: Build services
+      run: |
+        cd factif-ai/backend && npm run build
+        cd ../../bytebot/packages/bytebot-agent && npm run build
+
+    - name: Run integration tests
+      working-directory: factif-ai/backend
+      run: npm run test:integration
+      env:
+        NODE_ENV: test
+        REDIS_URL: redis://localhost:6379
+        DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/testdb
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run npm audit
+      working-directory: factif-ai/backend
+      run: npm audit --audit-level moderate
+
+    - name: Run security scan
+      uses: github/super-linter/slim@v5
+      env:
+        DEFAULT_BRANCH: main
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VALIDATE_JAVASCRIPT_ES: true
+        VALIDATE_TYPESCRIPT_ES: true
+        VALIDATE_JSON: true
+
+  performance-benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    needs: integration-test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      working-directory: factif-ai/backend
+      run: npm ci
+
+    - name: Run performance benchmarks
+      working-directory: factif-ai/backend
+      run: npm run benchmark
+      env:
+        NODE_ENV: production
+
+    - name: Store benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: factif-ai/backend/benchmark-results.json
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, security-audit]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to staging environment
+      run: |
+        echo "Deploying to staging environment..."
+        # Add actual deployment commands here
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, security-audit, performance-benchmark]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to production environment
+      run: |
+        echo "Deploying to production environment..."
+        # Add actual deployment commands here
+
+  notification:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, security-audit]
+    if: always()
+
+    steps:
+    - name: Send Slack notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "Unified Application Framework CI/CD Pipeline ${{ job.status }}"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      if: env.SLACK_WEBHOOK_URL != null

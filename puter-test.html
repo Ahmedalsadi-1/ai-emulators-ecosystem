@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puter.js Integration Test</title>
+    <!-- Puter.js for Free Unlimited AI -->
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #output {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Puter.js Integration Test - FREE Unlimited AI</h1>
+
+    <div class="test-section">
+        <h2>🤖 General AI Chat (GPT-5.2)</h2>
+        <button onclick="testGeneralAI()">Test General AI</button>
+        <div id="general-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>💻 Code Generation (GPT-5.1-Codex)</h2>
+        <button onclick="testCodeGeneration()">Generate Code</button>
+        <div id="code-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🖼️ Image Generation (GPT-Image-1.5)</h2>
+        <button onclick="testImageGeneration()">Generate Image</button>
+        <div id="image-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎵 Text-to-Speech (OpenAI TTS)</h2>
+        <button onclick="testTextToSpeech()">Generate Speech</button>
+        <div id="speech-output" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Available Models</h2>
+        <button onclick="listModels()">List Available Models</button>
+        <div id="models-output" class="output"></div>
+    </div>
+
+    <script>
+        async function testGeneralAI() {
+            const output = document.getElementById('general-output');
+            output.textContent = 'Loading...';
+
+            try {
+                const response = await puter.ai.chat(
+                    'Hello! Introduce yourself as TuriX, a unified AI assistant powered by Puter.js free unlimited AI.',
+                    { model: 'gpt-5.2' }
+                );
+                output.textContent = response;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testCodeGeneration() {
+            const output = document.getElementById('code-output');
+            output.textContent = 'Generating code...';
+
+            try {
+                const response = await puter.ai.chat(
+                    'Write a simple JavaScript function to check if a string is a palindrome',
+                    { model: 'gpt-5.1-codex' }
+                );
+                output.textContent = response;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testImageGeneration() {
+            const output = document.getElementById('image-output');
+            output.textContent = 'Generating image...';
+
+            try {
+                const image = await puter.ai.txt2img(
+                    'A beautiful sunset over mountains with a lake',
+                    { model: 'gpt-image-1.5' }
+                );
+                output.innerHTML = '';
+                output.appendChild(image);
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testTextToSpeech() {
+            const output = document.getElementById('speech-output');
+            output.textContent = 'Generating speech...';
+
+            try {
+                const audio = await puter.ai.txt2speech(
+                    'Hello from TuriX! This is free text-to-speech powered by Puter.js',
+                    { provider: 'openai' }
+                );
+                output.innerHTML = '';
+                output.appendChild(audio);
+                audio.controls = true;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function listModels() {
+            const output = document.getElementById('models-output');
+            output.textContent = 'Fetching models...';
+
+            try {
+                const models = await puter.ai.listModels();
+                const modelList = models.slice(0, 10).map(m => `${m.id} (${m.provider})`).join('\n');
+                output.textContent = `Available Models (showing first 10):\n${modelList}`;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // Auto-run a simple test on page load
+        window.addEventListener('load', () => {
+            console.log('🎉 Puter.js Integration Test Loaded!');
+            console.log('🚀 Testing FREE unlimited AI access...');
+        });
+    </script>
+</body>
+</html>

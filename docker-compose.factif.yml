@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  factif-ai-testing:
+    build:
+      context: ./factif-ai/backend
+      dockerfile: Dockerfile.optimized
+    container_name: factif-ai-testing
+    ports:
+      - "3002:3001"  # Use port 3002 to avoid conflicts
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - OMNI_PARSER_ENABLED=true
+      - SCREENSHOT_DIR=/app/screenshots
+      - TESTCASE_DIR=/app/testcases
+      - DATABASE_URL=postgresql://factif:factif123@postgres:5432/factif_testing
+      - REDIS_URL=redis://redis:6379
+      - DOCKER_SOCKET_PATH=/var/run/docker.sock
+    volumes:
+      - ./factif-ai/backend/screenshots:/app/screenshots
+      - ./factif-ai/backend/testcases:/app/testcases
+      - ./factif-ai/backend/logs:/app/logs
+      # Mount Docker socket for container automation
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - default
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    external: true
+    name: future-app_default

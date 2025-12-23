@@ -1,0 +1,287 @@
+/* TuriX App Styles */
+.turix-app {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.app-container {
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  min-width: 360px;
+  max-width: 400px;
+}
+
+/* Search Bar Styles */
+.search-bar-container {
+  margin-bottom: 16px;
+}
+
+.search-form {
+  width: 100%;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.search-input-wrapper:focus-within {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.turix-icon {
+  margin-right: 12px;
+  color: #00d4ff;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.cube-icon {
+  font-size: 20px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 16px;
+  placeholder-color: rgba(255, 255, 255, 0.6);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.clear-button, .mic-button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.clear-button:hover, .mic-button:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mic-button.listening {
+  color: #ff4757;
+  animation: listening-pulse 1.5s infinite;
+}
+
+@keyframes listening-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.search-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 12px;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.search-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Status Card Styles */
+.status-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.status-title {
+  flex: 1;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.status-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.command-text {
+  display: block;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 16px;
+}
+
+.status-icon.processing {
+  color: #ffa502;
+}
+
+.status-icon.success {
+  color: #2ed573;
+}
+
+.status-icon.error {
+  color: #ff4757;
+}
+
+.status-text {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-text.processing { color: #ffa502; }
+.status-text.success { color: #2ed573; }
+.status-text.error { color: #ff4757; }
+
+.status-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.share-button, .refresh-button, .close-button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.share-button:hover, .refresh-button:hover, .close-button:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.status-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.error-message {
+  color: #ff6b6b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Service Actions */
+.service-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.active-service-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.global-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.action-button.hide-button {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.action-button.hide-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+  .app-container {
+    min-width: 320px;
+    padding: 16px;
+  }
+
+  .search-input-wrapper {
+    padding: 6px 12px;
+  }
+
+  .command-text {
+    max-width: 150px;
+  }
+}

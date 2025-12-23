@@ -1,0 +1,219 @@
+# Production Environment Configuration
+# This configuration is optimized for production deployment with security and performance
+
+environment: production
+version: "1.0.0"
+debug: false
+logLevel: info
+
+# Production Database Configuration
+database:
+  type: postgresql
+  host: ${DATABASE_HOST}
+  port: ${DATABASE_PORT:-5432}
+  database: ${DATABASE_NAME}
+  username: ${DATABASE_USER}
+  password: ${DATABASE_PASSWORD}
+  ssl: true
+  poolSize: 20
+  connectionTimeout: 30000
+  maxRetries: 3
+
+# Production Redis Configuration
+redis:
+  host: ${REDIS_HOST}
+  port: ${REDIS_PORT:-6379}
+  password: ${REDIS_PASSWORD}
+  database: 0
+  maxRetries: 3
+  retryDelayOnFailover: 100
+  enableReadyCheck: true
+  maxRetriesPerRequest: 3
+
+# Production Security Configuration
+security:
+  jwtSecret: ${JWT_SECRET}
+  jwtExpiresIn: "1h"  # Shorter expiry for production
+  bcryptRounds: 12
+  corsOrigins:
+    - ${FRONTEND_URL}
+    - ${API_GATEWAY_URL}
+  rateLimitWindowMs: 900000
+  rateLimitMaxRequests: 100
+  enableHttps: true
+  sslCertPath: ${SSL_CERT_PATH}
+  sslKeyPath: ${SSL_KEY_PATH}
+
+# Production Service Configurations
+services:
+  orchestrator:
+    service: orchestrator
+    port: 3000
+    host: "0.0.0.0"
+    serviceRegistry:
+      heartbeatInterval: 30000
+      healthCheckTimeout: 10000
+      maxFailedHealthChecks: 3
+      serviceDiscoveryInterval: 60000
+    deviceManager:
+      maxVMs: 10
+      maxEmulators: 5
+      resourceCheckInterval: 30000
+      vmTimeout: 3600000  # 1 hour
+    eventHub:
+      maxConnections: 5000
+      pingTimeout: 60000
+      pingInterval: 25000
+      maxEventQueueSize: 50000
+
+  apiGateway:
+    service: api-gateway
+    port: 8080
+    host: "0.0.0.0"
+    routing:
+      timeout: 30000
+      retries: 3
+      retryDelay: 1000
+      enableLoadBalancing: true
+      loadBalancingStrategy: least-connections
+    rateLimit:
+      windowMs: 900000
+      maxRequests: 100
+      skipSuccessfulRequests: false
+      skipFailedRequests: false
+
+  bytebot:
+    service: bytebot
+    port: 3001
+    host: "0.0.0.0"
+    apiKeys:
+      openai: ${OPENAI_API_KEY}
+      anthropic: ${ANTHROPIC_API_KEY}
+      gemini: ${GEMINI_API_KEY}
+      groq: ${GROQ_API_KEY}
+    desktop:
+      width: 1920
+      height: 1080
+      enableGpu: ${ENABLE_GPU:-false}
+      maxSessions: 20
+      sessionTimeout: 3600000  # 1 hour
+    agent:
+      maxConcurrentTasks: 10
+      taskTimeout: 300000  # 5 minutes
+      enableScreenshots: true
+      screenshotInterval: 5000
+
+  factifAI:
+    service: factif-ai
+    port: 3002
+    host: "0.0.0.0"
+    apiKeys:
+      openai: ${OPENAI_API_KEY}
+      anthropic: ${ANTHROPIC_API_KEY}
+      gemini: ${GEMINI_API_KEY}
+    automation:
+      maxConcurrentJobs: 5
+      jobTimeout: 1800000  # 30 minutes
+      enableHeadless: true
+      browserPoolSize: 10
+    playwright:
+      browserType: chromium
+      headless: true
+      slowMo: 0
+      timeout: 30000
+
+  aios:
+    service: aios
+    port: 8000
+    host: "0.0.0.0"
+    apiKeys:
+      openai: ${OPENAI_API_KEY}
+      anthropic: ${ANTHROPIC_API_KEY}
+      gemini: ${GEMINI_API_KEY}
+      huggingface: ${HUGGINGFACE_TOKEN}
+      novita: ${NOVITA_API_KEY}
+    kernel:
+      maxAgents: 20
+      agentTimeout: 600000  # 10 minutes
+      enableGpu: ${ENABLE_GPU:-false}
+      cudaDevices: ${CUDA_VISIBLE_DEVICES:-all}
+      workers: ${AIOS_WORKERS:-4}
+    models:
+      cachePath: "/app/models"
+      maxCacheSize: "50GB"
+      enableAutoDownload: true
+      huggingfaceCache: "/app/models/huggingface"
+
+  ui:
+    service: ui
+    port: 9992
+    host: "0.0.0.0"
+    theme: dark
+    features:
+      enableDragAndDrop: true
+      enableRealTimeUpdates: true
+      maxWorkflowCards: 200
+      autoRefreshInterval: 30000
+    websocket:
+      reconnectAttempts: 5
+      reconnectInterval: 5000
+      timeout: 20000
+
+# Production Deployment Configuration
+deployment:
+  mode: kubernetes
+  replicas:
+    orchestrator: 2
+    api-gateway: 3
+    bytebot: 2
+    factif-ai: 2
+    aios: 2
+    ui: 2
+  resources:
+    orchestrator:
+      cpu: "1000m"
+      memory: "1Gi"
+    api-gateway:
+      cpu: "500m"
+      memory: "512Mi"
+    bytebot:
+      cpu: "2000m"
+      memory: "4Gi"
+    factif-ai:
+      cpu: "1500m"
+      memory: "2Gi"
+    aios:
+      cpu: "4000m"
+      memory: "8Gi"
+    ui:
+      cpu: "300m"
+      memory: "256Mi"
+  networking:
+    serviceMesh: true
+    networkPolicy: true
+    ingressEnabled: true
+    ingressHost: ${INGRESS_HOST}
+    tlsEnabled: true
+
+# Production Monitoring Configuration
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    metricsPath: "/metrics"
+    scrapeInterval: "15s"
+  grafana:
+    enabled: true
+    port: 3000
+    adminUser: ${GRAFANA_ADMIN_USER:-admin}
+    adminPassword: ${GRAFANA_ADMIN_PASSWORD}
+  jaeger:
+    enabled: true
+    endpoint: ${JAEGER_ENDPOINT:-http://jaeger:14268/api/traces}
+    serviceName: "unified-framework"
+    samplingRate: 0.1
+  elasticsearch:
+    enabled: true
+    host: ${ELASTICSEARCH_HOST:-elasticsearch}
+    port: ${ELASTICSEARCH_PORT:-9200}
+    index: "unified-framework"

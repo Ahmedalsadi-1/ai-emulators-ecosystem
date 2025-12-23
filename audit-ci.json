@@ -1,0 +1,14 @@
+{
+  "levels": {
+    "low": true,
+    "moderate": true,
+    "high": true,
+    "critical": true
+  },
+  "report": {
+    "type": "json",
+    "path": "./audit-report.json"
+  },
+  "path-allowlist": [],
+  "allowlist": []
+}

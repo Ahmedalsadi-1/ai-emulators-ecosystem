@@ -1,0 +1,621 @@
+name: Comprehensive Testing Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly tests at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.11'
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  # Job 1: Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [bytebot-agent, bytebot-ui, factif-ai, aios]
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Setup Python (for AIOS)
+      if: matrix.service == 'aios'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies - ByteBot Agent
+      if: matrix.service == 'bytebot-agent'
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: |
+        npm ci
+        npm run prisma:dev
+
+    - name: Install dependencies - ByteBot UI
+      if: matrix.service == 'bytebot-ui'
+      working-directory: ./bytebot/packages/bytebot-ui
+      run: npm ci
+
+    - name: Install dependencies - Factif-AI
+      if: matrix.service == 'factif-ai'
+      working-directory: ./factif-ai/backend
+      run: |
+        npm ci
+        npx playwright install chromium
+
+    - name: Install dependencies - AIOS
+      if: matrix.service == 'aios'
+      working-directory: ./AIOS
+      run: |
+        pip install -r requirements.txt
+        pip install -r requirements-cuda.txt || true
+
+    - name: Run unit tests - ByteBot Agent
+      if: matrix.service == 'bytebot-agent'
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: |
+        npm run test:cov
+        npm run test -- --testPathPattern=".*\.spec\.ts$" --testNamePattern="Property.*"
+
+    - name: Run unit tests - ByteBot UI
+      if: matrix.service == 'bytebot-ui'
+      working-directory: ./bytebot/packages/bytebot-ui
+      run: npm run test:coverage
+
+    - name: Run unit tests - Factif-AI
+      if: matrix.service == 'factif-ai'
+      working-directory: ./factif-ai/backend
+      run: npm test
+
+    - name: Run unit tests - AIOS
+      if: matrix.service == 'aios'
+      working-directory: ./AIOS
+      run: |
+        python -m pytest tests/ -v --cov=aios --cov-report=xml
+        python -m pytest tests/ -k "test_property" -v
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: ${{ matrix.service }}-unit-tests
+        name: ${{ matrix.service }}-coverage
+
+    - name: Archive test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: unit-test-results-${{ matrix.service }}-node${{ matrix.node-version }}
+        path: |
+          **/coverage/
+          **/test-results/
+          **/*.xml
+
+  # Job 2: Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: test
+          POSTGRES_DB: unified_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        # Install ByteBot dependencies
+        cd bytebot/packages/bytebot-agent && npm ci
+        cd ../bytebot-ui && npm ci
+        cd ../../../
+        
+        # Install Factif-AI dependencies
+        cd factif-ai/backend && npm ci
+        cd ../../
+        
+        # Install AIOS dependencies
+        cd AIOS && pip install -r requirements.txt
+        cd ../
+
+    - name: Setup test databases
+      run: |
+        # Setup PostgreSQL test database
+        PGPASSWORD=test psql -h localhost -U test -d unified_test -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+        
+        # Run database migrations
+        cd bytebot/packages/bytebot-agent
+        DATABASE_URL="postgresql://test:test@localhost:5432/unified_test" npm run prisma:dev
+        cd ../../../
+
+    - name: Start services for integration testing
+      run: |
+        # Start services in background
+        cd bytebot/packages/bytebot-agent
+        DATABASE_URL="postgresql://test:test@localhost:5432/unified_test" \
+        REDIS_URL="redis://localhost:6379" \
+        npm run start:dev &
+        
+        cd ../../../factif-ai/backend
+        DATABASE_URL="postgresql://test:test@localhost:5432/unified_test" \
+        REDIS_URL="redis://localhost:6379" \
+        npm run dev &
+        
+        cd ../../AIOS
+        python -m aios.server &
+        
+        # Wait for services to start
+        sleep 30
+
+    - name: Run cross-service integration tests
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: |
+        npm run test -- --testPathPattern="integration\.spec\.ts$" --testTimeout=60000
+        npm run test -- --testPathPattern="cross-service\.integration\.spec\.ts$" --testTimeout=120000
+
+    - name: Run API Gateway integration tests
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: |
+        npm run test -- --testPathPattern="api-gateway\.integration\.spec\.ts$" --testTimeout=60000
+
+    - name: Run configuration management integration tests
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: |
+        npm run test -- --testPathPattern="config.*integration\.spec\.ts$" --testTimeout=60000
+
+    - name: Upload integration test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: integration-test-results
+        path: |
+          **/test-results/
+          **/coverage/
+          **/*.log
+
+  # Job 3: End-to-End Tests
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install Playwright
+      working-directory: ./bytebot/packages/bytebot-ui
+      run: |
+        npm ci
+        npx playwright install --with-deps
+
+    - name: Build and start unified application
+      run: |
+        # Build all services
+        docker-compose -f docker-compose.ecosystem.yml build
+        
+        # Start the ecosystem
+        docker-compose -f docker-compose.ecosystem.yml up -d
+        
+        # Wait for services to be ready
+        timeout 300 bash -c 'until curl -f http://localhost:8080/health; do sleep 5; done'
+        timeout 300 bash -c 'until curl -f http://localhost:3000; do sleep 5; done'
+
+    - name: Run E2E tests
+      working-directory: ./bytebot/packages/bytebot-ui
+      run: |
+        E2E_BASE_URL=http://localhost:3000 \
+        E2E_API_URL=http://localhost:8080 \
+        E2E_WS_URL=ws://localhost:8080 \
+        npx playwright test --reporter=html
+
+    - name: Upload E2E test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-test-results
+        path: |
+          bytebot/packages/bytebot-ui/playwright-report/
+          bytebot/packages/bytebot-ui/test-results/
+
+    - name: Upload E2E screenshots and videos
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-failures
+        path: |
+          bytebot/packages/bytebot-ui/test-results/
+          bytebot/packages/bytebot-ui/screenshots/
+          bytebot/packages/bytebot-ui/videos/
+
+  # Job 4: Performance Tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf-test]')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: npm ci
+
+    - name: Start services for performance testing
+      run: |
+        docker-compose -f docker-compose.ecosystem.yml up -d postgres redis
+        sleep 10
+        
+        cd bytebot/packages/bytebot-agent
+        DATABASE_URL="postgresql://test:test@localhost:5432/unified_test" \
+        REDIS_URL="redis://localhost:6379" \
+        npm run start:dev &
+        
+        sleep 30
+
+    - name: Run performance tests
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: |
+        npm run test -- --testPathPattern="performance\.spec\.ts$" --testTimeout=300000 --maxWorkers=1
+
+    - name: Generate performance report
+      run: |
+        echo "## Performance Test Results" > performance-report.md
+        echo "Generated on: $(date)" >> performance-report.md
+        echo "" >> performance-report.md
+        
+        # Extract performance metrics from test output
+        grep -E "(Performance Results|Response Time Statistics|Load Consistency Results)" test-output.log >> performance-report.md || true
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-test-results
+        path: |
+          performance-report.md
+          **/performance-*.json
+          **/benchmark-*.log
+
+  # Job 5: Security Tests
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: npm ci
+
+    - name: Run security tests
+      working-directory: ./bytebot/packages/bytebot-agent
+      run: |
+        npm run test -- --testPathPattern="security.*\.spec\.ts$" --testTimeout=120000
+
+    - name: Run dependency vulnerability scan
+      run: |
+        # Scan ByteBot dependencies
+        cd bytebot/packages/bytebot-agent && npm audit --audit-level=moderate
+        cd ../bytebot-ui && npm audit --audit-level=moderate
+        cd ../../../
+        
+        # Scan Factif-AI dependencies
+        cd factif-ai/backend && npm audit --audit-level=moderate
+        cd ../../
+        
+        # Scan AIOS dependencies
+        cd AIOS && pip install safety && safety check
+        cd ../
+
+    - name: Run SAST scan with CodeQL
+      uses: github/codeql-action/analyze@v2
+      with:
+        languages: javascript, typescript, python
+
+    - name: Upload security test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-test-results
+        path: |
+          **/security-*.json
+          **/vulnerability-*.log
+
+  # Job 6: Docker and Kubernetes Tests
+  deployment-tests:
+    name: Deployment Tests
+    runs-on: ubuntu-latest
+    needs: [integration-tests, e2e-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Setup Kind (Kubernetes in Docker)
+      uses: helm/kind-action@v1.8.0
+      with:
+        cluster_name: unified-test-cluster
+        kubectl_version: v1.28.0
+
+    - name: Test Docker Compose deployment
+      run: |
+        # Test development deployment
+        docker-compose -f docker-compose.ecosystem.yml build
+        docker-compose -f docker-compose.ecosystem.yml up -d
+        
+        # Wait for services
+        timeout 300 bash -c 'until curl -f http://localhost:8080/health; do sleep 5; done'
+        
+        # Test service communication
+        curl -f http://localhost:8080/api/health
+        curl -f http://localhost:3000
+        
+        # Cleanup
+        docker-compose -f docker-compose.ecosystem.yml down
+
+    - name: Test Kubernetes deployment
+      run: |
+        # Install Helm
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        
+        # Deploy to Kind cluster
+        cd bytebot/helm
+        helm dependency update
+        helm install unified-test . --wait --timeout=10m
+        
+        # Test deployment
+        kubectl get pods
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=unified-framework --timeout=300s
+        
+        # Test service endpoints
+        kubectl port-forward svc/api-gateway 8080:80 &
+        sleep 10
+        curl -f http://localhost:8080/health
+        
+        # Cleanup
+        helm uninstall unified-test
+
+    - name: Upload deployment test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: deployment-test-results
+        path: |
+          **/deployment-*.log
+          **/k8s-*.yaml
+
+  # Job 7: Test Coverage Analysis
+  coverage-analysis:
+    name: Coverage Analysis
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install coverage tools
+      run: |
+        npm install -g nyc c8 lcov-result-merger
+
+    - name: Merge coverage reports
+      run: |
+        # Merge all coverage reports
+        find . -name "coverage.xml" -o -name "lcov.info" | head -20
+        
+        # Create combined coverage report
+        mkdir -p combined-coverage
+        
+        # Merge JavaScript/TypeScript coverage
+        lcov-result-merger "**/lcov.info" "combined-coverage/lcov.info" || true
+        
+        # Generate HTML report
+        genhtml combined-coverage/lcov.info --output-directory combined-coverage/html || true
+
+    - name: Calculate overall coverage
+      run: |
+        echo "## Test Coverage Summary" > coverage-summary.md
+        echo "Generated on: $(date)" >> coverage-summary.md
+        echo "" >> coverage-summary.md
+        
+        # Calculate coverage percentages
+        if [ -f "combined-coverage/lcov.info" ]; then
+          LINES_COVERED=$(grep -c "DA:" combined-coverage/lcov.info | head -1 || echo "0")
+          LINES_TOTAL=$(grep "LF:" combined-coverage/lcov.info | awk -F: '{sum += $2} END {print sum}' || echo "1")
+          COVERAGE_PERCENT=$(echo "scale=2; $LINES_COVERED * 100 / $LINES_TOTAL" | bc -l || echo "0")
+          
+          echo "- **Overall Line Coverage**: ${COVERAGE_PERCENT}%" >> coverage-summary.md
+          echo "- **Lines Covered**: ${LINES_COVERED}" >> coverage-summary.md
+          echo "- **Total Lines**: ${LINES_TOTAL}" >> coverage-summary.md
+        fi
+
+    - name: Check coverage thresholds
+      run: |
+        # Fail if coverage is below 80%
+        if [ -f "combined-coverage/lcov.info" ]; then
+          COVERAGE_PERCENT=$(grep "LF:" combined-coverage/lcov.info | awk -F: '{sum += $2} END {print sum}' | head -1 || echo "0")
+          if [ "$COVERAGE_PERCENT" -lt "80" ]; then
+            echo "❌ Coverage is below 80% threshold: ${COVERAGE_PERCENT}%"
+            exit 1
+          else
+            echo "✅ Coverage meets 80% threshold: ${COVERAGE_PERCENT}%"
+          fi
+        fi
+
+    - name: Upload combined coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: combined-coverage-report
+        path: |
+          combined-coverage/
+          coverage-summary.md
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('coverage-summary.md')) {
+            const coverage = fs.readFileSync('coverage-summary.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: coverage
+            });
+          }
+
+  # Job 8: Test Results Summary
+  test-summary:
+    name: Test Results Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, performance-tests, security-tests, deployment-tests, coverage-analysis]
+    if: always()
+    
+    steps:
+    - name: Generate test summary
+      run: |
+        echo "# 🧪 Comprehensive Test Results Summary" > test-summary.md
+        echo "" >> test-summary.md
+        echo "**Commit**: ${{ github.sha }}" >> test-summary.md
+        echo "**Branch**: ${{ github.ref_name }}" >> test-summary.md
+        echo "**Triggered by**: ${{ github.event_name }}" >> test-summary.md
+        echo "**Run ID**: ${{ github.run_id }}" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        # Job status summary
+        echo "## 📊 Job Status Summary" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "| Job | Status |" >> test-summary.md
+        echo "|-----|--------|" >> test-summary.md
+        echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> test-summary.md
+        echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> test-summary.md
+        echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> test-summary.md
+        echo "| Performance Tests | ${{ needs.performance-tests.result == 'success' && '✅ Passed' || needs.performance-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> test-summary.md
+        echo "| Security Tests | ${{ needs.security-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> test-summary.md
+        echo "| Deployment Tests | ${{ needs.deployment-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> test-summary.md
+        echo "| Coverage Analysis | ${{ needs.coverage-analysis.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        # Overall status
+        if [[ "${{ needs.unit-tests.result }}" == "success" && 
+              "${{ needs.integration-tests.result }}" == "success" && 
+              "${{ needs.e2e-tests.result }}" == "success" && 
+              "${{ needs.security-tests.result }}" == "success" && 
+              "${{ needs.deployment-tests.result }}" == "success" && 
+              "${{ needs.coverage-analysis.result }}" == "success" ]]; then
+          echo "## 🎉 Overall Result: SUCCESS" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "All critical tests passed! The unified application framework is ready for deployment." >> test-summary.md
+        else
+          echo "## ❌ Overall Result: FAILURE" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "Some tests failed. Please review the failed jobs and fix the issues before proceeding." >> test-summary.md
+        fi
+
+    - name: Upload test summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-summary
+        path: test-summary.md
+
+    - name: Comment summary on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('test-summary.md', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });

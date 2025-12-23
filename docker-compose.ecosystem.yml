@@ -1,0 +1,1359 @@
+# Unified AI Emulators Ecosystem
+# Comprehensive orchestration of 10 repositories with MCP integration
+
+# Security and Secrets Configuration
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  openai_api_key:
+    file: ./secrets/openai_api_key.txt
+  huggingface_token:
+    file: ./secrets/huggingface_token.txt
+  google_api_key:
+    file: ./secrets/google_api_key.txt
+  vnc_password:
+    file: ./secrets/vnc_password.txt
+  slack_webhook_url:
+    file: ./secrets/slack_webhook_url.txt
+
+services:
+  # ==========================================
+  # AI/LLM Operating Systems & Agent Platforms
+  # ==========================================
+
+  # AIOS - Complete AI Agent Operating System
+  aios:
+    build:
+      context: ./AIOS
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "8010:8000"
+      - "8011:8001"  # MCP server port
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://aios:password@postgres:5432/aios
+      - REDIS_URL=redis://redis:6379
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CUDA_VISIBLE_DEVICES=all
+    volumes:
+      - aios_data:/app/data
+      - ./AIOS/models:/app/models:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai_network
+      - mcp_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 12G
+          cpus: '6.0'
+        reservations:
+          memory: 6G
+          cpus: '3.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    profiles:
+      - gpu
+      - production
+
+  # gbox - Environment provider for AI agents
+  gbox:
+    build:
+      context: ./gbox
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3010:29888"
+      - "3011:7681"  # ttyd terminal port
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://gbox:password@postgres:5432/gbox
+    volumes:
+      - gbox_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ai_network
+      - mcp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:29888/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - production
+
+   # ==========================================
+   # Computer Control & Automation Tools
+   # ==========================================
+
+   # ==========================================
+   # Bytebot Multi-Service Architecture
+   # ==========================================
+
+   # Bytebot Desktop - Virtual desktop environment
+  bytebot-desktop:
+     build:
+       context: ./bytebot/packages
+       dockerfile: bytebotd/Dockerfile
+     container_name: bytebot-desktop
+     shm_size: "2g"
+     restart: unless-stopped
+     hostname: computer
+     privileged: true
+     ports:
+       - "9990:9990"  # bytebotd service & noVNC
+     environment:
+       - DISPLAY=:0
+       - NODE_ENV=production
+       - LOG_LEVEL=INFO
+     networks:
+       - automation_network
+       - mcp_network
+     deploy:
+       restart_policy:
+         condition: on-failure
+         delay: 5s
+         max_attempts: 3
+         window: 120s
+       resources:
+         limits:
+           memory: 4G
+           cpus: '2.0'
+         reservations:
+           memory: 2G
+           cpus: '1.0'
+     healthcheck:
+       test: ["CMD", "curl", "-f", "http://localhost:9990/health"]
+       interval: 30s
+       timeout: 15s
+       retries: 5
+       start_period: 60s
+     logging:
+       driver: "json-file"
+       options:
+         max-size: "100m"
+         max-file: "5"
+     profiles:
+       - automation
+       - production
+
+  # Bytebot Agent - Computer control agent
+  bytebot-agent:
+    build:
+      context: ./bytebot/packages
+      dockerfile: bytebot-agent-cc/Dockerfile
+    container_name: bytebot-agent
+    restart: unless-stopped
+    ports:
+      - "9991:9991"  # Agent API port
+      - "9998:9998"  # MCP server port
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://bytebot:password@postgres:5432/bytebot
+      - BYTEBOT_DESKTOP_BASE_URL=http://bytebot-desktop:9990
+      - BYTEBOT_LLM_PROXY_URL=http://bytebot-llm-proxy:4000
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bytebot-desktop:
+        condition: service_healthy
+      bytebot-llm-proxy:
+        condition: service_started
+    networks:
+      - automation_network
+      - mcp_network
+      - database_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9991/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    profiles:
+      - automation
+      - production
+
+  # Bytebot LLM Proxy - LiteLLM proxy for multiple AI providers
+  bytebot-llm-proxy:
+     build:
+       context: ./bytebot/packages
+       dockerfile: bytebot-llm-proxy/Dockerfile
+     container_name: bytebot-llm-proxy
+     restart: unless-stopped
+     ports:
+       - "4000:4000"  # LLM proxy port
+     environment:
+       - NODE_ENV=production
+       - LOG_LEVEL=INFO
+       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+       - OPENAI_API_KEY=${OPENAI_API_KEY}
+       - GEMINI_API_KEY=${GEMINI_API_KEY}
+     networks:
+       - automation_network
+       - mcp_network
+     deploy:
+       restart_policy:
+         condition: on-failure
+         delay: 5s
+         max_attempts: 3
+         window: 120s
+       resources:
+         limits:
+           memory: 1G
+           cpus: '0.5'
+         reservations:
+           memory: 512M
+           cpus: '0.25'
+     healthcheck:
+       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+       interval: 30s
+       timeout: 10s
+       retries: 3
+     logging:
+       driver: "json-file"
+       options:
+         max-size: "50m"
+         max-file: "3"
+     profiles:
+       - automation
+       - production
+
+  # Open-Interface - Cross-platform computer control
+  open-interface:
+    build:
+      context: ./Open-Interface
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "5010:5000"
+      - "5001:5001"  # MCP server port
+      - "6081:6080"  # VNC port
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DISPLAY=:99
+      - QT_QPA_PLATFORM=offscreen
+    volumes:
+      - open_interface_data:/app/data
+    networks:
+      - automation_network
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - automation
+
+  # macOS-use - macOS automation (limited Docker support)
+  macos-use:
+    build:
+      context: ./macOS-use
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "6010:6000"
+      - "6001:6001"  # MCP server port
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - macos_use_data:/app/data
+    networks:
+      - automation_network
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - automation
+
+  # factif-ai - AI-powered test automation
+  factif-ai:
+    build:
+      context: ./factif-ai
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "7010:7000"
+      - "7001:7001"  # MCP server port
+      - "6082:6080"  # VNC port
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://factif:password@postgres:5432/factif
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - factif_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - automation_network
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - automation
+      - testing
+
+  # ==========================================
+  # Specialized Applications
+  # ==========================================
+
+  # postiz-app - Social media scheduling platform
+  postiz-app:
+    build:
+      context: ./postiz-app
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "9000:9000"
+      - "9001:9001"  # MCP server port
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://postiz:password@postgres:5432/postiz
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - postiz_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - social_network
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - social
+      - production
+
+  # onlysnarf - OnlyFans automation platform
+  onlysnarf:
+    build:
+      context: ./onlysnarf
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "10000:10000"
+      - "10001:10001"  # MCP server port
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://onlysnarf:password@postgres:5432/onlysnarf
+    volumes:
+      - onlysnarf_data:/app/data
+      - onlysnarf_media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - social_network
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - social
+
+  # reels-clips-automator - Instagram Reels automation
+  reels-clips-automator:
+    build:
+      context: ./reels-clips-automator
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "11000:11000"
+      - "11001:11001"  # MCP server port
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - reels_data:/app/data
+      - reels_media:/app/media
+    networks:
+      - content_network
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - content
+
+  # Wan2GP - Video generation platform
+  wan2gp:
+    build:
+      context: ./Wan2GP
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "12000:12000"
+      - "12001:12001"  # MCP server port
+      - "7860:7860"    # Gradio UI
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - CUDA_VISIBLE_DEVICES=all
+      - TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0"
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+    volumes:
+      - wan2gp_data:/app/data
+      - wan2gp_models:/app/models
+    networks:
+      - content_network
+      - mcp_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 300s
+      resources:
+        limits:
+          memory: 24G
+          cpus: '12.0'
+        reservations:
+          memory: 12G
+          cpus: '6.0'
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12000/health"]
+      interval: 60s
+      timeout: 45s
+      retries: 5
+      start_period: 600s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "5"
+    profiles:
+      - content
+      - gpu
+
+  # ==========================================
+  # Supporting Infrastructure
+  # ==========================================
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ai_ecosystem
+      - POSTGRES_USER=admin
+      - POSTGRES_MAX_CONNECTIONS=200
+      - POSTGRES_SHARED_BUFFERS=256MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=1GB
+      - POSTGRES_WORK_MEM=4MB
+      - POSTGRES_MAINTENANCE_WORK_MEM=64MB
+      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=0.9
+      - POSTGRES_WAL_BUFFERS=16MB
+      - POSTGRES_DEFAULT_STATISTICS_TARGET=100
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      # Performance monitoring settings
+      - PG_STAT_STATEMENTS_MAX=10000
+      - PG_STAT_STATEMENTS_TRACK=all
+      - TRACK_IO_TIMING=on
+      - TRACK_FUNCTIONS=all
+      - LOG_STATEMENT=ddl
+      - LOG_CHECKPOINT=on
+      - LOG_AUTOVACUUM_MIN_DURATION=0
+    secrets:
+      - source: postgres_password
+        target: postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - database_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 300s
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ai_ecosystem"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    profiles:
+      - infrastructure
+
+  # Redis Cache/Message Queue
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - database_network
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 300s
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - infrastructure
+
+  # ==========================================
+  # Monitoring & Observability
+  # ==========================================
+
+  # Prometheus Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - ./monitoring/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring_network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - monitoring
+
+  # Alertmanager for Alert Handling
+  alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - monitoring_network
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    profiles:
+      - monitoring
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=localhost:587
+      - GF_SMTP_USER=
+      - GF_SMTP_PASSWORD=
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3020:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - monitoring
+
+  # Node Exporter for System Metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring_network
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    profiles:
+      - monitoring
+
+  # PostgreSQL Exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    environment:
+      - DATA_SOURCE_NAME=postgresql://admin:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/ai_ecosystem?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - database_network
+      - monitoring_network
+    profiles:
+      - monitoring
+
+  # Redis Exporter
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - database_network
+      - monitoring_network
+    profiles:
+      - monitoring
+
+  # Monitoring API - Custom monitoring service
+  monitoring-api:
+    build:
+      context: ./monitoring-api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - redis
+      - prometheus
+    networks:
+      - monitoring_network
+      - database_network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - monitoring
+      - infrastructure
+
+  # Nginx Prometheus Exporter
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    command:
+      - -nginx.scrape-uri=http://nginx:80/stub_status
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+    networks:
+      - web_network
+      - monitoring_network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+    profiles:
+      - monitoring
+
+  # Jaeger - Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Accept jaeger.thrift over HTTP
+      - "14250:14250"  # Accept jaeger.thrift over gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    volumes:
+      - jaeger_data:/tmp
+    networks:
+      - monitoring_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:16686/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - monitoring
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    volumes:
+      - ./monitoring/otel-collector-config.yml:/etc/otelcol/config.yaml:ro
+      - otel_data:/tmp
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Metrics endpoint
+    networks:
+      - monitoring_network
+    command: ["--config=/etc/otelcol/config.yaml"]
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    depends_on:
+      - jaeger
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - monitoring
+
+  # Loki - Log aggregation system
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - loki_data:/loki
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring_network
+    command: -config.file=/etc/loki/local-config.yaml
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - monitoring
+
+  # Promtail - Log shipping agent
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+    networks:
+      - monitoring_network
+    command: -config.file=/etc/promtail/config.yml
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    depends_on:
+      - loki
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - monitoring
+
+  # MCP Server Registry (Custom service for MCP discovery)
+  mcp-registry:
+    build:
+      context: ./mcp-registry
+      dockerfile: Dockerfile
+    ports:
+      - "8012:8002"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - mcp_network
+      - database_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - mcp
+      - infrastructure
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - unified-app
+      - orchestrator
+      - aios
+      - gbox
+      - bytebot
+      - postiz-app
+      - puter
+    networks:
+      - web_network
+    profiles:
+      - web
+      - production
+
+  # ==========================================
+  # Orchestration & Frontend Services
+  # ==========================================
+
+  # Unified Frontend - React SPA
+  unified-app:
+    build:
+      context: ./unified-app
+      dockerfile: Dockerfile
+    ports:
+      - "9999:80"  # Main frontend port
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - orchestrator
+      - aios
+      - bytebot
+      - postiz-app
+    networks:
+      - web_network
+      - ai_network
+      - automation_network
+      - social_network
+      - content_network
+      - mcp_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    profiles:
+      - web
+      - production
+
+  # Backend Orchestrator - API Gateway
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"  # Main orchestrator API
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGINS=http://localhost:80,http://localhost:9999,http://unified-app:80,http://nginx:80
+      - AIOS_URL=http://aios:8000
+      - GBOX_URL=http://gbox:29888
+       - BYTEBOT_URL=http://bytebot-agent:9991
+      - OPEN_INTERFACE_URL=http://open-interface:5000
+      - MACOS_USE_URL=http://macos-use:6000
+      - FACTIF_AI_URL=http://factif-ai:7000
+      - POSTIZ_URL=http://postiz-app:9000
+      - ONLYSNARF_URL=http://onlysnarf:10000
+      - REELS_AUTOMATOR_URL=http://reels-clips-automator:11000
+      - WAN2GP_URL=http://wan2gp:12000
+      - PUTER_URL=http://puter:4100
+      - OPEN_INTERPRETER_URL=http://open-interpreter:13000
+    volumes:
+      - orchestrator_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      aios:
+        condition: service_healthy
+      bytebot:
+        condition: service_healthy
+    networks:
+      - web_network
+      - ai_network
+      - automation_network
+      - social_network
+      - content_network
+      - database_network
+      - mcp_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    profiles:
+      - orchestration
+      - production
+
+  # ByteBot UI - Next.js Frontend
+  bytebot-ui:
+    build:
+      context: ./bytebot/packages
+      dockerfile: bytebot-ui/Dockerfile
+    ports:
+      - "9992:3000"
+    environment:
+      - NODE_ENV=production
+      - BYTEBOT_AGENT_BASE_URL=http://bytebot-agent:9991/api
+      - BYTEBOT_DESKTOP_VNC_URL=ws://bytebot-desktop:9990/websockify
+    depends_on:
+      - bytebot
+    networks:
+      - automation_network
+    profiles:
+      - production
+
+# ==========================================
+# Networks
+# ==========================================
+
+networks:
+  # AI/ML Services Network - Isolated for GPU workloads
+  ai_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: ai_bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    internal: false
+    labels:
+      - "ai-ecosystem.network.type=ai"
+      - "ai-ecosystem.network.security=high"
+
+  # Automation Services Network - Computer control services
+  automation_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: automation_bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+    internal: false
+    labels:
+      - "ai-ecosystem.network.type=automation"
+      - "ai-ecosystem.network.security=medium"
+
+  # Social Media Services Network
+  social_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: social_bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+          gateway: 172.22.0.1
+    internal: false
+    labels:
+      - "ai-ecosystem.network.type=social"
+      - "ai-ecosystem.network.security=medium"
+
+  # Content Creation Services Network
+  content_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: content_bridge
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16
+          gateway: 172.23.0.1
+    internal: false
+    labels:
+      - "ai-ecosystem.network.type=content"
+      - "ai-ecosystem.network.security=medium"
+
+  # Database Services Network - Highly secured
+  database_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: database_bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/16
+          gateway: 172.24.0.1
+    internal: true  # No external access
+    labels:
+      - "ai-ecosystem.network.type=database"
+      - "ai-ecosystem.network.security=critical"
+
+  # MCP (Model Context Protocol) Network - Service discovery
+  mcp_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: mcp_bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+          gateway: 172.25.0.1
+    internal: false
+    labels:
+      - "ai-ecosystem.network.type=mcp"
+      - "ai-ecosystem.network.security=medium"
+
+  # Monitoring and Observability Network
+  monitoring_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: monitoring_bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
+          gateway: 172.26.0.1
+    internal: false
+    labels:
+      - "ai-ecosystem.network.type=monitoring"
+      - "ai-ecosystem.network.security=high"
+
+  # Web Services Network - External facing
+  web_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: web_bridge
+    ipam:
+      config:
+        - subnet: 172.27.0.0/16
+          gateway: 172.27.0.1
+    internal: false
+    labels:
+      - "ai-ecosystem.network.type=web"
+      - "ai-ecosystem.network.security=low"
+
+# ==========================================
+# Volumes
+# ==========================================
+
+volumes:
+  # Application Data
+  aios_data:
+  gbox_data:
+  bytebot_data:
+  open_interface_data:
+  macos_use_data:
+  factif_data:
+  postiz_data:
+  onlysnarf_data:
+  onlysnarf_media:
+  reels_data:
+  reels_media:
+  wan2gp_data:
+  wan2gp_models:
+  puter_data:
+  open_interpreter_data:
+
+  # Orchestration
+  orchestrator_data:
+
+  # Monitoring
+  monitoring_api_data:
+
+  # Infrastructure
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  loki_data:
+  jaeger_data:
+  otel_data:
+  nginx_logs:

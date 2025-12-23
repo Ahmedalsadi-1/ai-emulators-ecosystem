@@ -1,0 +1,174 @@
+# Multi-stage Dockerfile for AI Emulators Ecosystem
+FROM node:20-alpine AS base
+
+# Install system dependencies
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    git \
+    curl \
+    build-base \
+    python3-dev \
+    linux-headers \
+    && ln -sf python3 /usr/bin/python
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package*.json ./
+COPY AIOS/requirements.txt ./AIOS/
+COPY bytebot/package*.json ./bytebot/
+COPY factif-ai/backend/package*.json ./factif-ai/backend/
+
+# ==========================================
+# Development Stage
+# ==========================================
+FROM base AS development
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r AIOS/requirements.txt
+
+# Install Node.js dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Expose ports for all services
+EXPOSE 8000 8001 4000 4001 7010 7001 9000 9001 10000 10001 11000 11001 12000 12001
+
+# Default command for development
+CMD ["npm", "run", "dev"]
+
+# ==========================================
+# Build Stage
+# ==========================================
+FROM base AS builder
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r AIOS/requirements.txt
+
+# Install Node.js dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build TypeScript services
+RUN cd bytebot/packages/bytebot-agent && npm run build
+RUN cd ../../../factif-ai/backend && npm run build
+RUN cd ../../mcp-registry && npm run build
+
+# ==========================================
+# Production Stage
+# ==========================================
+FROM node:20-alpine AS production
+
+# Install system dependencies for production
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    curl \
+    supervisor \
+    nginx \
+    && ln -sf python3 /usr/bin/python
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy built artifacts from builder stage
+COPY --from=builder --chown=nextjs:nodejs /app/AIOS ./AIOS
+COPY --from=builder --chown=nextjs:nodejs /app/bytebot ./bytebot
+COPY --from=builder --chown=nextjs:nodejs /app/factif-ai ./factif-ai
+COPY --from=builder --chown=nextjs:nodejs /app/mcp-registry ./mcp-registry
+
+# Install production Python dependencies
+RUN pip3 install --no-cache-dir -r AIOS/requirements.txt
+
+# Install production Node.js dependencies
+RUN cd bytebot/packages/bytebot-agent && npm ci --only=production && cd ../../..
+RUN cd factif-ai/backend && npm ci --only=production && cd ../..
+RUN cd mcp-registry && npm ci --only=production && cd ..
+
+# Copy configuration files
+COPY docker/supervisord.conf /etc/supervisord.conf
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
+# Create necessary directories
+RUN mkdir -p /var/log/supervisor /var/log/nginx /app/logs
+
+# Set permissions
+RUN chown -R nextjs:nodejs /app /var/log/supervisor /var/log/nginx
+
+# Switch to non-root user
+USER nextjs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose ports
+EXPOSE 80 443 8080
+
+# Start services with supervisord
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+
+# ==========================================
+# GPU Production Stage (for AI/ML workloads)
+# ==========================================
+FROM nvidia/cuda:12.2-runtime-ubuntu22.04 AS production-gpu
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    nodejs \
+    npm \
+    curl \
+    supervisor \
+    nginx \
+    git \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf python3 /usr/bin/python
+
+# Create app user
+RUN useradd -m -u 1001 appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy built artifacts from builder stage
+COPY --from=builder --chown=appuser:appuser /app .
+
+# Install production dependencies
+RUN pip3 install --no-cache-dir -r AIOS/requirements.txt
+RUN cd bytebot/packages/bytebot-agent && npm ci --only=production && cd ../../..
+RUN cd factif-ai/backend && npm ci --only=production && cd ../..
+
+# Copy configuration files
+COPY docker/supervisord-gpu.conf /etc/supervisord.conf
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
+# Create necessary directories
+RUN mkdir -p /var/log/supervisor /var/log/nginx /app/logs
+
+# Set permissions
+RUN chown -R appuser:appuser /app /var/log/supervisor /var/log/nginx
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose ports
+EXPOSE 80 443 8080
+
+# Start services with supervisord
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

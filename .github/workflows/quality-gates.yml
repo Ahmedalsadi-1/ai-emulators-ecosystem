@@ -1,0 +1,395 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    branches: [ main, develop, staging ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  # ==========================================
+  # PR Quality Checks
+  # ==========================================
+
+  pr-quality-checks:
+    name: PR Quality Checks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Check PR size
+      run: |
+        # Check number of changed files
+        CHANGED_FILES=$(git diff --name-only HEAD~1 | wc -l)
+        if [ "$CHANGED_FILES" -gt 50 ]; then
+          echo "❌ PR is too large: $CHANGED_FILES files changed. Consider splitting into smaller PRs."
+          exit 1
+        fi
+
+        # Check lines changed
+        LINES_CHANGED=$(git diff --stat HEAD~1 | tail -1 | awk '{print $4+$6}')
+        if [ "$LINES_CHANGED" -gt 1000 ]; then
+          echo "❌ PR is too large: $LINES_CHANGED lines changed. Consider splitting into smaller PRs."
+          exit 1
+        fi
+
+        echo "✅ PR size is acceptable: $CHANGED_FILES files, $LINES_CHANGED lines"
+
+    - name: Check commit messages
+      run: |
+        # Check if commits follow conventional commit format
+        INVALID_COMMITS=$(git log --oneline HEAD~1..HEAD | grep -vE "^[a-z]+(\([a-z-]+\))?: " | wc -l)
+        if [ "$INVALID_COMMITS" -gt 0 ]; then
+          echo "❌ Found $INVALID_COMMITS commit(s) not following conventional commit format"
+          echo "Expected format: type(scope): description"
+          echo "Examples: feat(auth): add login endpoint, fix(ui): resolve button styling"
+          git log --oneline HEAD~1..HEAD | grep -vE "^[a-z]+(\([a-z-]+\))?: "
+          exit 1
+        fi
+        echo "✅ All commits follow conventional commit format"
+
+    - name: Check for large files
+      run: |
+        # Check for files larger than 10MB
+        LARGE_FILES=$(find . -type f -size +10M | wc -l)
+        if [ "$LARGE_FILES" -gt 0 ]; then
+          echo "❌ Found $LARGE_FILES file(s) larger than 10MB:"
+          find . -type f -size +10M -exec ls -lh {} \;
+          exit 1
+        fi
+        echo "✅ No large files found"
+
+    - name: Check for sensitive data
+      run: |
+        # Check for potential secrets
+        if command -v gitleaks &> /dev/null; then
+          gitleaks detect --verbose --redact --config .gitleaks.toml || exit 1
+        else
+          # Fallback checks
+          git diff HEAD~1 | grep -i "password\|secret\|key\|token" | head -5
+          if [ $? -eq 0 ]; then
+            echo "⚠️  Potential sensitive data found in changes. Please review."
+          fi
+        fi
+
+  # ==========================================
+  # Dependency Vulnerability Checks
+  # ==========================================
+
+  dependency-checks:
+    name: Dependency Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install security tools
+      run: |
+        pip install safety bandit pip-audit
+        npm install -g audit-ci npm-check-updates
+
+    - name: Check for outdated dependencies
+      run: |
+        echo "## Outdated Dependencies Report" > outdated-report.md
+        echo "Generated on: $(date)" >> outdated-report.md
+        echo "" >> outdated-report.md
+
+        # Check Node.js packages
+        echo "### Node.js Packages" >> outdated-report.md
+        ncu --format markdown >> outdated-report.md 2>/dev/null || echo "No outdated packages found" >> outdated-report.md
+
+        # Check Python packages
+        echo "" >> outdated-report.md
+        echo "### Python Packages" >> outdated-report.md
+        pip list --outdated --format=columns >> outdated-report.md 2>/dev/null || echo "No outdated packages found" >> outdated-report.md
+
+    - name: Check for dependency confusion
+      run: |
+        # Check for potential dependency confusion attacks
+        echo "Checking for dependency confusion vulnerabilities..."
+
+        # Check package.json files for suspicious packages
+        find . -name "package.json" -exec grep -l "name.*:" {} \; | xargs grep -A 5 -B 5 "dependencies\|devDependencies" | grep -i "babel\|webpack\|react\|vue\|angular" | head -10
+
+    - name: Upload dependency report
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-report
+        path: outdated-report.md
+
+  # ==========================================
+  # Code Coverage Quality Gate
+  # ==========================================
+
+  coverage-gate:
+    name: Code Coverage Quality Gate
+    runs-on: ubuntu-latest
+    needs: [pr-quality-checks]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install coverage tools
+      run: |
+        npm install -g nyc c8 lcov-result-merger
+        pip install coverage
+
+    - name: Run coverage analysis
+      run: |
+        # Run tests with coverage for all services
+        mkdir -p coverage-reports
+
+        # Python coverage
+        cd AIOS && python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-fail-under=80 && cd ..
+        cp AIOS/coverage.xml coverage-reports/aios-coverage.xml
+
+        # Node.js coverage
+        cd bytebot/packages/bytebot-agent && npm run test:cov && cd ../../..
+        cp bytebot/packages/bytebot-agent/coverage/coverage-final.json coverage-reports/bytebot-coverage.json
+
+        cd factif-ai/backend && npm run test:coverage && cd ../..
+        cp factif-ai/backend/coverage/lcov.info coverage-reports/factif-coverage.lcov
+
+    - name: Check coverage thresholds
+      run: |
+        # Check Python coverage
+        if [ -f "AIOS/coverage.xml" ]; then
+          PYTHON_COVERAGE=$(grep 'line-rate=' AIOS/coverage.xml | head -1 | sed 's/.*line-rate="\([0-9.]*\)".*/\1/' | awk '{print int($1 * 100)}')
+          if [ "$PYTHON_COVERAGE" -lt 80 ]; then
+            echo "❌ Python coverage is below 80%: ${PYTHON_COVERAGE}%"
+            exit 1
+          fi
+          echo "✅ Python coverage: ${PYTHON_COVERAGE}%"
+        fi
+
+        # Check Node.js coverage
+        if [ -f "bytebot/packages/bytebot-agent/coverage/coverage-summary.json" ]; then
+          NODE_COVERAGE=$(jq '.total.lines.pct' bytebot/packages/bytebot-agent/coverage/coverage-summary.json 2>/dev/null || echo "0")
+          if (( $(echo "$NODE_COVERAGE < 80" | bc -l) )); then
+            echo "❌ Node.js coverage is below 80%: ${NODE_COVERAGE}%"
+            exit 1
+          fi
+          echo "✅ Node.js coverage: ${NODE_COVERAGE}%"
+        fi
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: coverage-reports/
+
+  # ==========================================
+  # License Compliance Check
+  # ==========================================
+
+  license-check:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install license tools
+      run: |
+        npm install -g license-checker
+        pip install pip-licenses
+
+    - name: Check licenses
+      run: |
+        echo "## License Compliance Report" > license-report.md
+        echo "Generated on: $(date)" >> license-report.md
+        echo "" >> license-report.md
+
+        # Check Node.js licenses
+        echo "### Node.js Licenses" >> license-report.md
+        license-checker --json | jq '. | to_entries[] | select(.value.licenses | contains("GPL") or contains("LGPL")) | .key' > gpl-licenses.json || true
+
+        if [ -s gpl-licenses.json ]; then
+          echo "⚠️  Found packages with GPL/LGPL licenses:" >> license-report.md
+          cat gpl-licenses.json >> license-report.md
+        else
+          echo "✅ No GPL/LGPL licensed packages found" >> license-report.md
+        fi
+
+        # Check Python licenses
+        echo "" >> license-report.md
+        echo "### Python Licenses" >> license-report.md
+        pip-licenses --format=markdown >> license-report.md 2>/dev/null || echo "Could not check Python licenses" >> license-report.md
+
+    - name: Upload license report
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-report
+        path: license-report.md
+
+  # ==========================================
+  # Documentation Quality Check
+  # ==========================================
+
+  docs-check:
+    name: Documentation Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install markdown tools
+      run: |
+        npm install -g markdownlint-cli
+        pip install linkchecker
+
+    - name: Check markdown files
+      run: |
+        # Lint markdown files
+        find . -name "*.md" -not -path "./node_modules/*" | xargs markdownlint --config .markdownlint.json || true
+
+        # Check for broken links in documentation
+        find docs/ -name "*.md" | head -5 | xargs -I {} sh -c 'echo "Checking {}"; linkchecker --check-extern --no-warnings {}' || true
+
+    - name: Check API documentation
+      run: |
+        # Check if API docs are up to date
+        if [ -f "docs/API.md" ]; then
+          echo "API documentation exists"
+        else
+          echo "⚠️  API documentation missing"
+        fi
+
+        # Check if all services have README files
+        SERVICES=("AIOS" "bytebot" "factif-ai" "postiz-app" "onlysnarf" "reels-clips-automator" "Wan2GP")
+        for service in "${SERVICES[@]}"; do
+          if [ ! -f "$service/README.md" ]; then
+            echo "⚠️  Missing README.md for $service"
+          fi
+        done
+
+  # ==========================================
+  # Final Quality Gate
+  # ==========================================
+
+  quality-gate-summary:
+    name: Quality Gate Summary
+    runs-on: ubuntu-latest
+    needs: [pr-quality-checks, dependency-checks, coverage-gate, license-check, docs-check]
+    if: always()
+
+    steps:
+    - name: Generate quality gate summary
+      run: |
+        echo "# 🔍 Quality Gate Summary" > quality-gate-summary.md
+        echo "" >> quality-gate-summary.md
+        echo "**Pull Request:** #${{ github.event.number }}" >> quality-gate-summary.md
+        echo "**Branch:** ${{ github.head_ref }}" >> quality-gate-summary.md
+        echo "**Generated:** $(date)" >> quality-gate-summary.md
+        echo "" >> quality-gate-summary.md
+
+        # Overall status
+        if [[ "${{ needs.pr-quality-checks.result }}" == "success" && 
+              "${{ needs.dependency-checks.result }}" == "success" && 
+              "${{ needs.coverage-gate.result }}" == "success" && 
+              "${{ needs.license-check.result }}" == "success" && 
+              "${{ needs.docs-check.result }}" == "success" ]]; then
+          echo "## ✅ All Quality Gates Passed" >> quality-gate-summary.md
+          echo "" >> quality-gate-summary.md
+          echo "The code changes meet all quality standards and are ready for review." >> quality-gate-summary.md
+        else
+          echo "## ❌ Quality Gates Failed" >> quality-gate-summary.md
+          echo "" >> quality-gate-summary.md
+          echo "Some quality checks failed. Please review the individual job results and fix the issues." >> quality-gate-summary.md
+          echo "" >> quality-gate-summary.md
+          echo "### Failed Checks:" >> quality-gate-summary.md
+          if [[ "${{ needs.pr-quality-checks.result }}" != "success" ]]; then
+            echo "- ❌ PR Quality Checks" >> quality-gate-summary.md
+          fi
+          if [[ "${{ needs.dependency-checks.result }}" != "success" ]]; then
+            echo "- ❌ Dependency Security Checks" >> quality-gate-summary.md
+          fi
+          if [[ "${{ needs.coverage-gate.result }}" != "success" ]]; then
+            echo "- ❌ Code Coverage Requirements" >> quality-gate-summary.md
+          fi
+          if [[ "${{ needs.license-check.result }}" != "success" ]]; then
+            echo "- ❌ License Compliance" >> quality-gate-summary.md
+          fi
+          if [[ "${{ needs.docs-check.result }}" != "success" ]]; then
+            echo "- ❌ Documentation Quality" >> quality-gate-summary.md
+          fi
+        fi
+
+        # Recommendations
+        echo "" >> quality-gate-summary.md
+        echo "## 📋 Recommendations" >> quality-gate-summary.md
+        echo "" >> quality-gate-summary.md
+        echo "- Ensure all tests pass with adequate coverage (>80%)" >> quality-gate-summary.md
+        echo "- Keep PRs small and focused on single features" >> quality-gate-summary.md
+        echo "- Follow conventional commit message format" >> quality-gate-summary.md
+        echo "- Update documentation for any API changes" >> quality-gate-summary.md
+        echo "- Review dependency updates for security implications" >> quality-gate-summary.md
+
+    - name: Comment quality summary on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('quality-gate-summary.md', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+
+    - name: Upload quality gate summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: quality-gate-summary
+        path: quality-gate-summary.md

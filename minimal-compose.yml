@@ -1,0 +1,91 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ai_ecosystem
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    secrets:
+      - source: postgres_password
+        target: postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ai_ecosystem"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - infrastructure
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - database_network
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - infrastructure
+
+  aios:
+    build:
+      context: ./AIOS
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "8010:8000"
+      - "8011:8001"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://aios:password@postgres:5432/aios
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - aios_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai_network
+      - mcp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    profiles:
+      - production
+
+networks:
+  database_network:
+    driver: bridge
+  ai_network:
+    driver: bridge
+  mcp_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  aios_data:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt

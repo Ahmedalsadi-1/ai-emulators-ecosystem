@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  bytebot-desktop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bytebot-desktop-automation
+    restart: unless-stopped
+    hostname: bytebot-desktop
+    privileged: true
+    shm_size: "2g"
+    environment:
+      - DISPLAY=:1
+      - VNC_PORT=5900
+      - NOVNC_PORT=6080
+      - BYTEBOT_DESKTOP_PORT=9990
+      - NODE_ENV=production
+    volumes:
+      - bytebot_desktop_data:/home/bytebot/Desktop
+      - bytebot_downloads:/home/bytebot/Downloads
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev/shm:/dev/shm
+    networks:
+      - bytebot-network
+    ports:
+      - "9990:9990"  # Bytebot API endpoint for computer control
+      - "5900:5900"  # Direct VNC access
+      - "6080:6080"  # noVNC web interface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9990/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+networks:
+  bytebot-network:
+    driver: bridge
+
+volumes:
+  bytebot_desktop_data:
+  bytebot_downloads:

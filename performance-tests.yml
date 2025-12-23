@@ -1,0 +1,56 @@
+config:
+  target: 'http://localhost:4000'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: Warm up phase
+    - duration: 120
+      arrivalRate: 10
+      name: Load testing phase
+    - duration: 60
+      arrivalRate: 20
+      name: Stress testing phase
+    - duration: 30
+      arrivalRate: 50
+      name: Peak load testing
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+
+scenarios:
+  - name: 'Health check'
+    weight: 20
+    requests:
+      - get:
+          url: '/health'
+
+  - name: 'API health check'
+    weight: 30
+    requests:
+      - get:
+          url: '/api/health'
+
+  - name: 'Computer use endpoint'
+    weight: 25
+    requests:
+      - post:
+          url: '/api/computer-use/action'
+          json:
+            action: 'screenshot'
+            parameters: {}
+
+  - name: 'Task creation'
+    weight: 15
+    requests:
+      - post:
+          url: '/api/tasks'
+          json:
+            title: 'Performance test task'
+            description: 'Testing system performance under load'
+            priority: 'medium'
+
+  - name: 'Get tasks'
+    weight: 10
+    requests:
+      - get:
+          url: '/api/tasks'

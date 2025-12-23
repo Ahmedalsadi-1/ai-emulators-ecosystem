@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  kali-desktop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kali-desktop
+    ports:
+      - "5901:5901"  # VNC port
+      - "6080:6080"  # noVNC web interface
+    volumes:
+      - ./workspace:/root/workspace
+      - ./memory:/tmp/kali-memory  # Persistent memory storage
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker-in-Docker
+    environment:
+      - DISPLAY=:1
+      - VNC_PASSWORD=kali
+      - KALI_MULTIMODAL_AI=true
+    restart: unless-stopped
+    privileged: true  # Required for some security tools
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      - kali-network
+    healthcheck:
+      test: ["CMD", "pgrep", "Xvfb"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  kali-mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: kali-mcp-server
+    ports:
+      - "9991:9991"  # MCP server port
+    volumes:
+      - ./workspace:/workspace
+      - ./memory:/tmp/kali-memory  # Shared memory with desktop
+      - ./screenshots:/tmp/kali-screenshots  # Screenshot storage
+    environment:
+      - KALI_DESKTOP_URL=http://kali-desktop:6080
+      - VNC_HOST=kali-desktop
+      - VNC_PORT=5901
+      - VNC_PASSWORD=kali
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - MEMORY_DIR=/tmp/kali-memory
+      - SCREENSHOT_DIR=/tmp/kali-screenshots
+    depends_on:
+      kali-desktop:
+        condition: service_healthy
+    networks:
+      - kali-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('MCP server health check')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: AI Model Server for local inference
+  ai-model-server:
+    image: ollama/ollama:latest
+    container_name: kali-ai-models
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ai-models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - kali-network
+    restart: unless-stopped
+    profiles:
+      - ai-local  # Only start when explicitly requested
+
+networks:
+  kali-network:
+    driver: bridge

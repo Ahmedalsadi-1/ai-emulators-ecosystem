@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postiz-app:
+    build:
+      context: ./postiz-app
+      dockerfile: Dockerfile.optimized
+      target: production
+    container_name: postiz-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=9000
+      - DATABASE_URL=postgresql://postiz:password@postgres:5432/postiz
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=turix-postiz-jwt-secret-2024
+      - FRONTEND_URL=http://localhost:9000
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:9000
+      - BACKEND_INTERNAL_URL=http://localhost:9000
+      - STORAGE_PROVIDER=local
+      - UPLOAD_DIRECTORY=/app/uploads
+      - NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY=/uploads
+      - ENCRYPTION_KEY=turix-postiz-encryption-key-2024
+      - IS_GENERAL=true
+      - API_LIMIT=30
+    volumes:
+      - postiz_uploads:/app/uploads
+      - postiz_logs:/app/logs
+    ports:
+      - "9000:9000"
+    networks:
+      - default
+    # Depends on external postgres and redis services
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  default:
+    external: true
+    name: future-app_default
+
+volumes:
+  postiz_uploads:
+  postiz_logs:

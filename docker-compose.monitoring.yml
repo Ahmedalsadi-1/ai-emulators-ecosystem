@@ -1,0 +1,52 @@
+version: '3.8'
+
+# Enhanced Monitoring API Service for Projects/Monitoring Tabs Integration
+
+services:
+  # ==========================================
+  # Monitoring API Service - New Addition
+  # ==========================================
+
+  monitoring-api:
+    build:
+      context: ./monitoring-api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PROMETHEUS_URL=http://prometheus:9090
+      - GRAFANA_URL=http://grafana:3000
+      - LOKI_URL=http://loki:3100
+      - MCP_REGISTRY_URL=http://mcp-registry:8002
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - redis
+      - prometheus
+      - grafana
+      - loki
+      - mcp-registry
+    networks:
+      - monitoring_network
+      - mcp_network
+      - database_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - monitoring
+      - infrastructure
+
+# Add to existing networks
+networks:
+  monitoring_network:
+    # existing config
+  mcp_network:
+    # existing config
+  database_network:
+    # existing config

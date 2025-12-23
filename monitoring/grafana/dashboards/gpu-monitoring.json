@@ -1,0 +1,115 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AI Emulators Ecosystem - GPU Monitoring",
+    "tags": ["ai-ecosystem", "gpu", "nvidia"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "GPU Utilization by Device",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "gpu_utilization",
+            "legendFormat": "GPU {{gpu}} Utilization %",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "GPU Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "gpu_memory_used_bytes / gpu_memory_total_bytes * 100",
+            "legendFormat": "GPU {{gpu}} Memory %",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "GPU Temperature",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "gpu_temperature_celsius",
+            "legendFormat": "GPU {{gpu}} Temperature °C",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "GPU Power Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "gpu_power_draw_watts",
+            "legendFormat": "GPU {{gpu}} Power W",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "GPU Memory Bandwidth",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(gpu_memory_bandwidth_bytes[5m])",
+            "legendFormat": "GPU {{gpu}} Memory BW",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 8
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

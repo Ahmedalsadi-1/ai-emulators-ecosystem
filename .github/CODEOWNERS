@@ -1,0 +1,54 @@
+# Code Owners for AI Emulators Ecosystem
+# This file defines who is responsible for reviewing code changes in different parts of the repository
+
+# Global owners - must review all changes
+* @ai-ecosystem-maintainers
+
+# AIOS (AI Operating System) - Core AI/ML functionality
+/AIOS/ @ai-ecosystem-ai-team @ai-ecosystem-maintainers
+
+# ByteBot (Computer Control & Automation)
+/bytebot/ @ai-ecosystem-automation-team @ai-ecosystem-maintainers
+
+# Factif-AI (Test Automation & Quality Assurance)
+/factif-ai/ @ai-ecosystem-testing-team @ai-ecosystem-maintainers
+
+# Social Media Platforms
+/postiz-app/ @ai-ecosystem-social-team @ai-ecosystem-maintainers
+/onlysnarf/ @ai-ecosystem-social-team @ai-ecosystem-maintainers
+
+# Content Creation & Video Processing
+/reels-clips-automator/ @ai-ecosystem-content-team @ai-ecosystem-maintainers
+/Wan2GP/ @ai-ecosystem-content-team @ai-ecosystem-maintainers
+
+# Open-Interface & macOS-use (Cross-platform automation)
+/Open-Interface/ @ai-ecosystem-automation-team @ai-ecosystem-maintainers
+/macOS-use/ @ai-ecosystem-automation-team @ai-ecosystem-maintainers
+
+# Infrastructure & DevOps
+/docker/ @ai-ecosystem-infra-team @ai-ecosystem-devops-team
+/helm/ @ai-ecosystem-infra-team @ai-ecosystem-devops-team
+/nginx/ @ai-ecosystem-infra-team @ai-ecosystem-devops-team
+/monitoring/ @ai-ecosystem-infra-team @ai-ecosystem-devops-team
+
+# MCP (Model Context Protocol) Registry
+/mcp-registry/ @ai-ecosystem-infra-team @ai-ecosystem-maintainers
+
+# CI/CD and GitHub Configuration
+/.github/ @ai-ecosystem-devops-team @ai-ecosystem-maintainers
+/scripts/ @ai-ecosystem-devops-team @ai-ecosystem-maintainers
+
+# Configuration Files
+/*.yml @ai-ecosystem-devops-team
+/*.yaml @ai-ecosystem-devops-team
+/*.json @ai-ecosystem-devops-team
+/*.config.* @ai-ecosystem-devops-team
+
+# Documentation
+/docs/ @ai-ecosystem-maintainers
+/*.md @ai-ecosystem-maintainers
+
+# Package management and dependencies
+/package*.json @ai-ecosystem-devops-team
+/requirements*.txt @ai-ecosystem-devops-team
+/.pre-commit-config.yaml @ai-ecosystem-devops-team

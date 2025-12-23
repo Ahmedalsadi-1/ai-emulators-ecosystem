@@ -1,0 +1,25 @@
+{
+  "name": "turix-unified-app",
+  "version": "1.0.0",
+  "description": "TuriX - Unified AI Ecosystem Assistant",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "electron": "^27.3.11"
+  },
+  "build": {
+    "appId": "com.turix.ai",
+    "productName": "TuriX",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js"
+    ]
+  }
+}

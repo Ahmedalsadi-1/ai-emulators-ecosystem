@@ -1,0 +1,200 @@
+version: '3.8'
+
+# Minimal TuriX Ecosystem - Core Services Only
+# This focuses on getting the essential services running for the unified app
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  openai_api_key:
+    file: ./secrets/openai_api_key.txt
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ai_ecosystem
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    secrets:
+      - source: postgres_password
+        target: postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ai_ecosystem"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # AIOS - AI Operating System
+  aios:
+    build:
+      context: ./AIOS
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "8010:8000"
+      - "8011:8001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://aios:password@postgres:5432/aios
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai_network
+      - database_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+
+  # Bytebot - Desktop Automation
+  bytebot:
+    build:
+      context: ./bytebot
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "4000:4000"
+      - "4001:4001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://bytebot:password@postgres:5432/bytebot
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - automation_network
+      - database_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # Postiz - Social Media Management
+  postiz:
+    build:
+      context: ./postiz-app
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "9000:9000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postiz:password@postgres:5432/postiz
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - social_network
+      - database_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Orchestrator - API Gateway
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - AIOS_URL=http://aios:8000
+      - BYTEBOT_URL=http://bytebot:4000
+      - POSTIZ_URL=http://postiz:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      aios:
+        condition: service_healthy
+      bytebot:
+        condition: service_healthy
+    networks:
+      - web_network
+      - ai_network
+      - automation_network
+      - social_network
+      - database_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # Unified Frontend
+  unified-app:
+    build:
+      context: ./unified-app
+      dockerfile: Dockerfile
+    ports:
+      - "9999:80"
+    depends_on:
+      - orchestrator
+    networks:
+      - web_network
+
+networks:
+  ai_network:
+    driver: bridge
+  automation_network:
+    driver: bridge
+  social_network:
+    driver: bridge
+  database_network:
+    driver: bridge
+  web_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

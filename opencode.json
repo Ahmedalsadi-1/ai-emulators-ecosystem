@@ -1,0 +1,482 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/big-pickle",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+    "gh_grep": {
+      "type": "remote",
+      "url": "https://mcp.grep.app",
+      "enabled": true
+    },
+    "magic_mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@21st-dev/magic@latest"],
+      "enabled": true,
+        "environment": {
+          "TWENTY_FIRST_API_KEY": "YOUR_TWENTY_FIRST_API_KEY"
+        }
+    },
+    "apple_mcp": {
+      "type": "local",
+      "command": ["npx", "apple-mcp"],
+      "enabled": true
+    },
+    "blender_mcp": {
+      "type": "local",
+      "command": ["uvx", "blender-mcp"],
+      "enabled": true
+    },
+    "mobile_mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@mobilenext/mobile-mcp@latest"],
+      "enabled": true
+    },
+    "filesystem_mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/albsheralsadi/Desktop"],
+      "enabled": true
+    },
+    "sequential_thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": true
+    },
+    "bytebot": {
+      "type": "remote",
+      "url": "http://localhost:9990/mcp",
+      "enabled": true
+    },
+    "browseros": {
+      "type": "remote",
+      "url": "http://127.0.0.1:9115/mcp",
+      "enabled": true
+    },
+    "browser-tools-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@agentdeskai/browser-tools-mcp@latest"],
+      "enabled": true
+    },
+    "gbox-android": {
+      "type": "local",
+      "command": ["npx", "-y", "@gbox.ai/mcp-server@latest"],
+      "enabled": true
+    },
+    "git-mcp": {
+      "type": "local",
+      "command": ["npx", "@modelcontextprotocol/server-git"],
+      "enabled": true
+    },
+    "sqlite-mcp": {
+      "type": "local",
+      "command": ["npx", "@modelcontextprotocol/server-sqlite"],
+      "enabled": true,
+      "environment": {
+        "SQLITE_DB_PATH": "/Users/albsheralsadi/tradesv3.dryrun.sqlite"
+      }
+    },
+    "github.com/NightTrek/Software-planning-mcp": {
+      "type": "local",
+      "command": ["node", "/Users/albsheralsadi/mcp-servers/Software-planning-mcp/build/index.js"],
+      "enabled": true
+    },
+    "github.com/supabase-community/supabase-mcp": {
+      "type": "local",
+      "command": ["node", "/Users/albsheralsadi/Documents/Cline/MCP/supabase-mcp/packages/mcp-server-supabase/dist/transports/stdio.js"],
+      "enabled": true,
+        "environment": {
+          "SUPABASE_ACCESS_TOKEN": "YOUR_SUPABASE_ACCESS_TOKEN"
+        }
+    },
+    "github.com/github/github-mcp-server": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
+      "enabled": true,
+        "environment": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
+        }
+    },
+    "github.com/NightTrek/Ollama-mcp": {
+      "type": "local",
+      "command": ["node", "/Users/albsheralsadi/Documents/Cline/MCP/Ollama-mcp/build/index.js"],
+      "enabled": true,
+      "environment": {
+        "OLLAMA_HOST": "http://127.0.0.1:11434"
+      }
+    },
+    "zapier-ai-content": {
+      "type": "remote",
+      "url": "https://mcp.zapier.com/api/mcp/s/YzQ3NDM0YzctZGQ2NS00OTVkLTllMjctNWRjNTU2N2I2MWM5OmFjYzgzN2UxLWE4NGUtNDM0Yi1iMDExLWRhYjM0NWI1N2JkNQ==/mcp",
+      "enabled": true
+    },
+    "zapier-google": {
+      "type": "remote",
+      "url": "https://mcp.zapier.com/api/mcp/s/MDM5NGFmOWMtNzhmYS00ZmE3LWFhMjYtODgxZDFiNjc0OGFkOjgwM2QxZTc0LTg5NDYtNGVmZC1hNWRhLWExODlkNTgxNTBmZQ==/mcp",
+      "enabled": true
+    },
+    "DEXTO": {
+      "type": "remote",
+      "url": "https://mcp.zapier.com/api/mcp/s/ZGJkYjg3MzUtZmYxMy00YWNiLTgzNjYtY2RiZDllZTdlMmQ4OjY1MzZhNmUwLWY5ZjMtNDg2OS1hMTQ0LWUzMzExYjc1YzZiYw==/mcp",
+      "enabled": true
+    },
+    "github.com/pashpashpash/mcp-taskmanager": {
+      "type": "local",
+      "command": ["node", "/Users/albsheralsadi/Documents/Cline/MCP/mcp-taskmanager/dist/index.js"],
+      "enabled": true
+    },
+    "postgresql-mcp": {
+      "type": "local",
+      "command": ["npx", "postgresql-mcp"],
+      "enabled": true,
+      "environment": {
+        "DATABASE_URL": "postgresql://postgres:secure_postgres_password_2024@localhost:5432/postgres"
+      }
+    },
+    "mysql-mcp": {
+      "type": "local",
+      "command": ["npx", "mysql-mcp"],
+      "enabled": true,
+      "environment": {
+        "DATABASE_URL": "mysql://user:password@localhost:3306/dbname"
+      }
+    },
+    "duckdb-mcp": {
+      "type": "local",
+      "command": ["npx", "duckdb-mcp"],
+      "enabled": true,
+      "environment": {
+        "DUCKDB_PATH": "/Users/albsheralsadi/mcp_duckdb.db"
+      }
+    },
+    "gitlab-mcp": {
+      "type": "local",
+      "command": ["npx", "gitlab-mcp"],
+      "enabled": true,
+        "environment": {
+          "GITLAB_ACCESS_TOKEN": "YOUR_GITLAB_ACCESS_TOKEN"
+        }
+    },
+    "linear-mcp": {
+      "type": "local",
+      "command": ["npx", "linear-mcp"],
+      "enabled": true,
+        "environment": {
+          "LINEAR_API_KEY": "YOUR_LINEAR_API_KEY"
+        }
+    },
+    "discord-mcp": {
+      "type": "local",
+      "command": ["npx", "discord-mcp"],
+      "enabled": true,
+        "environment": {
+          "DISCORD_BOT_TOKEN": "YOUR_DISCORD_BOT_TOKEN"
+        }
+    },
+    "telegram-mcp": {
+      "type": "local",
+      "command": ["npx", "telegram-mcp"],
+      "enabled": true,
+        "environment": {
+          "TELEGRAM_BOT_TOKEN": "YOUR_TELEGRAM_BOT_TOKEN"
+        }
+    },
+    "whatsapp-mcp": {
+      "type": "local",
+      "command": ["npx", "whatsapp-mcp"],
+      "enabled": true,
+      "environment": {
+        "WHATSAPP_API_KEY": "your_whatsapp_api_key"
+      }
+    },
+    "email-mcp": {
+      "type": "local",
+      "command": ["npx", "email-mcp"],
+      "enabled": true,
+        "environment": {
+          "EMAIL_API_KEY": "YOUR_EMAIL_API_KEY"
+        }
+    },
+    "weather-mcp": {
+      "type": "local",
+      "command": ["npx", "@modelcontextprotocol/server-weather"],
+      "enabled": true
+    },
+    "news-mcp": {
+      "type": "local",
+      "command": ["npx", "news-mcp"],
+      "enabled": true,
+        "environment": {
+          "NEWS_API_KEY": "YOUR_NEWS_API_KEY"
+        }
+    },
+    "code-execution-mcp": {
+      "type": "local",
+      "command": ["npx", "code-execution-mcp"],
+      "enabled": true
+    },
+    "kali-desktop": {
+      "type": "local",
+      "command": ["node", "/Users/albsheralsadi/.opencode/kali-mcp-server.js"],
+      "enabled": true
+    }
+  },
+  "provider": {
+    "ollama-local": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (Local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      },
+      "models": {
+        "llama3.2:3b": {
+          "name": "Llama 3.2 3B (Local)"
+        },
+        "llama3.2:latest": {
+          "name": "Llama 3.2 Latest (Local)"
+        },
+        "gemma2:2b": {
+          "name": "Gemma2 2B (Local)"
+        },
+        "llava:latest": {
+          "name": "LLaVA Latest (Local)"
+        },
+        "qwen2.5-coder:7b": {
+          "name": "Qwen2.5 Coder 7B (Local)"
+        },
+        "codellama:7b": {
+          "name": "CodeLlama 7B (Local)"
+        },
+        "qwen3-vl:4b": {
+          "name": "Qwen3 VL 4B (Local)"
+        },
+        "devstral-small-2:24b-cloud": {
+          "name": "Devstral Small 2 24B (Cloud)"
+        },
+        "glm-4.6:cloud": {
+          "name": "GLM-4.6 (Cloud)"
+        },
+        "gpt-oss:120b-cloud": {
+          "name": "GPT-OSS 120B (Cloud)"
+        },
+        "qwen3-coder:480b-cloud": {
+          "name": "Qwen3 Coder 480B (Cloud)"
+        },
+        "deepseek-v3.1:671b-cloud": {
+          "name": "DeepSeek V3.1 671B (Cloud)"
+        },
+        "qwen3-vl:235b-cloud": {
+          "name": "Qwen3 VL 235B (Cloud)"
+        },
+        "gemini-3-pro-preview:latest": {
+          "name": "Gemini 3 Pro Preview (Cloud)"
+        },
+        "minimax-m2:cloud": {
+          "name": "MiniMax M2 (Cloud)"
+        }
+      }
+    }
+  },
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "description": "Full development agent with intelligent subagent delegation",
+      "prompt": "{file:./prompts/build.txt}",
+      "model": "opencode/big-pickle",
+      "temperature": 0.3,
+      "tools": {
+        "write": true,
+        "edit": true,
+        "bash": true
+      }
+    },
+    "plan": {
+      "mode": "primary",
+      "description": "Strategic planning agent with specialized analysis delegation",
+      "prompt": "{file:./prompts/plan.txt}",
+      "model": "opencode/big-pickle",
+      "temperature": 0.1,
+      "permission": {
+        "write": "ask",
+        "edit": "ask",
+        "bash": "ask"
+      }
+    },
+    "data": {
+      "mode": "primary",
+      "description": "Data analysis specialist with database orchestration capabilities",
+      "prompt": "{file:./prompts/data.txt}",
+      "model": "opencode/big-pickle",
+      "temperature": 0.1,
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false
+      },
+      "permission": {
+        "webfetch": "allow"
+      }
+    },
+    "automation": {
+      "mode": "primary",
+      "description": "Automation specialist with orchestration delegation",
+      "prompt": "{file:./prompts/automation.txt}",
+      "model": "opencode/big-pickle",
+      "temperature": 0.3,
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false
+      },
+      "permission": {
+        "webfetch": "allow"
+      }
+    },
+    "security": {
+      "mode": "primary",
+      "description": "Security analysis specialist with comprehensive audit delegation",
+      "prompt": "{file:./prompts/security.txt}",
+      "model": "opencode/big-pickle",
+      "temperature": 0.1,
+      "tools": {
+        "write": false,
+        "edit": false,
+        "bash": false
+      },
+      "permission": {
+        "webfetch": "allow"
+      }
+    },
+    "github-devops": {
+      "mode": "subagent",
+      "description": "GitHub operations, Git management, DevOps workflows, and project planning",
+      "temperature": 0.2,
+      "tools": {
+        "git-mcp": true,
+        "github.com/github/github-mcp-server": true,
+        "gitlab-mcp": true,
+        "linear-mcp": true,
+        "github.com/NightTrek/Software-planning-mcp": true,
+        "github.com/pashpashpash/mcp-taskmanager": true
+      }
+    },
+    "database-pro": {
+      "mode": "subagent",
+      "description": "Database operations, SQL queries, and data analysis",
+      "temperature": 0.1,
+      "tools": {
+        "sqlite-mcp": true,
+        "postgresql-mcp": true,
+        "mysql-mcp": true,
+        "duckdb-mcp": true,
+        "write": false,
+        "edit": false,
+        "bash": false
+      }
+    },
+    "communication-hub": {
+      "mode": "subagent",
+      "description": "Communication platforms, messaging, social media automation, and content management",
+      "temperature": 0.3,
+      "tools": {
+        "discord-mcp": true,
+        "telegram-mcp": true,
+        "whatsapp-mcp": true,
+        "email-mcp": true,
+        "zapier-ai-content": true,
+        "news-mcp": true,
+        "write": true,
+        "edit": false,
+        "bash": false
+      }
+    },
+    "automation-specialist": {
+      "mode": "subagent",
+      "description": "Browser automation, web scraping, and mobile app testing",
+      "temperature": 0.2,
+      "tools": {
+        "browser-tools-mcp": true,
+        "browseros": true,
+        "mobile_mcp": true,
+        "gbox-android": true
+      }
+    },
+    "ai-integration": {
+      "mode": "subagent",
+      "description": "AI integration, code execution, and advanced development tools",
+      "temperature": 0.4,
+      "tools": {
+        "github.com/NightTrek/Ollama-mcp": true,
+        "code-execution-mcp": true,
+        "sequential_thinking": true,
+        "magic_mcp": true
+      }
+    },
+    "external-services": {
+      "mode": "subagent",
+      "description": "External services, APIs, and third-party integrations",
+      "temperature": 0.3,
+      "tools": {
+        "zapier-google": true,
+        "DEXTO": true,
+        "weather-mcp": true,
+        "write": true,
+        "edit": false,
+        "bash": false
+      }
+    },
+    "system-admin": {
+      "mode": "subagent",
+      "description": "System administration, file management, and desktop environments",
+      "temperature": 0.2,
+      "tools": {
+        "filesystem_mcp": true,
+        "apple_mcp": true,
+        "github.com/supabase-community/supabase-mcp": true
+      }
+    },
+    "research-analyst": {
+      "mode": "subagent",
+      "description": "Advanced search, code analysis, and research capabilities",
+      "temperature": 0.3,
+      "tools": {
+        "context7": true,
+        "gh_grep": true,
+        "write": false,
+        "edit": false,
+        "bash": false
+      }
+    },
+    "creative-developer": {
+      "mode": "subagent",
+      "description": "Creative development, 3D modeling, and multimedia content creation",
+      "temperature": 0.6,
+      "tools": {
+        "blender_mcp": true,
+        "apple_mcp": true,
+        "filesystem_mcp": true
+      }
+    },
+    "security-auditor": {
+      "mode": "subagent",
+      "description": "Security analysis, penetration testing, and Kali Linux operations",
+      "temperature": 0.1,
+      "tools": {
+        "kali-desktop": true,
+        "bytebot": true,
+        "bash": true
+      },
+      "permission": {
+        "bash": {
+          "nmap*": "allow",
+          "nikto*": "allow",
+          "sqlmap*": "allow",
+          "metasploit*": "ask",
+          "*": "ask"
+        }
+      }
+    }
+  }
+}

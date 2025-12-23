@@ -1,0 +1,16 @@
+{
+  "name": "factif-ai-minimal",
+  "version": "1.0.0",
+  "description": "Minimal Factif-AI testing service for TuriX integration",
+  "main": "factif-ai-minimal.js",
+  "scripts": {
+    "start": "node factif-ai-minimal.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "keywords": ["testing", "automation", "turi-x"],
+  "author": "TuriX Team",
+  "license": "MIT"
+}

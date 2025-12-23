@@ -1,0 +1,66 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway (ByteBot Agent)
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['bytebot-agent:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # AIOS Service
+  - job_name: 'aios'
+    static_configs:
+      - targets: ['aios:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Factif-AI Service
+  - job_name: 'factif-ai'
+    static_configs:
+      - targets: ['factif-ai:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # ByteBot UI
+  - job_name: 'bytebot-ui'
+    static_configs:
+      - targets: ['bytebot-ui:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 60s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 60s
+
+  # Nginx
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: '/nginx_status'
+    scrape_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093

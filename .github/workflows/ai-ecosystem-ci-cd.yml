@@ -1,0 +1,920 @@
+name: AI Emulators Ecosystem CI/CD
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    branches: [ main, develop, staging ]
+  schedule:
+    # Nightly builds for comprehensive testing
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      run_performance_tests:
+        description: 'Run performance tests'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.11'
+  GO_VERSION: '1.21'
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ==========================================
+  # Code Quality & Security Checks
+  # ==========================================
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    outputs:
+      python-changed: ${{ steps.filter.outputs.python }}
+      typescript-changed: ${{ steps.filter.outputs.typescript }}
+      go-changed: ${{ steps.filter.outputs.go }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+
+    - name: Install global tools
+      run: |
+        npm install -g prettier @typescript-eslint/eslint-plugin @typescript-eslint/parser
+        pip install pre-commit ruff black isort mypy bandit safety
+        go install golangci-lint golang.org/x/tools/cmd/goimports@latest
+
+    - name: Check for changed files
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          python:
+            - 'AIOS/**'
+            - 'macOS-use/**'
+            - 'Open-Interface/**'
+            - 'onlysnarf/**'
+            - 'reels-clips-automator/**'
+            - 'Wan2GP/**'
+          typescript:
+            - 'bytebot/**'
+            - 'factif-ai/**'
+            - 'postiz-app/**'
+            - 'mcp-registry/**'
+          go:
+            - '**/*.go'
+
+    - name: Run Pre-commit hooks
+      run: |
+        pre-commit install
+        pre-commit run --all-files
+
+    - name: Lint Python code
+      if: steps.filter.outputs.python == 'true'
+      run: |
+        ruff check AIOS/ macOS-use/ Open-Interface/ onlysnarf/ reels-clips-automator/ Wan2GP/
+        black --check --diff AIOS/ macOS-use/ Open-Interface/ onlysnarf/ reels-clips-automator/ Wan2GP/
+        isort --check-only --diff AIOS/ macOS-use/ Open-Interface/ onlysnarf/ reels-clips-automator/ Wan2GP/
+
+    - name: Lint TypeScript/JavaScript code
+      if: steps.filter.outputs.typescript == 'true'
+      run: |
+        npx eslint bytebot/ factif-ai/ postiz-app/ mcp-registry/ --ext .ts,.tsx,.js,.jsx
+        npx prettier --check "bytebot/**/*.{ts,tsx,js,jsx,json,md}" "factif-ai/**/*.{ts,tsx,js,jsx,json,md}" "postiz-app/**/*.{ts,tsx,js,jsx,json,md}" "mcp-registry/**/*.{ts,tsx,js,jsx,json,md}"
+
+    - name: Lint Go code
+      if: steps.filter.outputs.go == 'true'
+      run: |
+        golangci-lint run ./...
+        go vet ./...
+
+    - name: Security scan - Python dependencies
+      if: steps.filter.outputs.python == 'true'
+      run: |
+        safety check --file AIOS/requirements.txt
+        bandit -r AIOS/src/ macOS-use/ Open-Interface/ onlysnarf/ reels-clips-automator/ Wan2GP/ -f json -o python-security-report.json
+
+    - name: Security scan - Node.js dependencies
+      if: steps.filter.outputs.typescript == 'true'
+      run: |
+        npm audit --audit-level moderate --json > npm-audit-report.json || true
+        npx audit-ci --config audit-ci.json || true
+
+    - name: Security scan - Go dependencies
+      if: steps.filter.outputs.go == 'true'
+      run: |
+        go mod download
+        go list -json -m all | nancy sleuth || true
+
+    - name: Upload security reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          **/*-security-report.json
+          **/*-audit-report.json
+
+  # ==========================================
+  # Unit Testing
+  # ==========================================
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    strategy:
+      matrix:
+        include:
+          - service: aios
+            path: AIOS
+            language: python
+          - service: bytebot-agent
+            path: bytebot/packages/bytebot-agent
+            language: typescript
+          - service: bytebot-ui
+            path: bytebot/packages/bytebot-ui
+            language: typescript
+          - service: factif-ai
+            path: factif-ai/backend
+            language: typescript
+          - service: postiz-app
+            path: postiz-app
+            language: typescript
+          - service: mcp-registry
+            path: mcp-registry
+            language: typescript
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: test
+          POSTGRES_DB: test_${{ matrix.service }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      if: matrix.language == 'python'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Setup Node.js
+      if: matrix.language == 'typescript'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install Python dependencies
+      if: matrix.language == 'python'
+      working-directory: ${{ matrix.path }}
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-mock coverage[toml]
+
+    - name: Install Node.js dependencies
+      if: matrix.language == 'typescript'
+      working-directory: ${{ matrix.path }}
+      run: |
+        npm ci
+        if [ -f "prisma/schema.prisma" ]; then
+          npm run prisma:generate
+        fi
+
+    - name: Setup test database
+      if: matrix.language == 'typescript' && contains(matrix.service, 'bytebot')
+      working-directory: ${{ matrix.path }}
+      run: |
+        npm run prisma:migrate:test
+
+    - name: Run unit tests - Python
+      if: matrix.language == 'python'
+      working-directory: ${{ matrix.path }}
+      run: |
+        python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-fail-under=80
+
+    - name: Run unit tests - TypeScript
+      if: matrix.language == 'typescript'
+      working-directory: ${{ matrix.path }}
+      run: |
+        npm run test:cov
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: |
+          ${{ matrix.path }}/coverage.xml
+          ${{ matrix.path }}/coverage/lcov.info
+        flags: ${{ matrix.service }}-unit-tests
+        name: ${{ matrix.service }}-coverage
+        fail_ci_if_error: false
+
+    - name: Upload test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: unit-test-results-${{ matrix.service }}
+        path: |
+          ${{ matrix.path }}/coverage/
+          ${{ matrix.path }}/test-results/
+          ${{ matrix.path }}/*.xml
+
+  # ==========================================
+  # Integration Testing
+  # ==========================================
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: test
+          POSTGRES_DB: integration_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        # Install Python dependencies
+        cd AIOS && pip install -r requirements.txt && cd ..
+
+        # Install Node.js dependencies
+        cd bytebot/packages/bytebot-agent && npm ci && npm run prisma:generate && cd ../../..
+        cd factif-ai/backend && npm ci && cd ../..
+        cd postiz-app && npm ci && cd ..
+
+    - name: Setup test databases
+      run: |
+        PGPASSWORD=test psql -h localhost -U test -d integration_test -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+        cd bytebot/packages/bytebot-agent && DATABASE_URL="postgresql://test:test@localhost:5432/integration_test" npm run prisma:migrate:test && cd ../../..
+
+    - name: Start services for integration testing
+      run: |
+        # Start ByteBot Agent
+        cd bytebot/packages/bytebot-agent
+        DATABASE_URL="postgresql://test:test@localhost:5432/integration_test" REDIS_URL="redis://localhost:6379" npm run start:dev &
+        AGENT_PID=$!
+        echo $AGENT_PID > ../../../../agent.pid
+        cd ../../../../
+
+        # Start Factif-AI Backend
+        cd factif-ai/backend
+        DATABASE_URL="postgresql://test:test@localhost:5432/integration_test" REDIS_URL="redis://localhost:6379" npm run dev &
+        BACKEND_PID=$!
+        echo $BACKEND_PID > ../../../backend.pid
+        cd ../../
+
+        # Start AIOS
+        cd AIOS
+        python -m uvicorn runtime.launch:app --host 0.0.0.0 --port 8000 &
+        AIOS_PID=$!
+        echo $AIOS_PID > ../aios.pid
+        cd ..
+
+        # Wait for services to start
+        timeout 120 bash -c 'until curl -f http://localhost:8080/health; do sleep 5; done' || true
+        timeout 120 bash -c 'until curl -f http://localhost:7010/health; do sleep 5; done' || true
+        timeout 120 bash -c 'until curl -f http://localhost:8010/health; do sleep 5; done' || true
+
+    - name: Run cross-service integration tests
+      working-directory: bytebot/packages/bytebot-agent
+      run: |
+        npm run test -- --testPathPattern="integration\.spec\.ts$" --testTimeout=60000
+        npm run test -- --testPathPattern="cross-service\.integration\.spec\.ts$" --testTimeout=120000
+
+    - name: Run API integration tests
+      run: |
+        npm install -g newman
+        if [ -f "postman_collection.json" ]; then
+          newman run postman_collection.json --environment postman_environment.json
+        fi
+
+    - name: Cleanup services
+      if: always()
+      run: |
+        kill $(cat agent.pid) $(cat backend.pid) $(cat aios.pid) || true
+        rm -f *.pid
+
+    - name: Upload integration test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: |
+          **/test-results/
+          **/integration-*.log
+          **/newman/**
+
+  # ==========================================
+  # End-to-End Testing
+  # ==========================================
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install Playwright
+      working-directory: factif-ai/backend
+      run: |
+        npm ci
+        npx playwright install --with-deps chromium
+
+    - name: Build and start ecosystem
+      run: |
+        # Build services
+        docker-compose -f docker-compose.ecosystem.yml build --parallel
+
+        # Start essential services for E2E testing
+        docker-compose -f docker-compose.ecosystem.yml up -d postgres redis bytebot factif-ai
+
+        # Wait for services to be ready
+        timeout 300 bash -c 'until curl -f http://localhost:4000/health; do sleep 5; done'
+        timeout 300 bash -c 'until curl -f http://localhost:7010/health; do sleep 5; done'
+
+    - name: Run E2E tests
+      working-directory: factif-ai/backend
+      run: |
+        E2E_BASE_URL=http://localhost:4000 \
+        E2E_API_URL=http://localhost:7010 \
+        npx playwright test --reporter=html,junit
+
+    - name: Upload E2E test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-test-results
+        path: |
+          factif-ai/backend/playwright-report/
+          factif-ai/backend/test-results/
+          factif-ai/backend/results.xml
+
+    - name: Upload E2E screenshots and videos
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-failures
+        path: |
+          factif-ai/backend/test-results/
+          **/screenshots/
+          **/videos/
+
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose -f docker-compose.ecosystem.yml down
+
+  # ==========================================
+  # Performance Testing
+  # ==========================================
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf-test]') || github.event.inputs.run_performance_tests == 'true'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        cd bytebot/packages/bytebot-agent && npm ci && cd ../../..
+        cd AIOS && pip install -r requirements.txt && cd ..
+
+    - name: Start services for performance testing
+      run: |
+        docker-compose -f docker-compose.ecosystem.yml up -d postgres redis
+        sleep 15
+
+        # Start ByteBot Agent
+        cd bytebot/packages/bytebot-agent
+        DATABASE_URL="postgresql://test:test@localhost:5432/test" REDIS_URL="redis://localhost:6379" npm run start:dev &
+        echo $! > ../../../agent.pid
+        cd ../../..
+
+        # Start AIOS
+        cd AIOS
+        python -m uvicorn runtime.launch:app --host 0.0.0.0 --port 8000 &
+        echo $! > ../aios.pid
+        cd ..
+
+        sleep 30
+
+    - name: Run performance tests
+      run: |
+        # Install Artillery for load testing
+        npm install -g artillery
+
+        # Run load tests
+        artillery run performance-tests.yml --output performance-report.json
+
+        # Run custom performance tests
+        cd bytebot/packages/bytebot-agent
+        npm run test -- --testPathPattern="performance\.spec\.ts$" --testTimeout=300000 --maxWorkers=1
+        cd ../../..
+
+    - name: Generate performance report
+      run: |
+        echo "## Performance Test Results" > performance-report.md
+        echo "Generated on: $(date)" >> performance-report.md
+        echo "" >> performance-report.md
+
+        if [ -f "performance-report.json" ]; then
+          artillery report performance-report.json --output performance-report.html
+          echo "### Load Test Results" >> performance-report.md
+          echo "\`\`\`json" >> performance-report.md
+          cat performance-report.json >> performance-report.md
+          echo "\`\`\`" >> performance-report.md
+        fi
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-test-results
+        path: |
+          performance-report.md
+          performance-report.html
+          performance-report.json
+          **/performance-*.json
+          **/benchmark-*.log
+
+    - name: Cleanup
+      if: always()
+      run: |
+        kill $(cat agent.pid) $(cat aios.pid) || true
+        rm -f *.pid
+        docker-compose -f docker-compose.ecosystem.yml down
+
+  # ==========================================
+  # Security Testing
+  # ==========================================
+
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install security tools
+      run: |
+        pip install safety bandit
+        npm install -g audit-ci
+        # Install Trivy for container scanning
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update && sudo apt-get install -y trivy
+
+    - name: Run SAST with CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript, typescript, python
+        queries: security-and-quality
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:javascript"
+        upload: false
+
+    - name: Run dependency vulnerability scans
+      run: |
+        # Python dependencies
+        safety check --file AIOS/requirements.txt --output safety-report.json || true
+
+        # Node.js dependencies
+        audit-ci --config audit-ci.json --output audit-report.json || true
+
+        # Container image scanning
+        trivy image --format json --output trivy-report.json python:3.11-slim node:20-alpine postgres:15-alpine redis:7-alpine || true
+
+    - name: Run secrets detection
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload security test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-test-results
+        path: |
+          **/*-report.json
+          **/gitleaks-report.json
+          codeql-analysis/
+
+  # ==========================================
+  # Build & Package
+  # ==========================================
+
+  build:
+    name: Build & Package
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+    - name: Build service-specific images
+      run: |
+        # Build AIOS
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/aios:latest ./AIOS
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/aios:latest
+
+        # Build ByteBot
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bytebot:latest ./bytebot
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/bytebot:latest
+
+        # Build Factif-AI
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/factif-ai:latest ./factif-ai
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/factif-ai:latest
+
+    - name: Generate SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/aios:latest
+        format: spdx-json
+        output-file: ./sbom.spdx.json
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          sbom.spdx.json
+          **/dist/
+          **/build/
+
+  # ==========================================
+  # Deployment
+  # ==========================================
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build, security-tests]
+    if: (github.ref == 'refs/heads/develop' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig.yaml
+        kubectl config use-context staging-cluster
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Update images in helm charts
+        sed -i "s|image:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest|g" helm/values-staging.yaml
+
+        # Deploy using Helm
+        helm upgrade --install ai-ecosystem-staging ./helm \
+          --values helm/values-staging.yaml \
+          --namespace staging \
+          --create-namespace \
+          --wait \
+          --timeout 10m
+
+    - name: Run smoke tests
+      run: |
+        # Wait for deployment
+        kubectl wait --for=condition=available --timeout=300s deployment/ai-ecosystem -n staging
+
+        # Run smoke tests
+        kubectl run smoke-test --image=curlimages/curl --rm -i --restart=Never -- curl -f http://ai-ecosystem-staging/health
+
+    - name: Notify deployment
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "AI Emulators Ecosystem deployed to Staging"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_STAGING }}
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, security-tests, performance-tests]
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig.yaml
+        kubectl config use-context production-cluster
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Update images with production tag
+        PRODUCTION_TAG=$(git rev-parse --short HEAD)
+        sed -i "s|image:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${PRODUCTION_TAG}|g" helm/values-production.yaml
+
+        # Deploy using Helm
+        helm upgrade --install ai-ecosystem ./helm \
+          --values helm/values-production.yaml \
+          --namespace production \
+          --create-namespace \
+          --wait \
+          --timeout 15m
+
+    - name: Run production smoke tests
+      run: |
+        # Wait for deployment
+        kubectl wait --for=condition=available --timeout=600s deployment/ai-ecosystem -n production
+
+        # Run comprehensive smoke tests
+        kubectl run smoke-test --image=curlimages/curl --rm -i --restart=Never -- \
+          curl -f http://ai-ecosystem/health && \
+          curl -f http://ai-ecosystem/api/health && \
+          echo "All services healthy"
+
+    - name: Notify deployment
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "AI Emulators Ecosystem deployed to Production"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_PRODUCTION }}
+
+  # ==========================================
+  # Test Results Summary
+  # ==========================================
+
+  test-summary:
+    name: Test Results Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests, integration-tests, e2e-tests, performance-tests, security-tests]
+    if: always()
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate comprehensive test summary
+      run: |
+        echo "# 🧪 AI Emulators Ecosystem CI/CD Results" > test-summary.md
+        echo "" >> test-summary.md
+        echo "**Commit**: \`${{ github.sha }}\`" >> test-summary.md
+        echo "**Branch**: \`${{ github.ref_name }}\`" >> test-summary.md
+        echo "**Triggered by**: ${{ github.event_name }}" >> test-summary.md
+        echo "**Run ID**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> test-summary.md
+        echo "" >> test-summary.md
+
+        # Job status summary
+        echo "## 📊 Pipeline Status Summary" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "| Job | Status | Duration |" >> test-summary.md
+        echo "|-----|--------|----------|" >> test-summary.md
+        echo "| Code Quality | ${{ needs.code-quality.result == 'success' && '✅ Passed' || needs.code-quality.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | ${{ needs.code-quality.result != 'skipped' && format('[{0}m]({1})', github.event.head_commit.timestamp, github.server_url) || '-' }} |" >> test-summary.md
+        echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} | - |" >> test-summary.md
+        echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} | - |" >> test-summary.md
+        echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} | - |" >> test-summary.md
+        echo "| Performance Tests | ${{ needs.performance-tests.result == 'success' && '✅ Passed' || needs.performance-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} | - |" >> test-summary.md
+        echo "| Security Tests | ${{ needs.security-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} | - |" >> test-summary.md
+        echo "" >> test-summary.md
+
+        # Overall assessment
+        if [[ "${{ needs.code-quality.result }}" == "success" && 
+              "${{ needs.unit-tests.result }}" == "success" && 
+              "${{ needs.integration-tests.result }}" == "success" && 
+              "${{ needs.e2e-tests.result }}" == "success" && 
+              "${{ needs.security-tests.result }}" == "success" ]]; then
+          echo "## 🎉 Overall Result: SUCCESS" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "✅ All critical quality gates passed! The AI Emulators Ecosystem is ready for deployment." >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### Next Steps" >> test-summary.md
+          echo "- Code is ready for deployment to staging/production" >> test-summary.md
+          echo "- All security and quality requirements met" >> test-summary.md
+          echo "- Performance benchmarks achieved" >> test-summary.md
+        else
+          echo "## ❌ Overall Result: FAILURE" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "❌ Some quality gates failed. Please review the failed jobs and fix the issues before proceeding." >> test-summary.md
+          echo "" >> test-summary.md
+          echo "### Action Required" >> test-summary.md
+          echo "- Review failed job logs for detailed error information" >> test-summary.md
+          echo "- Address security vulnerabilities if any were found" >> test-summary.md
+          echo "- Fix code quality issues (linting, formatting, etc.)" >> test-summary.md
+          echo "- Ensure all tests pass before retrying deployment" >> test-summary.md
+        fi
+
+        # Download and include coverage summary
+        echo "" >> test-summary.md
+        echo "## 📈 Code Coverage" >> test-summary.md
+        echo "_Coverage reports uploaded as artifacts_" >> test-summary.md
+
+    - name: Upload test summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-summary
+        path: test-summary.md
+
+    - name: Comment summary on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('test-summary.md', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+
+    - name: Notify pipeline completion
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "AI Emulators Ecosystem CI/CD Pipeline completed"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_CICD }}

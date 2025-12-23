@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Unified dark theme colors */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --bg-card: #333333;
+
+    --accent-primary: #00d4aa;
+    --accent-secondary: #00b896;
+    --accent-hover: #00a085;
+
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #999999;
+
+    --status-success: #00d4aa;
+    --status-warning: #ffa500;
+    --status-error: #ff4444;
+    --status-running: #0099cc;
+
+    --border-color: #444444;
+    --border-hover: #00d4aa;
+    --shadow-glow: 0 0 20px rgba(0, 212, 170, 0.3);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-accent-primary text-bg-primary px-4 py-2 rounded-md font-medium transition-all duration-200;
+  }
+
+  .btn-primary:hover {
+    @apply bg-accent-hover transform -translate-y-0.5 shadow-glow;
+  }
+
+  .card {
+    @apply bg-bg-card border border-border rounded-lg p-6 transition-all duration-300;
+  }
+
+  .card:hover {
+    @apply border-accent-primary shadow-glow transform -translate-y-1;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

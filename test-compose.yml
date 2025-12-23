@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  test:
+    image: nginx:alpine
+volumes:
+  aios_data:
+  bytebot_data:
+  open_interface_data:
+  macos_use_data:
+  factif_data:
+  postiz_data:
+  onlysnarf_data:
+  onlysnarf_media:
+  reels_data:
+  reels_media:
+  wan2gp_data:
+  wan2gp_models:
+  puter_data:
+  open_interpreter_data:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  nginx_logs:

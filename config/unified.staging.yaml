@@ -1,0 +1,218 @@
+# Staging Environment Configuration
+# This configuration balances production-like settings with debugging capabilities
+
+environment: staging
+version: "1.0.0"
+debug: false
+logLevel: info
+
+# Staging Database Configuration
+database:
+  type: postgresql
+  host: ${DATABASE_HOST:-staging-postgres}
+  port: ${DATABASE_PORT:-5432}
+  database: ${DATABASE_NAME:-unified_framework_staging}
+  username: ${DATABASE_USER:-postgres}
+  password: ${DATABASE_PASSWORD}
+  ssl: true
+  poolSize: 15
+  connectionTimeout: 30000
+  maxRetries: 3
+
+# Staging Redis Configuration
+redis:
+  host: ${REDIS_HOST:-staging-redis}
+  port: ${REDIS_PORT:-6379}
+  password: ${REDIS_PASSWORD}
+  database: 0
+  maxRetries: 3
+  retryDelayOnFailover: 100
+  enableReadyCheck: true
+  maxRetriesPerRequest: 3
+
+# Staging Security Configuration
+security:
+  jwtSecret: ${JWT_SECRET}
+  jwtExpiresIn: "2h"
+  bcryptRounds: 12
+  corsOrigins:
+    - ${FRONTEND_URL:-https://staging-ui.example.com}
+    - ${API_GATEWAY_URL:-https://staging-api.example.com}
+    - "https://staging.example.com"
+  rateLimitWindowMs: 900000
+  rateLimitMaxRequests: 200  # Higher than prod for testing
+  enableHttps: true
+  sslCertPath: ${SSL_CERT_PATH}
+  sslKeyPath: ${SSL_KEY_PATH}
+
+# Staging Service Configurations
+services:
+  orchestrator:
+    service: orchestrator
+    port: 3000
+    host: "0.0.0.0"
+    serviceRegistry:
+      heartbeatInterval: 30000
+      healthCheckTimeout: 10000
+      maxFailedHealthChecks: 3
+      serviceDiscoveryInterval: 60000
+    deviceManager:
+      maxVMs: 5
+      maxEmulators: 3
+      resourceCheckInterval: 30000
+      vmTimeout: 2700000  # 45 minutes
+    eventHub:
+      maxConnections: 2000
+      pingTimeout: 60000
+      pingInterval: 25000
+      maxEventQueueSize: 20000
+
+  apiGateway:
+    service: api-gateway
+    port: 8080
+    host: "0.0.0.0"
+    routing:
+      timeout: 30000
+      retries: 3
+      retryDelay: 1000
+      enableLoadBalancing: true
+      loadBalancingStrategy: round-robin
+    rateLimit:
+      windowMs: 900000
+      maxRequests: 200
+      skipSuccessfulRequests: false
+      skipFailedRequests: false
+
+  bytebot:
+    service: bytebot
+    port: 3001
+    host: "0.0.0.0"
+    apiKeys:
+      openai: ${OPENAI_API_KEY}
+      anthropic: ${ANTHROPIC_API_KEY}
+      gemini: ${GEMINI_API_KEY}
+    desktop:
+      width: 1920
+      height: 1080
+      enableGpu: false
+      maxSessions: 10
+      sessionTimeout: 3600000  # 1 hour
+    agent:
+      maxConcurrentTasks: 5
+      taskTimeout: 300000  # 5 minutes
+      enableScreenshots: true
+      screenshotInterval: 5000
+
+  factifAI:
+    service: factif-ai
+    port: 3002
+    host: "0.0.0.0"
+    apiKeys:
+      openai: ${OPENAI_API_KEY}
+      anthropic: ${ANTHROPIC_API_KEY}
+      gemini: ${GEMINI_API_KEY}
+    automation:
+      maxConcurrentJobs: 3
+      jobTimeout: 1800000  # 30 minutes
+      enableHeadless: true
+      browserPoolSize: 5
+    playwright:
+      browserType: chromium
+      headless: true
+      slowMo: 0
+      timeout: 30000
+
+  aios:
+    service: aios
+    port: 8000
+    host: "0.0.0.0"
+    apiKeys:
+      openai: ${OPENAI_API_KEY}
+      anthropic: ${ANTHROPIC_API_KEY}
+      gemini: ${GEMINI_API_KEY}
+      huggingface: ${HUGGINGFACE_TOKEN}
+    kernel:
+      maxAgents: 10
+      agentTimeout: 600000  # 10 minutes
+      enableGpu: false
+      cudaDevices: "all"
+      workers: 4
+    models:
+      cachePath: "/app/models"
+      maxCacheSize: "20GB"
+      enableAutoDownload: true
+      huggingfaceCache: "/app/models/huggingface"
+
+  ui:
+    service: ui
+    port: 9992
+    host: "0.0.0.0"
+    theme: dark
+    features:
+      enableDragAndDrop: true
+      enableRealTimeUpdates: true
+      maxWorkflowCards: 100
+      autoRefreshInterval: 30000
+    websocket:
+      reconnectAttempts: 5
+      reconnectInterval: 5000
+      timeout: 20000
+
+# Staging Deployment Configuration
+deployment:
+  mode: kubernetes
+  replicas:
+    orchestrator: 1
+    api-gateway: 2
+    bytebot: 1
+    factif-ai: 1
+    aios: 1
+    ui: 1
+  resources:
+    orchestrator:
+      cpu: "500m"
+      memory: "512Mi"
+    api-gateway:
+      cpu: "300m"
+      memory: "256Mi"
+    bytebot:
+      cpu: "1000m"
+      memory: "2Gi"
+    factif-ai:
+      cpu: "800m"
+      memory: "1Gi"
+    aios:
+      cpu: "2000m"
+      memory: "4Gi"
+    ui:
+      cpu: "200m"
+      memory: "128Mi"
+  networking:
+    serviceMesh: true
+    networkPolicy: true
+    ingressEnabled: true
+    ingressHost: ${INGRESS_HOST:-staging.example.com}
+    tlsEnabled: true
+
+# Staging Monitoring Configuration
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    metricsPath: "/metrics"
+    scrapeInterval: "15s"
+  grafana:
+    enabled: true
+    port: 3000
+    adminUser: ${GRAFANA_ADMIN_USER:-admin}
+    adminPassword: ${GRAFANA_ADMIN_PASSWORD}
+  jaeger:
+    enabled: true
+    endpoint: ${JAEGER_ENDPOINT:-http://jaeger:14268/api/traces}
+    serviceName: "unified-framework-staging"
+    samplingRate: 0.5  # Higher sampling for staging
+  elasticsearch:
+    enabled: true
+    host: ${ELASTICSEARCH_HOST:-elasticsearch}
+    port: ${ELASTICSEARCH_PORT:-9200}
+    index: "unified-framework-staging"

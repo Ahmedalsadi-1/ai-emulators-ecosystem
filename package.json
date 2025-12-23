@@ -1,0 +1,45 @@
+{
+  "name": "kali-desktop-mcp",
+  "version": "2.0.0",
+  "description": "AI-powered Kali Linux desktop control with OmniParser integration, Hawkeye pinpointing, and advanced security testing capabilities",
+  "main": "kali-mcp-server.js",
+  "bin": {
+    "kali-desktop-mcp": "./kali-mcp-server.js"
+  },
+  "scripts": {
+    "start": "node kali-mcp-server.js",
+    "dev": "node --watch kali-mcp-server.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "docker:build": "docker build -t kali-desktop-mcp .",
+    "docker:run": "docker run -d --name kali-desktop -p 5901:5901 -p 6080:6080 kali-desktop-mcp",
+    "setup": "npm install && chmod +x kali-mcp-server.js"
+  },
+  "keywords": [
+    "mcp",
+    "kali-linux",
+    "desktop-automation",
+    "ai-interaction",
+    "security-testing",
+    "penetration-testing",
+    "omniparser",
+    "hawkeye"
+  ],
+  "author": "AI Security Specialist",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "@opencode-ai/plugin": "1.0.171",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/kali-desktop-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/kali-desktop-mcp/issues"
+  },
+  "homepage": "https://github.com/yourusername/kali-desktop-mcp#readme"
+}

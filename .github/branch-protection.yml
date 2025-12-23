@@ -1,0 +1,96 @@
+# Branch Protection Rules Configuration
+# This file documents the required branch protection rules for the AI Emulators Ecosystem
+# These rules should be configured in GitHub Settings > Branches > Branch protection rules
+
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "code-quality"
+          - "unit-tests"
+          - "integration-tests"
+          - "e2e-tests"
+          - "security-tests"
+          - "build"
+          - "test-summary"
+      enforce_admins: false
+      required_pull_requests:
+        required_approving_review_count: 2
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+        dismissal_restrictions: []
+      restrictions:
+        allow_force_pushes: false
+        allow_deletions: false
+      block_creations: false
+
+  - name: develop
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "code-quality"
+          - "unit-tests"
+          - "integration-tests"
+          - "security-tests"
+          - "build"
+      enforce_admins: false
+      required_pull_requests:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: false
+        dismissal_restrictions: []
+      restrictions: null
+      block_creations: false
+
+  - name: staging
+    protection:
+      required_status_checks:
+        strict: false
+        contexts:
+          - "code-quality"
+          - "unit-tests"
+          - "integration-tests"
+      enforce_admins: false
+      required_pull_requests:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: false
+        dismissal_restrictions: []
+      restrictions: null
+      block_creations: false
+
+# Code Owners Configuration
+# This should be placed in .github/CODEOWNERS
+codeowners: |
+  # Global owners
+  * @ai-ecosystem-maintainers
+
+  # AIOS (AI Operating System)
+  /AIOS/ @ai-ecosystem-ai-team
+
+  # ByteBot (Computer Control)
+  /bytebot/ @ai-ecosystem-automation-team
+
+  # Factif-AI (Test Automation)
+  /factif-ai/ @ai-ecosystem-testing-team
+
+  # Social Media Platforms
+  /postiz-app/ @ai-ecosystem-social-team
+  /onlysnarf/ @ai-ecosystem-social-team
+
+  # Content Creation
+  /reels-clips-automator/ @ai-ecosystem-content-team
+  /Wan2GP/ @ai-ecosystem-content-team
+
+  # Infrastructure & MCP
+  /mcp-registry/ @ai-ecosystem-infra-team
+  /docker/ @ai-ecosystem-infra-team
+  /helm/ @ai-ecosystem-infra-team
+  /.github/ @ai-ecosystem-infra-team
+
+  # CI/CD and DevOps
+  /.github/workflows/ @ai-ecosystem-devops-team
+  /scripts/ @ai-ecosystem-devops-team

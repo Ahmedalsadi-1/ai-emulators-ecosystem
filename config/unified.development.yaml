@@ -1,0 +1,206 @@
+# Development Environment Configuration
+# This configuration is optimized for local development with debugging enabled
+
+environment: development
+version: "1.0.0"
+debug: true
+logLevel: debug
+
+# Development Database Configuration
+database:
+  type: postgresql
+  host: localhost
+  port: 5432
+  database: unified_framework_dev
+  username: postgres
+  password: dev_password
+  ssl: false
+  poolSize: 5
+  connectionTimeout: 30000
+  maxRetries: 3
+
+# Development Redis Configuration
+redis:
+  host: localhost
+  port: 6379
+  database: 0
+  maxRetries: 3
+  retryDelayOnFailover: 100
+  enableReadyCheck: true
+  maxRetriesPerRequest: 3
+
+# Development Security Configuration
+security:
+  jwtSecret: "dev-jwt-secret-key-not-for-production-use-only"
+  jwtExpiresIn: "24h"
+  bcryptRounds: 10  # Lower for faster development
+  corsOrigins:
+    - "http://localhost:3000"
+    - "http://localhost:9992"
+    - "http://localhost:8080"
+    - "http://127.0.0.1:3000"
+    - "http://127.0.0.1:9992"
+  rateLimitWindowMs: 900000
+  rateLimitMaxRequests: 1000  # Higher limit for development
+  enableHttps: false
+
+# Service Configurations
+services:
+  orchestrator:
+    service: orchestrator
+    port: 3000
+    host: "0.0.0.0"
+    serviceRegistry:
+      heartbeatInterval: 15000  # More frequent in dev
+      healthCheckTimeout: 5000
+      maxFailedHealthChecks: 5  # More tolerant in dev
+      serviceDiscoveryInterval: 30000
+    deviceManager:
+      maxVMs: 3  # Fewer resources in dev
+      maxEmulators: 2
+      resourceCheckInterval: 15000
+      vmTimeout: 900000  # 15 minutes
+    eventHub:
+      maxConnections: 100
+      pingTimeout: 30000
+      pingInterval: 10000
+      maxEventQueueSize: 1000
+
+  apiGateway:
+    service: api-gateway
+    port: 8080
+    host: "0.0.0.0"
+    routing:
+      timeout: 60000  # Longer timeout for debugging
+      retries: 1  # Fewer retries in dev
+      retryDelay: 500
+      enableLoadBalancing: false  # Simpler setup for dev
+      loadBalancingStrategy: round-robin
+    rateLimit:
+      windowMs: 900000
+      maxRequests: 1000
+      skipSuccessfulRequests: false
+      skipFailedRequests: false
+
+  bytebot:
+    service: bytebot
+    port: 3001
+    host: "0.0.0.0"
+    apiKeys: {}  # Set via environment variables
+    desktop:
+      width: 1920
+      height: 1080
+      enableGpu: false
+      maxSessions: 3  # Fewer sessions in dev
+      sessionTimeout: 1800000  # 30 minutes
+    agent:
+      maxConcurrentTasks: 2
+      taskTimeout: 600000  # 10 minutes for debugging
+      enableScreenshots: true
+      screenshotInterval: 2000  # More frequent screenshots
+
+  factifAI:
+    service: factif-ai
+    port: 3002
+    host: "0.0.0.0"
+    apiKeys: {}  # Set via environment variables
+    automation:
+      maxConcurrentJobs: 2
+      jobTimeout: 1200000  # 20 minutes for debugging
+      enableHeadless: false  # Show browser in dev
+      browserPoolSize: 2
+    playwright:
+      browserType: chromium
+      headless: false  # Visible browser for debugging
+      slowMo: 100  # Slow down for debugging
+      timeout: 60000
+
+  aios:
+    service: aios
+    port: 8000
+    host: "0.0.0.0"
+    apiKeys: {}  # Set via environment variables
+    kernel:
+      maxAgents: 5
+      agentTimeout: 300000  # 5 minutes
+      enableGpu: false
+      cudaDevices: "all"
+      workers: 2  # Fewer workers in dev
+    models:
+      cachePath: "./data/models"
+      maxCacheSize: "5GB"  # Smaller cache for dev
+      enableAutoDownload: true
+      huggingfaceCache: "./data/models/huggingface"
+
+  ui:
+    service: ui
+    port: 9992
+    host: "0.0.0.0"
+    theme: dark
+    features:
+      enableDragAndDrop: true
+      enableRealTimeUpdates: true
+      maxWorkflowCards: 50
+      autoRefreshInterval: 10000  # More frequent updates
+    websocket:
+      reconnectAttempts: 10
+      reconnectInterval: 2000
+      timeout: 10000
+
+# Development Deployment Configuration
+deployment:
+  mode: docker
+  replicas:
+    orchestrator: 1
+    api-gateway: 1
+    bytebot: 1
+    factif-ai: 1
+    aios: 1
+    ui: 1
+  resources:
+    orchestrator:
+      cpu: "200m"
+      memory: "256Mi"
+    api-gateway:
+      cpu: "100m"
+      memory: "128Mi"
+    bytebot:
+      cpu: "500m"
+      memory: "1Gi"
+    factif-ai:
+      cpu: "400m"
+      memory: "512Mi"
+    aios:
+      cpu: "1000m"
+      memory: "2Gi"
+    ui:
+      cpu: "100m"
+      memory: "64Mi"
+  networking:
+    serviceMesh: false
+    networkPolicy: false
+    ingressEnabled: false
+    tlsEnabled: false
+
+# Development Monitoring Configuration
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    metricsPath: "/metrics"
+    scrapeInterval: "30s"  # Less frequent in dev
+  grafana:
+    enabled: true
+    port: 3000
+    adminUser: admin
+    adminPassword: admin  # Default for dev only
+  jaeger:
+    enabled: true
+    endpoint: "http://localhost:14268/api/traces"
+    serviceName: "unified-framework-dev"
+    samplingRate: 1.0  # Sample everything in dev
+  elasticsearch:
+    enabled: false  # Disabled by default in dev
+    host: localhost
+    port: 9200
+    index: "unified-framework-dev"

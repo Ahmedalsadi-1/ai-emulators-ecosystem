@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Widget Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .widget-container { border: 1px solid #ccc; margin: 10px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Unified Widget Embedding Test</h1>
+
+    <div class="widget-container">
+        <h3>Compact Mode Widget</h3>
+        <div id="compact-widget" style="height: 400px;"></div>
+    </div>
+
+    <div class="widget-container">
+        <h3>Standard Mode Widget</h3>
+        <div id="standard-widget" style="height: 600px;"></div>
+    </div>
+
+    <script>
+        // Test the Unified Widget API
+        function testWidgetAPI() {
+            // Test compact widget
+            if (window.UnifiedWidget) {
+                window.UnifiedWidget.mount(document.getElementById('compact-widget'), {
+                    mode: 'compact',
+                    theme: 'dark',
+                    showHeader: true,
+                    showSidebar: false
+                }).then(() => {
+                    console.log('Compact widget mounted successfully');
+                }).catch(error => {
+                    console.error('Failed to mount compact widget:', error);
+                });
+
+                // Test standard widget
+                window.UnifiedWidget.mount(document.getElementById('standard-widget'), {
+                    mode: 'standard',
+                    theme: 'light',
+                    showHeader: true,
+                    showSidebar: true
+                }).then(() => {
+                    console.log('Standard widget mounted successfully');
+                }).catch(error => {
+                    console.error('Failed to mount standard widget:', error);
+                });
+
+                // Test event listening
+                window.UnifiedWidget.on('widget-added', (data) => {
+                    console.log('Widget added event:', data);
+                });
+
+                window.UnifiedWidget.on('ready', (data) => {
+                    console.log('Widget ready event:', data);
+                });
+            } else {
+                console.error('UnifiedWidget API not available');
+            }
+        }
+
+        // Wait for the widget script to load
+        setTimeout(testWidgetAPI, 2000);
+    </script>
+
+    <!-- Load the Unified Widget script -->
+    <script src="http://localhost:9992/widget.js"></script>
+</body>
+</html>

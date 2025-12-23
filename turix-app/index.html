@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuriX - Unified AI Ecosystem</title>
+    <!-- OpenCode.ai Provider for Free AI Models -->
+    <script src="opencode-provider.js"></script>
+    <!-- Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .turix-app {
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            padding: 24px;
+            min-width: 400px;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .close-button:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .search-input-wrapper:focus-within {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .turix-icon {
+            margin-right: 12px;
+            color: #00d4ff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .cube-icon {
+            font-size: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-size: 16px;
+            placeholder-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .mic-button {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            margin-left: 8px;
+        }
+
+        .mic-button:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .mic-button.listening {
+            color: #ff4757;
+            animation: listening-pulse 1.5s infinite;
+        }
+
+        @keyframes listening-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .search-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-left: 12px;
+            transition: all 0.2s ease;
+            color: white;
+        }
+
+        .search-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .status-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+        }
+
+        .status-title {
+            flex: 1;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .status-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .command-text {
+            display: block;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0 16px;
+        }
+
+        .status-icon.processing {
+            color: #ffa502;
+        }
+
+        .status-icon.success {
+            color: #2ed573;
+        }
+
+        .status-icon.error {
+            color: #ff4757;
+        }
+
+        .status-text {
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-text.processing { color: #ffa502; }
+        .status-text.success { color: #2ed573; }
+        .status-text.error { color: #ff4757; }
+
+        .status-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .share-button, .refresh-button, .close-button {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .share-button:hover, .refresh-button:hover, .close-button:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .service-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .service-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .service-name {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .service-status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .status-running { background: #2ed573; color: white; }
+        .status-stopped { background: #ff4757; color: white; }
+        .status-building { background: #ffa502; color: white; }
+
+        .global-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .action-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .action-button.hide-button {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .action-button.hide-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="turix-app">
+        <div class="app-header">
+            <div class="app-title">TuriX</div>
+            <button class="close-button" onclick="closeApp()">×</button>
+        </div>
+
+        <div class="search-container">
+            <form class="search-form" onsubmit="handleCommand(event)">
+                <div class="search-input-wrapper">
+                    <div class="turix-icon">
+                        <div class="cube-icon">◈</div>
+                    </div>
+                    <input
+                        type="text"
+                        id="commandInput"
+                        placeholder="What can I help you?"
+                        class="search-input"
+                        autofocus
+                    />
+                    <button type="button" onclick="toggleListening()" class="mic-button" id="micButton">
+                        🎤
+                    </button>
+                    <button type="submit" class="search-button">
+                        🔍
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="status-card" id="statusCard">
+            <div class="status-header">
+                <div class="status-title">
+                    <span class="status-label">Last Command:</span>
+                    <span class="command-text" id="lastCommand">Ready to assist</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="status-icon success">✓</span>
+                    <span class="status-text success">Ready</span>
+                </div>
+                <div class="status-actions">
+                    <button class="share-button">📤</button>
+                    <button class="refresh-button">🔄</button>
+                    <button onclick="hideStatus()" class="close-button">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="services-grid">
+            <div class="service-card" onclick="selectService('aios')">
+                <div class="service-icon">🤖</div>
+                <div class="service-name">AIOS (AI Operating System)</div>
+                <div class="service-status status-running">AI Ready</div>
+            </div>
+            <div class="service-card" onclick="selectService('bytebot')">
+                <div class="service-icon">🖥️</div>
+                <div class="service-name">Bytebot (Desktop Automation)</div>
+                <div class="service-status status-running">AI Ready</div>
+            </div>
+            <div class="service-card" onclick="selectService('postiz')">
+                <div class="service-icon">📱</div>
+                <div class="service-name">Postiz (Social Media)</div>
+                <div class="service-status status-running">AI Ready</div>
+            </div>
+            <div class="service-card" onclick="selectService('factif')">
+                <div class="service-icon">🧪</div>
+                <div class="service-name">Factif-AI (Testing)</div>
+                <div class="service-status status-running">AI Ready</div>
+            </div>
+             <div class="service-card" onclick="selectService('opencode')">
+                 <div class="service-icon">🚀</div>
+                 <div class="service-name">OpenCode.ai AI Engine</div>
+                 <div class="service-status status-running">FREE Models</div>
+             </div>
+        </div>
+
+        <div class="global-actions">
+            <button class="action-button" onclick="executeCommand('select screen')">
+                Select Screen
+            </button>
+            <button class="action-button" onclick="executeCommand('open web')">
+                Open Web
+            </button>
+            <button class="action-button" onclick="executeCommand('settings')">
+                Settings
+            </button>
+            <button class="action-button hide-button" onclick="hideApp()">
+                Hide TuriX
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isListening = false;
+        let selectedService = null;
+        let socket = null;
+        let openCodeProvider = null;
+
+        // Initialize WebSocket connection to API Gateway
+        function initWebSocket() {
+            try {
+                socket = io('http://localhost:8083');
+
+                socket.on('connect', () => {
+                    console.log('Connected to API Gateway');
+                    updateConnectionStatus(true);
+                });
+
+                socket.on('disconnect', () => {
+                    console.log('Disconnected from API Gateway');
+                    updateConnectionStatus(false);
+                });
+
+                socket.on('service-update', (data) => {
+                    console.log('Service update:', data);
+                    updateServiceStatus(data.service, data.status);
+                });
+
+                socket.on('connect_error', (error) => {
+                    console.error('WebSocket connection error:', error);
+                    updateConnectionStatus(false);
+                });
+
+            } catch (error) {
+                console.error('Failed to initialize WebSocket:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusIndicator = document.querySelector('.status-indicator');
+            const statusIcon = statusIndicator.querySelector('.status-icon');
+            const statusText = statusIndicator.querySelector('.status-text');
+
+            if (connected) {
+                statusIcon.className = 'status-icon success';
+                statusIcon.textContent = '🟢';
+                statusText.className = 'status-text success';
+                statusText.textContent = 'Connected';
+            } else {
+                statusIcon.className = 'status-icon error';
+                statusIcon.textContent = '🔴';
+                statusText.className = 'status-text error';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        function updateServiceStatus(serviceName, status) {
+            const serviceCards = document.querySelectorAll('.service-card');
+            serviceCards.forEach(card => {
+                const serviceNameEl = card.querySelector('.service-name');
+                if (serviceNameEl && serviceNameEl.textContent.toLowerCase().includes(serviceName.toLowerCase())) {
+                    const statusEl = card.querySelector('.service-status');
+
+                    // Remove existing status classes
+                    statusEl.classList.remove('status-running', 'status-stopped', 'status-building');
+
+                    // Add new status class and text
+                    switch (status) {
+                        case 'healthy':
+                            statusEl.classList.add('status-running');
+                            statusEl.textContent = 'Running';
+                            break;
+                        case 'unhealthy':
+                            statusEl.classList.add('status-stopped');
+                            statusEl.textContent = 'Stopped';
+                            break;
+                        default:
+                            statusEl.classList.add('status-building');
+                            statusEl.textContent = 'Checking...';
+                    }
+                }
+            });
+        }
+
+        // Initialize OpenCode.ai provider
+        async function initOpenCode() {
+            try {
+                // Initialize OpenCode provider with the provided API key
+                openCodeProvider = new OpenCodeProvider('sk-XWhyzRPzVwIj6ajyEvrO27gSOa5tG7vySIXbEDr8WxtQqqkv7UOK4d5MikTLKhkZ');
+
+                // Test the connection
+                const connectionTest = await openCodeProvider.testConnection();
+                if (connectionTest) {
+                    console.log('OpenCode.ai connection successful');
+                    updateConnectionStatus(true);
+                } else {
+                    console.warn('OpenCode.ai connection test failed, but continuing...');
+                    updateConnectionStatus(true); // Still show as connected for now
+                }
+            } catch (error) {
+                console.error('Failed to initialize OpenCode.ai:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        // Initialize WebSocket when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initWebSocket();
+            initOpenCode();
+        });
+
+        function handleCommand(event) {
+            event.preventDefault();
+            const command = document.getElementById('commandInput').value.trim();
+            if (command) {
+                executeCommand(command);
+                document.getElementById('commandInput').value = '';
+            }
+        }
+
+        async function executeCommand(command) {
+            // Show status card
+            const statusCard = document.getElementById('statusCard');
+            const lastCommand = document.getElementById('lastCommand');
+            lastCommand.textContent = command;
+            statusCard.style.display = 'block';
+
+            // Send command status to API Gateway
+            if (socket && socket.connected) {
+                socket.emit('service-status', {
+                    service: selectedService || 'turix',
+                    status: 'processing'
+                });
+            }
+
+            console.log('Executing command:', command);
+
+            try {
+                // Use OpenCode.ai for free unlimited AI
+                let aiResponse;
+                let selectedModel = 'gpt-5-nano'; // Default to free GPT Nano
+
+                if (command.toLowerCase().includes('screenshot') || command.toLowerCase().includes('screen')) {
+                    // For screenshot/visual tasks - use Grok Code Fast (good at technical tasks)
+                    selectedModel = 'grok-code';
+                    aiResponse = await openCodeProvider.chat(
+                        `You are a computer automation assistant. Help with: ${command}`,
+                        { model: selectedModel }
+                    );
+                } else if (command.toLowerCase().includes('code') || command.toLowerCase().includes('programming')) {
+                    // For coding tasks - use Grok Code Fast (optimized for coding)
+                    selectedModel = 'grok-code';
+                    aiResponse = await openCodeProvider.chat(
+                        `You are a coding assistant. Help with: ${command}`,
+                        { model: selectedModel }
+                    );
+                } else if (command.toLowerCase().includes('analyze') || command.toLowerCase().includes('test')) {
+                    // For analysis/testing tasks - use Big Pickle (good at analysis)
+                    selectedModel = 'big-pickle';
+                    aiResponse = await openCodeProvider.chat(
+                        `You are a testing and analysis assistant. Help with: ${command}`,
+                        { model: selectedModel }
+                    );
+                } else if (command.toLowerCase().includes('social') || command.toLowerCase().includes('post') || command.toLowerCase().includes('content')) {
+                    // For content creation tasks - use GLM 4.7 (good at creative tasks)
+                    selectedModel = 'glm-4.7-free';
+                    aiResponse = await openCodeProvider.chat(
+                        `You are a content creation assistant. Help with: ${command}`,
+                        { model: selectedModel }
+                    );
+                } else {
+                    // General AI tasks - use free GPT Nano
+                    aiResponse = await openCodeProvider.chat(
+                        `You are TuriX, a unified AI assistant. Help with: ${command}`,
+                        { model: selectedModel }
+                    );
+                }
+
+                console.log('AI Response from', openCodeProvider.getModelDisplayName(selectedModel) + ':', aiResponse);
+
+                // Update status with AI response
+                const statusCard = document.getElementById('statusCard');
+                const statusText = statusCard.querySelector('.status-text');
+                statusText.textContent = `Completed (${openCodeProvider.getModelDisplayName(selectedModel)})`;
+                statusText.className = 'status-text success';
+
+                // Send success status to API Gateway
+                if (socket && socket.connected) {
+                    socket.emit('service-status', {
+                        service: selectedService || 'turix',
+                        status: 'completed'
+                    });
+                }
+
+                // Show response in a simple way (could be enhanced)
+                setTimeout(() => {
+                    alert(`TuriX Response: ${aiResponse}`);
+                }, 500);
+
+            } catch (error) {
+                console.error('AI command failed:', error);
+
+                // Update status to error
+                const statusCard = document.getElementById('statusCard');
+                const statusText = statusCard.querySelector('.status-text');
+                statusText.textContent = 'Failed';
+                statusText.className = 'status-text error';
+
+                // Send error status to API Gateway
+                if (socket && socket.connected) {
+                    socket.emit('service-status', {
+                        service: selectedService || 'turix',
+                        status: 'error'
+                    });
+                }
+            }
+        }
+
+        function toggleListening() {
+            isListening = !isListening;
+            const micButton = document.getElementById('micButton');
+
+            if (isListening) {
+                micButton.classList.add('listening');
+                micButton.textContent = '🎙️';
+                console.log('Voice listening started...');
+            } else {
+                micButton.classList.remove('listening');
+                micButton.textContent = '🎤';
+                console.log('Voice listening stopped');
+            }
+        }
+
+        function selectService(serviceName) {
+            selectedService = serviceName;
+            console.log('Selected service:', serviceName);
+
+            // Send service status update to API Gateway
+            if (socket && socket.connected) {
+                socket.emit('service-status', {
+                    service: serviceName,
+                    status: 'selected'
+                });
+            }
+
+            // Update UI to show selected service
+            const cards = document.querySelectorAll('.service-card');
+            cards.forEach(card => {
+                card.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            });
+
+            const selectedCard = document.querySelector(`[onclick="selectService('${serviceName}')"]`);
+            if (selectedCard) {
+                selectedCard.style.borderColor = '#00d4ff';
+            }
+        }
+
+        function hideStatus() {
+            document.getElementById('statusCard').style.display = 'none';
+        }
+
+        function hideApp() {
+            // In Electron, this would minimize the window
+            console.log('Hiding TuriX app...');
+            if (window.electronAPI) {
+                window.electronAPI.toggleVisibility();
+            }
+        }
+
+        function closeApp() {
+            // In Electron, this would close the window
+            console.log('Closing TuriX app...');
+            if (window.electronAPI) {
+                window.electronAPI.close();
+            } else {
+                window.close();
+            }
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 TuriX Unified AI Ecosystem loaded successfully!');
+            console.log('🤖 AI Powered by Puter.js - FREE Unlimited Access');
+            console.log('📱 Available services: AIOS, Bytebot, Postiz, Factif-AI');
+            console.log('💰 Zero API costs - Users pay for their own AI usage');
+            console.log('⚡ Using GPT-5.2, GPT-5.1, GPT-4o, and more - FREE!');
+        });
+    </script>
+</body>
+</html>

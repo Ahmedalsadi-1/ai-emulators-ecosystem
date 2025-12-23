@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Widget - Future App</title>
+    <style>
+        .auth-widget {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .auth-widget h3 {
+            margin: 0 0 20px 0;
+            color: #1a202c;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+
+        .form-input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .auth-button {
+            padding: 10px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .auth-button:hover {
+            background: #2563eb;
+        }
+
+        .auth-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .auth-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .auth-status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .auth-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .auth-status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .sso-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sso-button {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sso-button:hover {
+            border-color: #9ca3af;
+            background: #f9fafb;
+        }
+
+        .session-info {
+            font-size: 12px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 12px;
+            margin-top: 16px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: ' ...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ' ...'; }
+            40% { content: '. ...'; }
+            60% { content: '.. .'; }
+            80%, 100% { content: '... '; }
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-widget" class="auth-widget">
+        <h3 id="auth-title">Sign In</h3>
+
+        <!-- Login Form -->
+        <div id="login-form" class="auth-form">
+            <div class="form-group">
+                <label class="form-label" for="username">Username or Email</label>
+                <input type="text" id="username" class="form-input" placeholder="Enter your username or email">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" class="form-input" placeholder="Enter your password">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="remember-me"> Remember me
+                </label>
+            </div>
+
+            <button id="login-btn" class="auth-button">Sign In</button>
+        </div>
+
+        <!-- SSO Options -->
+        <div id="sso-section" class="hidden">
+            <p style="text-align: center; margin: 16px 0; color: #6b7280;">Or continue with SSO</p>
+            <div class="sso-buttons">
+                <button id="sso-login-btn" class="sso-button">
+                    🔗 Single Sign-On Login
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="auth-status" class="auth-status hidden"></div>
+
+        <!-- Session Info -->
+        <div id="session-info" class="session-info hidden">
+            <div>Session: <span id="session-id">N/A</span></div>
+            <div>Expires: <span id="session-expires">N/A</span></div>
+            <button id="logout-btn" style="margin-top: 8px; font-size: 12px; padding: 4px 8px;">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        class AuthWidget {
+            constructor(options = {}) {
+                this.apiBase = options.apiBase || 'http://localhost:3000';
+                this.parentOrigin = options.parentOrigin || window.location.origin;
+                this.appId = options.appId || 'unknown-app';
+
+                // SSO iframe client for cross-origin communication
+                this.iframeClient = null;
+
+                this.initializeElements();
+                this.bindEvents();
+                this.checkAuthStatus();
+            }
+
+            initializeElements() {
+                this.widget = document.getElementById('auth-widget');
+                this.title = document.getElementById('auth-title');
+                this.loginForm = document.getElementById('login-form');
+                this.ssoSection = document.getElementById('sso-section');
+                this.status = document.getElementById('auth-status');
+                this.sessionInfo = document.getElementById('session-info');
+
+                this.usernameInput = document.getElementById('username');
+                this.passwordInput = document.getElementById('password');
+                this.rememberMeInput = document.getElementById('remember-me');
+                this.loginBtn = document.getElementById('login-btn');
+                this.ssoLoginBtn = document.getElementById('sso-login-btn');
+                this.logoutBtn = document.getElementById('logout-btn');
+            }
+
+            bindEvents() {
+                this.loginBtn.addEventListener('click', () => this.handleLogin());
+                this.ssoLoginBtn.addEventListener('click', () => this.handleSSOLogin());
+                this.logoutBtn.addEventListener('click', () => this.handleLogout());
+
+                // Enter key support
+                [this.usernameInput, this.passwordInput].forEach(input => {
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') this.handleLogin();
+                    });
+                });
+            }
+
+            async checkAuthStatus() {
+                try {
+                    const response = await this.apiRequest('/auth/me');
+                    if (response.success) {
+                        this.showAuthenticated(response.data);
+                    } else {
+                        this.showLoginForm();
+                    }
+                } catch (error) {
+                    this.showLoginForm();
+                }
+            }
+
+            async handleLogin() {
+                const username = this.usernameInput.value.trim();
+                const password = this.passwordInput.value.trim();
+                const rememberMe = this.rememberMeInput.checked;
+
+                if (!username || !password) {
+                    this.showStatus('Please enter both username and password', 'error');
+                    return;
+                }
+
+                this.setLoading(true);
+
+                try {
+                    const response = await this.apiRequest('/auth/login', {
+                        method: 'POST',
+                        body: JSON.stringify({ username, password, rememberMe })
+                    });
+
+                    if (response.success) {
+                        localStorage.setItem('auth_token', response.data.accessToken);
+                        localStorage.setItem('refresh_token', response.data.refreshToken);
+                        this.showStatus('Login successful!', 'success');
+                        setTimeout(() => this.checkAuthStatus(), 1000);
+                    } else {
+                        this.showStatus(response.error || 'Login failed', 'error');
+                    }
+                } catch (error) {
+                    this.showStatus('Login failed. Please try again.', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            async handleSSOLogin() {
+                this.setLoading(true);
+
+                try {
+                    // Initialize iframe client if in embedded context
+                    if (window.parent !== window) {
+                        this.iframeClient = new IframeClient(this.parentOrigin);
+
+                        const response = await this.iframeClient.requestSSOLogin(this.appId, 'current-session-id');
+
+                        if (response) {
+                            this.showStatus('SSO login successful!', 'success');
+                            setTimeout(() => this.checkAuthStatus(), 1000);
+                        }
+                    } else {
+                        // Redirect to SSO login page
+                        window.location.href = `${this.apiBase}/auth/login?appId=${this.appId}&sso=true`;
+                    }
+                } catch (error) {
+                    this.showStatus('SSO login failed', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            async handleLogout() {
+                try {
+                    await this.apiRequest('/auth/logout', { method: 'POST' });
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('refresh_token');
+                    this.showStatus('Logged out successfully', 'info');
+                    setTimeout(() => this.showLoginForm(), 1500);
+                } catch (error) {
+                    this.showStatus('Logout failed', 'error');
+                }
+            }
+
+            showLoginForm() {
+                this.title.textContent = 'Sign In';
+                this.loginForm.classList.remove('hidden');
+                this.ssoSection.classList.remove('hidden');
+                this.sessionInfo.classList.add('hidden');
+                this.status.classList.add('hidden');
+            }
+
+            showAuthenticated(user) {
+                this.title.textContent = `Welcome, ${user.username}`;
+                this.loginForm.classList.add('hidden');
+                this.ssoSection.classList.add('hidden');
+                this.sessionInfo.classList.remove('hidden');
+
+                // Update session info
+                document.getElementById('session-id').textContent = 'Active';
+                document.getElementById('session-expires').textContent = 'Auto-managed';
+
+                this.showStatus('Authenticated', 'success');
+            }
+
+            showStatus(message, type) {
+                this.status.textContent = message;
+                this.status.className = `auth-status ${type}`;
+                this.status.classList.remove('hidden');
+
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    this.status.classList.add('hidden');
+                }, 5000);
+            }
+
+            setLoading(loading) {
+                this.loginBtn.disabled = loading;
+                this.ssoLoginBtn.disabled = loading;
+
+                if (loading) {
+                    this.loginBtn.classList.add('loading');
+                    this.ssoLoginBtn.classList.add('loading');
+                } else {
+                    this.loginBtn.classList.remove('loading');
+                    this.ssoLoginBtn.classList.remove('loading');
+                }
+            }
+
+            async apiRequest(endpoint, options = {}) {
+                const url = `${this.apiBase}${endpoint}`;
+                const token = localStorage.getItem('auth_token');
+
+                const defaultOptions = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` })
+                    }
+                };
+
+                const response = await fetch(url, { ...defaultOptions, ...options });
+                return await response.json();
+            }
+        }
+
+        // IframeClient for embedded app communication
+        class IframeClient {
+            constructor(parentOrigin) {
+                this.parentOrigin = parentOrigin;
+                this.pendingRequests = new Map();
+                this.setupMessageListener();
+            }
+
+            async requestSSOLogin(appId, sessionId) {
+                const messageId = this.generateId();
+
+                return new Promise((resolve, reject) => {
+                    this.pendingRequests.set(messageId, { resolve, reject });
+
+                    setTimeout(() => {
+                        this.pendingRequests.delete(messageId);
+                        reject(new Error('Request timeout'));
+                    }, 30000);
+
+                    const message = {
+                        type: 'sso:login',
+                        id: messageId,
+                        source: 'iframe',
+                        targetAppId: appId,
+                        timestamp: Date.now(),
+                        payload: { sessionId }
+                    };
+
+                    window.parent.postMessage(message, this.parentOrigin);
+                });
+            }
+
+            handleMessage(event) {
+                if (event.origin !== this.parentOrigin) return;
+
+                const message = event.data;
+                if (!message || !message.id) return;
+
+                const pending = this.pendingRequests.get(message.id);
+                if (pending) {
+                    this.pendingRequests.delete(message.id);
+
+                    if (message.type.includes('error')) {
+                        pending.reject(new Error(message.payload?.error || 'Request failed'));
+                    } else {
+                        pending.resolve(message.payload);
+                    }
+                }
+            }
+
+            setupMessageListener() {
+                window.addEventListener('message', this.handleMessage.bind(this));
+            }
+
+            generateId() {
+                return `iframe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            }
+        }
+
+        // Initialize the auth widget when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.authWidget = new AuthWidget({
+                apiBase: 'http://localhost:3000',
+                appId: 'sample-app'
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # Infrastructure Services
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 5s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # AI/LLM Services
+  - job_name: 'aios'
+    static_configs:
+      - targets: ['aios:8000']
+        labels:
+          service: 'aios'
+          type: 'ai_platform'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: 'gbox'
+    static_configs:
+      - targets: ['gbox:29888']
+        labels:
+          service: 'gbox'
+          type: 'environment_provider'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Automation Services
+  - job_name: 'bytebot'
+    static_configs:
+      - targets: ['bytebot:4000']
+        labels:
+          service: 'bytebot'
+          type: 'desktop_agent'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  - job_name: 'open-interface'
+    static_configs:
+      - targets: ['open-interface:5000']
+        labels:
+          service: 'open-interface'
+          type: 'computer_control'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'macos-use'
+    static_configs:
+      - targets: ['macos-use:6000']
+        labels:
+          service: 'macos-use'
+          type: 'macos_automation'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'factif-ai'
+    static_configs:
+      - targets: ['factif-ai:7000']
+        labels:
+          service: 'factif-ai'
+          type: 'test_automation'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Social Media Services
+  - job_name: 'postiz-app'
+    static_configs:
+      - targets: ['postiz-app:9000']
+        labels:
+          service: 'postiz-app'
+          type: 'social_scheduling'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'onlysnarf'
+    static_configs:
+      - targets: ['onlysnarf:10000']
+        labels:
+          service: 'onlysnarf'
+          type: 'content_automation'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Content Services
+  - job_name: 'reels-clips-automator'
+    static_configs:
+      - targets: ['reels-clips-automator:11000']
+        labels:
+          service: 'reels-clips-automator'
+          type: 'video_automation'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'wan2gp'
+    static_configs:
+      - targets: ['wan2gp:12000']
+        labels:
+          service: 'wan2gp'
+          type: 'video_generation'
+    metrics_path: '/metrics'
+    scrape_interval: 60s  # Longer interval for GPU-intensive service
+    scrape_timeout: 30s
+
+  # MCP Services
+  - job_name: 'mcp-registry'
+    static_configs:
+      - targets: ['mcp-registry:8002']
+        labels:
+          service: 'mcp-registry'
+          type: 'service_discovery'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Node Exporter for system metrics (if running on host)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Docker metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['docker-exporter:9323']
+    scrape_interval: 30s
+
+  # Custom business metrics (if services expose them)
+  - job_name: 'business-metrics'
+    static_configs:
+      - targets: ['business-metrics:9091']
+    scrape_interval: 60s
+    metrics_path: '/metrics'
