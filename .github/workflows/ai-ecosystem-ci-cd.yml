@@ -1,4 +1,4 @@
-name: AI Emulators Ecosystem CI/CD
+name: Unified AI Ecosystem CI/CD
 
 on:
   push:
@@ -23,6 +23,15 @@ on:
         required: false
         default: false
         type: boolean
+      agent_focus:
+        description: 'Focus testing on specific agent'
+        required: false
+        type: choice
+        options:
+          - all
+          - agent-a
+          - agent-b
+          - agent-c
 
 env:
   NODE_VERSION: '20'
