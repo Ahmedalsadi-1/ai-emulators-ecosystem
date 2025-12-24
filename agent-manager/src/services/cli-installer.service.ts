@@ -4,12 +4,8 @@
  */
 
 import { execSync, spawn } from 'child_process';
-import { existsSync } from 'fs';
-import { resolve } from 'path';
 import { getLogger } from '../utils/logger';
 import { PlatformId, PlatformError } from '../interfaces';
-
-const logger = getLogger();
 
 export interface CLIInstallationConfig {
   platform: PlatformId;
@@ -345,25 +341,25 @@ export class CLIInstallerService {
       let stdout = '';
       let stderr = '';
 
-      child.stdout?.on('data', (data) => {
-        stdout += data.toString();
-      });
+       child.stdout?.on('data', (data: any) => {
+         stdout += data.toString();
+       });
 
-      child.stderr?.on('data', (data) => {
-        stderr += data.toString();
-      });
+       child.stderr?.on('data', (data: any) => {
+         stderr += data.toString();
+       });
 
-      child.on('close', (code) => {
-        resolve({
-          stdout,
-          stderr,
-          exitCode: code || 0,
-        });
-      });
+       child.on('close', (code: any) => {
+         resolve({
+           stdout,
+           stderr,
+           exitCode: code || 0,
+         });
+       });
 
-      child.on('error', (error) => {
-        reject(new PlatformError(platform, `Failed to execute command: ${error.message}`));
-      });
+       child.on('error', (error: any) => {
+         reject(new PlatformError(platform, `Failed to execute command: ${error.message}`));
+       });
     });
   }
 }
