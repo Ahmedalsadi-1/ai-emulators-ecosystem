@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import { Header } from "@/components/layout/Header";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { ChatContainer } from "@/components/messages/ChatContainer";
 import { DesktopContainer } from "@/components/ui/desktop-container";
 import { useChatSession } from "@/hooks/useChatSession";
@@ -48,13 +47,14 @@ export default function TaskPage() {
   } = useChatSession({ initialTaskId: taskId });
 
   // Determine if task is inactive (show screenshot) or active (show VNC)
-  function isTaskInactive(): boolean {
+  const isTaskInactive = useCallback((): boolean => {
     return (
-      taskStatus === TaskStatus.COMPLETED ||
-      taskStatus === TaskStatus.FAILED ||
-      taskStatus === TaskStatus.CANCELLED
+      control === Role.ASSISTANT &&
+      (taskStatus === TaskStatus.COMPLETED ||
+        taskStatus === TaskStatus.FAILED ||
+        taskStatus === TaskStatus.CANCELLED)
     );
-  }
+  }, [control, taskStatus]);
 
   // Determine if user can take control
   function canTakeOver(): boolean {
@@ -94,7 +94,7 @@ export default function TaskPage() {
       loadMoreMessages();
     }
   }, [
-    isTaskInactive(),
+    isTaskInactive,
     hasMoreMessages,
     isLoadingMoreMessages,
     loadMoreMessages,
@@ -116,14 +116,56 @@ export default function TaskPage() {
     }
   }, [currentTaskId, taskId, router]);
 
-  return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <Header />
+  const backgroundStyle = useMemo(
+    () => ({
+      backgroundImage:
+        "linear-gradient(180deg, rgba(16,49,69,0.6) 0%, rgba(8,25,38,0.65) 100%), url('/home-bg.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }),
+    [],
+  );
 
-      <main className="m-2 flex-1 overflow-hidden px-2 py-4">
-        <div className="grid h-full grid-cols-7 gap-4">
+  return (
+    <div
+      className="relative flex min-h-screen flex-col overflow-hidden px-4 py-6"
+      style={backgroundStyle}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/20 via-white/10 to-white/25" />
+
+      <div className="drag-region relative z-10 w-full rounded-[36px] border border-white/20 bg-white/12 p-4 backdrop-blur-3xl shadow-[0_25px_80px_rgba(0,0,0,0.45)]">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-2 text-white shadow-inner shadow-white/10">
+            <span className="text-sm font-semibold">Navigation</span>
+          </div>
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            {[
+              { href: "/", label: "Home" },
+              { href: "/tasks", label: "Tasks" },
+              { href: "/desktop", label: "Desktop" },
+              { href: "/settings", label: "Settings" },
+            ].map((item) => {
+              const isActive = item.href === "/tasks";
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => router.push(item.href)}
+                  className={`no-drag rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                    isActive
+                      ? "bg-white text-[#0f2d3c] shadow-lg shadow-white/50"
+                      : "text-white/80 hover:bg-white/15"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-7">
           {/* Main container */}
-          <div className="col-span-4">
+          <div className="lg:col-span-4">
             <DesktopContainer
               screenshot={isTaskInactive() ? currentScreenshot : null}
               viewOnly={vncViewOnly()}
@@ -140,7 +182,6 @@ export default function TaskPage() {
                   if (taskStatus === TaskStatus.FAILED) return "failed";
                   if (taskStatus === TaskStatus.CANCELLED) return "canceled";
                   if (taskStatus === TaskStatus.COMPLETED) return "completed";
-                  // You may want to add a scheduled state if you have that info
                   return "pending";
                 })() as VirtualDesktopStatus
               }
@@ -189,11 +230,10 @@ export default function TaskPage() {
           </div>
 
           {/* Chat Area */}
-          <div className="col-span-3 flex h-full min-h-0 flex-col">
-            {/* Messages scrollable area */}
+          <div className="lg:col-span-3 flex h-full min-h-0 flex-col rounded-[20px] border border-white/20 bg-white/10 backdrop-blur-xl shadow-inner shadow-white/10">
             <div
               ref={chatContainerRef}
-              className="hide-scrollbar min-h-0 flex-1 overflow-scroll px-4"
+              className="hide-scrollbar min-h-0 flex-1 overflow-scroll px-4 py-3"
             >
               <ChatContainer
                 scrollRef={chatContainerRef}
@@ -214,7 +254,7 @@ export default function TaskPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
