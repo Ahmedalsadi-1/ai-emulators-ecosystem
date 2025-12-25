@@ -50,8 +50,8 @@ function TasksPageContent() {
           activeTab === "ALL"
             ? undefined
             : activeTab === "COMPLETED"
-              ? ["completed"]
-              : ["pending", "running", "in_progress"];
+              ? ["COMPLETED"]
+              : ["PENDING", "RUNNING", "NEEDS_HELP", "NEEDS_REVIEW"];
         const result = await fetchTasks({
           page: currentPage,
           limit: PAGE_SIZE,
@@ -266,8 +266,8 @@ function TasksPageContent() {
     >
       <div className="drag-region relative z-10 w-full max-w-[1200px] rounded-[36px] border border-white/20 bg-white/12 p-6 backdrop-blur-3xl shadow-[0_25px_80px_rgba(0,0,0,0.45)]">
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-2 text-white shadow-inner shadow-white/10">
-            <Image src="/bytebot_transparent_logo_dark.svg" alt="KRONOS" width={28} height={28} className="h-7 w-auto" />
+          <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/8 px-3 py-2 text-white shadow-inner shadow-white/5">
+            <Image src="/bytebot_transparent_logo_white.svg" alt="KRONOS" width={30} height={30} className="h-8 w-auto drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]" />
             <span className="text-sm font-semibold">Navigation</span>
           </div>
           <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -296,8 +296,8 @@ function TasksPageContent() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-2 text-white shadow-inner shadow-white/10">
-            <Image src="/bytebot_transparent_logo_dark.svg" alt="KRONOS" width={28} height={28} className="h-7 w-auto" />
+          <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/8 px-3 py-2 text-white shadow-inner shadow-white/5">
+            <Image src="/bytebot_transparent_logo_white.svg" alt="KRONOS" width={30} height={30} className="h-8 w-auto drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]" />
             <span className="text-sm font-semibold">Tasks</span>
           </div>
           <div className="flex flex-1 flex-wrap items-center gap-2">
