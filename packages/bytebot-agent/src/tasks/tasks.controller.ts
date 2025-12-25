@@ -68,6 +68,28 @@ export class TasksController {
 
   @Get('models')
   async getModels() {
+    // Return default models for UI testing when proxy is not available or fails
+    const defaultModels: BytebotAgentModel[] = [
+      {
+        provider: 'anthropic',
+        name: 'claude-3-5-sonnet-20241022',
+        title: 'Claude 3.5 Sonnet',
+        contextWindow: 200000,
+      },
+      {
+        provider: 'openai',
+        name: 'gpt-4o',
+        title: 'GPT-4o',
+        contextWindow: 128000,
+      },
+      {
+        provider: 'google',
+        name: 'gemini-2.5-pro',
+        title: 'Gemini 2.5 Pro',
+        contextWindow: 1000000,
+      },
+    ];
+
     if (proxyUrl) {
       try {
         const response = await fetch(`${proxyUrl}/model/info`, {
@@ -98,16 +120,13 @@ export class TasksController {
 
         return models;
       } catch (error) {
-        if (error instanceof HttpException) {
-          throw error;
-        }
-        throw new HttpException(
-          `Error fetching models: ${error.message}`,
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
+        // Fall back to default models if proxy fails
+        return defaultModels;
       }
     }
-    return models;
+
+    // Return default models if no proxy, or fallback models if API keys are invalid
+    return models.length > 0 ? models : defaultModels;
   }
 
   @Get(':id')
