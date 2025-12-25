@@ -30,11 +30,11 @@ export function FloatingNav() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 rounded-full px-3 py-1.5 hover:bg-white/5 transition-colors">
           <Image
-            src="/kronos_logo.webp"
+            src="/bytebot_transparent_logo_white.svg"
             alt="KRONOS"
             width={32}
             height={32}
-            className="h-8 w-auto"
+            className="h-8 w-auto drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]"
           />
         </Link>
 
@@ -46,14 +46,15 @@ export function FloatingNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`
-                relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300
-                ${
-                  pathname === item.href
-                    ? "bg-white text-black shadow-lg"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }
-              `}
+               className={`
+                 relative rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300
+                 ${
+                   pathname === item.href
+                     ? "bg-white text-black shadow-lg"
+                     : "text-white/70 hover:bg-white/10 hover:text-white"
+                 }
+               `}
+               style={{ fontFamily: "var(--font-bartle)" }}
             >
               {item.label}
             </Link>
