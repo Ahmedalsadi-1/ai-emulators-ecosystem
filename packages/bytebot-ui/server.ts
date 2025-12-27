@@ -15,6 +15,17 @@ const port = parseInt(process.env.PORT || "9992", 10);
 // Backend URLs
 const BYTEBOT_AGENT_BASE_URL = process.env.BYTEBOT_AGENT_BASE_URL;
 const BYTEBOT_DESKTOP_VNC_URL = process.env.BYTEBOT_DESKTOP_VNC_URL;
+const BYTEBOT_DESKTOP_BASE_URL = process.env.BYTEBOT_DESKTOP_BASE_URL;
+
+const resolveDesktopBaseUrl = () => {
+  if (BYTEBOT_DESKTOP_BASE_URL) return BYTEBOT_DESKTOP_BASE_URL;
+  if (!BYTEBOT_DESKTOP_VNC_URL) return undefined;
+  const vncUrl = new URL(BYTEBOT_DESKTOP_VNC_URL);
+  const protocol = vncUrl.protocol === "wss:" ? "https:" : "http:";
+  return `${protocol}//${vncUrl.host}`;
+};
+
+const DESKTOP_BASE_URL = resolveDesktopBaseUrl() || "http://localhost:9990";
 
 const app = next({ dev, hostname, port });
 
@@ -36,8 +47,23 @@ app
       pathRewrite: { "^/api/proxy/tasks": "/socket.io" },
     });
 
+    const desktopProxy = createProxyMiddleware({
+      target: DESKTOP_BASE_URL,
+      changeOrigin: true,
+      pathRewrite: { "^/api/proxy/desktop": "" },
+    });
+
+    const terminalProxy = createProxyMiddleware({
+      target: DESKTOP_BASE_URL,
+      ws: true,
+      changeOrigin: true,
+      pathRewrite: { "^/api/proxy/terminal": "/terminal" },
+    });
+
     // Apply HTTP proxies
     expressApp.use("/api/proxy/tasks", tasksProxy);
+    expressApp.use("/api/proxy/desktop", desktopProxy);
+    expressApp.use("/api/proxy/terminal", terminalProxy);
     expressApp.use("/api/proxy/websockify", (req, res) => {
       console.log("Proxying websockify request");
       // Rewrite path
@@ -62,6 +88,10 @@ app
 
       if (pathname.startsWith("/api/proxy/tasks")) {
         return tasksProxy.upgrade(request, socket as any, head);
+      }
+
+      if (pathname.startsWith("/api/proxy/terminal")) {
+        return terminalProxy.upgrade(request, socket as any, head);
       }
 
       if (pathname.startsWith("/api/proxy/websockify")) {

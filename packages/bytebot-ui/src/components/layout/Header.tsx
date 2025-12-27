@@ -51,13 +51,13 @@ export function Header() {
             <Image
               src={
                 resolvedTheme === "dark"
-                  ? "/bytebot_transparent_logo_white.svg"
-                  : "/bytebot_transparent_logo_dark.svg"
+                  ? "/bytebot-logo.png"
+                  : "/bytebot-logo.png"
               }
               alt="Bytebot Logo"
-              width={100}
-              height={30}
-              className="h-8 w-auto"
+              width={140}
+              height={44}
+              className="h-10 w-auto"
             />
           ) : (
             <div className="h-8 w-[110px]" />

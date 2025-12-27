@@ -284,11 +284,17 @@ export class ComputerUseService {
       return;
     }
 
+    const browserosCommand =
+      process.env.BROWSEROS_APP_COMMAND || 'browseros';
+    const browserosWmClass =
+      process.env.BROWSEROS_APP_WMCLASS || 'browseros.BrowserOS';
+
     const commandMap: Record<string, string> = {
       firefox: 'firefox-esr',
       '1password': '1password',
       thunderbird: 'thunderbird',
       vscode: 'code',
+      browseros: browserosCommand,
       terminal: 'xfce4-terminal',
       directory: 'thunar',
     };
@@ -298,6 +304,7 @@ export class ComputerUseService {
       '1password': '1password.1Password',
       thunderbird: 'Mail.thunderbird',
       vscode: 'code.Code',
+      browseros: browserosWmClass,
       terminal: 'xfce4-terminal.Xfce4-Terminal',
       directory: 'Thunar',
       desktop: 'xfdesktop.Xfdesktop',

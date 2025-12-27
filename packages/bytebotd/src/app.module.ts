@@ -6,6 +6,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { BytebotMcpModule } from './mcp';
+import { TerminalModule } from './terminal/terminal.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { BytebotMcpModule } from './mcp';
     ComputerUseModule,
     InputTrackingModule,
     BytebotMcpModule,
+    TerminalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

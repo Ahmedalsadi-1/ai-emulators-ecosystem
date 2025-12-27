@@ -31,6 +31,7 @@ export enum ApplicationName {
   ONEPASSWORD = '1password',
   THUNDERBIRD = 'thunderbird',
   VSCODE = 'vscode',
+  BROWSEROS = 'browseros',
   TERMINAL = 'terminal',
   DESKTOP = 'desktop',
   DIRECTORY = 'directory',

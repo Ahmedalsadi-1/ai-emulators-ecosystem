@@ -513,6 +513,7 @@ V, W, X, Y, Z
         '1password',
         'thunderbird',
         'vscode',
+        'browseros',
         'terminal',
         'desktop',
         'directory',
@@ -527,6 +528,7 @@ V, W, X, Y, Z
       | '1password'
       | 'thunderbird'
       | 'vscode'
+      | 'browseros'
       | 'terminal'
       | 'desktop'
       | 'directory';
