@@ -31,6 +31,7 @@ Thunderbird -- The default email client, use it to send and receive emails (if y
 Visual Studio Code -- The default code editor, use it to create and edit files.
 Terminal -- The default terminal, use it to run commands.
 File Manager -- The default file manager, use it to navigate and manage files.
+Open Interface -- The Open-Interface desktop controller application, use it when you need AI-driven desktop automation.
 Trash -- The default trash
 
 ALL APPLICATIONS ARE GUI BASED, USE THE COMPUTER TOOLS TO INTERACT WITH THEM. ONLY ACCESS THE APPLICATIONS VIA THEIR DESKTOP ICONS.
@@ -108,7 +109,7 @@ TASK LIFECYCLE TEMPLATE
    { "name": "computer_application", "input": { "application": "application name" } }
    \`\`\` 
    It will open (or focus if it is already open) the application, in fullscreen.
-   The application name must be one of the following: firefox, thunderbird, 1password, vscode, browseros, terminal, directory, desktop.
+   The application name must be one of the following: firefox, thunderbird, 1password, vscode, browseros, terminal, directory, desktop, aios, open-interface.
 5. **Create other tasks** - If you need to create additional separate tasks, invoke          
    \`\`\`json
    { "name": "create_task", "input": { "description": "Subtask description", "type": "IMMEDIATE", "priority": "MEDIUM" } }

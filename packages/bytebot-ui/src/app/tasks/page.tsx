@@ -11,11 +11,13 @@ import Image from "next/image";
 type ViewMode = "floating" | "bento" | "pulse";
 
 const statusNeon: Record<string, { color: string; label: string }> = {
-  completed: { color: "from-emerald-400/90 to-emerald-300/70", label: "Completed" },
-  running: { color: "from-sky-400/90 to-blue-400/70", label: "In Progress" },
-  in_progress: { color: "from-sky-400/90 to-blue-400/70", label: "In Progress" },
-  pending: { color: "from-white/50 to-white/40", label: "Pending" },
-  failed: { color: "from-rose-500/90 to-orange-400/80", label: "Failed" },
+  COMPLETED: { color: "from-emerald-400/90 to-emerald-300/70", label: "Completed" },
+  RUNNING: { color: "from-sky-400/90 to-blue-400/70", label: "In Progress" },
+  PENDING: { color: "from-white/50 to-white/40", label: "Pending" },
+  FAILED: { color: "from-rose-500/90 to-orange-400/80", label: "Failed" },
+  CANCELLED: { color: "from-rose-500/90 to-orange-400/80", label: "Cancelled" },
+  NEEDS_HELP: { color: "from-yellow-500/90 to-amber-400/80", label: "Needs Help" },
+  NEEDS_REVIEW: { color: "from-purple-500/90 to-violet-400/80", label: "Needs Review" },
 };
 
 const appEmojis = ["🖥️", "🧭", "📝", "🌐", "📧", "📁", "⚙️", "🛰️"];
@@ -26,6 +28,7 @@ function TasksPageContent() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"ALL" | "ACTIVE" | "COMPLETED">(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam && ["ALL", "ACTIVE", "COMPLETED"].includes(tabParam)) {
@@ -42,29 +45,31 @@ function TasksPageContent() {
   const [viewMode, setViewMode] = useState<ViewMode>("floating");
   const PAGE_SIZE = 20;
 
-  useEffect(() => {
-    const loadTasks = async () => {
-      setIsLoading(true);
-      try {
-        const statuses =
-          activeTab === "ALL"
-            ? undefined
-            : activeTab === "COMPLETED"
-              ? ["COMPLETED"]
-              : ["PENDING", "RUNNING", "NEEDS_HELP", "NEEDS_REVIEW"];
-        const result = await fetchTasks({
-          page: currentPage,
-          limit: PAGE_SIZE,
-          statuses,
-        });
-        setTasks(result.tasks || []);
-      } catch (error) {
-        console.error("Failed to load tasks:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadTasks = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const statuses =
+        activeTab === "ALL"
+          ? undefined
+          : activeTab === "COMPLETED"
+            ? ["COMPLETED"]
+            : ["PENDING", "RUNNING", "NEEDS_HELP", "NEEDS_REVIEW"];
+      const result = await fetchTasks({
+        page: currentPage,
+        limit: PAGE_SIZE,
+        statuses,
+      });
+      setTasks(result.tasks || []);
+    } catch (error) {
+      console.error("Failed to load tasks:", error);
+      setError(error instanceof Error ? error.message : "Failed to load tasks");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadTasks();
   }, [currentPage, activeTab]);
 
@@ -75,6 +80,7 @@ function TasksPageContent() {
         setTaskCounts(counts);
       } catch (error) {
         console.error("Failed to load task counts:", error);
+        // Don't set error state for counts failure to avoid blocking the UI
       }
     };
 
@@ -93,7 +99,7 @@ function TasksPageContent() {
     router.push(newUrl, { scroll: false });
   };
 
-  const neonForStatus = (status: string) => statusNeon[status] || statusNeon.pending;
+  const neonForStatus = (status: string) => statusNeon[status.toUpperCase()] || statusNeon.PENDING;
 
   const groupedByDate = useMemo(() => {
     const groups: Record<string, Task[]> = {};
@@ -351,6 +357,17 @@ function TasksPageContent() {
                 className="h-12 w-12 rounded-full border-4 border-white/20 border-t-white/60"
               />
               Loading tasks...
+            </div>
+          ) : error ? (
+            <div className="text-center text-white/70">
+              <p className="mb-4 text-lg text-red-400">Error loading tasks</p>
+              <p className="mb-4 text-sm">{error}</p>
+               <button
+                 onClick={() => loadTasks()}
+                 className="inline-block rounded-md bg-white/80 px-6 py-3 text-sm font-semibold text-[#0f2d3c] shadow-lg shadow-white/40"
+               >
+                 Refresh
+               </button>
             </div>
           ) : tasks.length === 0 ? (
             <div className="text-center text-white/70">

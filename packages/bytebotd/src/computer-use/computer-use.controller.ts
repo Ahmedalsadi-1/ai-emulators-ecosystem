@@ -9,8 +9,10 @@ import {
 import { ComputerUseService } from './computer-use.service';
 import { ComputerActionValidationPipe } from './dto/computer-action-validation.pipe';
 import { ComputerActionDto } from './dto/computer-action.dto';
+import { Roles } from '../auth/auth.decorators';
 
 @Controller('computer-use')
+@Roles('operator', 'admin')
 export class ComputerUseController {
   private readonly logger = new Logger(ComputerUseController.name);
 

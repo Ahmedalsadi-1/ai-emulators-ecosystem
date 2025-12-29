@@ -1,0 +1,85 @@
+name: bytebot-production
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bytebot-postgres-prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-bytebotdb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bytebot-network
+
+  bytebot-desktop:
+    image: ghcr.io/bytebot-ai/bytebot-desktop:edge
+    container_name: bytebot-desktop-prod
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: computer
+    privileged: true
+    ports:
+      - "9990:9990"
+    environment:
+      - DISPLAY=:0
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - BYTEBOT_AUTH_ENABLED=${BYTEBOT_AUTH_ENABLED:-false}
+      - BYTEBOT_AUTH_SECRET=${BYTEBOT_AUTH_SECRET}
+      - BYTEBOT_AUTH_TTL_SECONDS=${BYTEBOT_AUTH_TTL_SECONDS:-3600}
+      - BYTEBOT_AUTH_USERS_FILE=/app/data/bytebotd.users.json
+      - BYTEBOT_AUDIT_ENABLED=${BYTEBOT_AUDIT_ENABLED:-false}
+      - AIOS_BASE_URL=${AIOS_BASE_URL:-http://host.docker.internal:8000}
+      - FACTIF_AI_BASE_URL=${FACTIF_AI_BASE_URL:-http://host.docker.internal:3001}
+      - OPEN_INTERFACE_APP_COMMAND=${OPEN_INTERFACE_APP_COMMAND}
+      - OPEN_INTERFACE_APP_WMCLASS=${OPEN_INTERFACE_APP_WMCLASS}
+    volumes:
+      - bytebot_desktop_data:/app/data
+    networks:
+      - bytebot-network
+
+  bytebot-agent:
+    image: ghcr.io/bytebot-ai/bytebot-agent:edge
+    container_name: bytebot-agent-prod
+    restart: unless-stopped
+    ports:
+      - "9991:9991"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/bytebotdb}
+      - BYTEBOT_DESKTOP_BASE_URL=${BYTEBOT_DESKTOP_BASE_URL:-http://bytebot-desktop:9990}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - BYTEBOT_LLM_PROXY_URL=${BYTEBOT_LLM_PROXY_URL}
+    depends_on:
+      - postgres
+    networks:
+      - bytebot-network
+
+  bytebot-ui:
+    image: ghcr.io/bytebot-ai/bytebot-ui:edge
+    container_name: bytebot-ui-prod
+    restart: unless-stopped
+    ports:
+      - "9992:9992"
+    environment:
+      - NODE_ENV=production
+      - BYTEBOT_AGENT_BASE_URL=${BYTEBOT_AGENT_BASE_URL:-http://bytebot-agent:9991}
+      - BYTEBOT_DESKTOP_VNC_URL=${BYTEBOT_DESKTOP_VNC_URL:-http://bytebot-desktop:9990/websockify}
+      - NEXT_PUBLIC_TURIX_API_URL=${NEXT_PUBLIC_TURIX_API_URL:-http://host.docker.internal:3000}
+    depends_on:
+      - bytebot-agent
+    networks:
+      - bytebot-network
+
+networks:
+  bytebot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  bytebot_desktop_data:

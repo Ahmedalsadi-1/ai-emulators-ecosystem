@@ -18,14 +18,16 @@ async function bootstrap() {
     credentials: true,
   });
 
+  const vncServerUrl = process.env.VNC_SERVER_URL || 'http://localhost:6080';
   const wsProxy = createProxyMiddleware({
-    target: 'http://localhost:6080',
+    target: vncServerUrl,
     ws: true,
     changeOrigin: true,
     pathRewrite: { '^/websockify': '/' },
   });
   app.use('/websockify', express.raw({ type: '*/*' }), wsProxy);
-  const server = await app.listen(9990);
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 9990;
+  const server = await app.listen(port);
 
   // Selective upgrade routing
   server.on('upgrade', (req, socket, head) => {

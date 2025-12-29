@@ -517,6 +517,8 @@ V, W, X, Y, Z
         'terminal',
         'desktop',
         'directory',
+        'turix',
+        'aios',
       ]),
     }),
   })
@@ -531,7 +533,9 @@ V, W, X, Y, Z
       | 'browseros'
       | 'terminal'
       | 'desktop'
-      | 'directory';
+      | 'directory'
+      | 'turix'
+      | 'aios';
   }) {
     try {
       await this.computerUse.action({ action: 'application', application });

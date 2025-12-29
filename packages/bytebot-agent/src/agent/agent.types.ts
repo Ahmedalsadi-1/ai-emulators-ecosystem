@@ -8,6 +8,12 @@ export interface BytebotAgentResponse {
     outputTokens: number;
     totalTokens: number;
   };
+  performance?: {
+    responseTime: number;
+    provider: string;
+    model: string;
+    success: boolean;
+  };
 }
 
 export interface BytebotAgentService {
@@ -20,12 +26,25 @@ export interface BytebotAgentService {
   ): Promise<BytebotAgentResponse>;
 }
 
-export interface BytebotAgentModel {
-  provider: 'anthropic' | 'openai' | 'google' | 'proxy';
-  name: string;
-  title: string;
-  contextWindow?: number;
-}
+  export interface BytebotAgentModel {
+    provider:
+      | 'anthropic'
+      | 'openai'
+      | 'google'
+      | 'proxy'
+      | 'ollama-local'
+      | 'opencode-local'
+      | 'routeway'
+      | 'groq';
+    name: string;
+    title: string;
+    contextWindow?: number;
+    capabilities?: {
+      toolCalling?: boolean;
+      vision?: boolean;
+      streaming?: boolean;
+    };
+  }
 
 export class BytebotAgentInterrupt extends Error {
   constructor() {

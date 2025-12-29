@@ -18,25 +18,23 @@ import { MessagesService } from '../messages/messages.service';
 import { ANTHROPIC_MODELS } from '../anthropic/anthropic.constants';
 import { OPENAI_MODELS } from '../openai/openai.constants';
 import { GOOGLE_MODELS } from '../google/google.constants';
+import { GROQ_MODELS } from '../groq/groq.constants';
+import { ROUTEWAY_MODELS } from '../routeway/routeway.constants';
+import { OLLAMA_MODELS } from '../ollama/ollama.constants';
+import { OPENCODE_MODELS } from '../opencode/opencode.constants';
 import { BytebotAgentModel } from 'src/agent/agent.types';
-
-const geminiApiKey = process.env.GEMINI_API_KEY;
-const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-const openaiApiKey = process.env.OPENAI_API_KEY;
+import { ConfigService } from '@nestjs/config';
+import { PerformanceMonitorService } from '../agent/performance-monitor.service';
 
 const proxyUrl = process.env.BYTEBOT_LLM_PROXY_URL;
-
-const models = [
-  ...(anthropicApiKey ? ANTHROPIC_MODELS : []),
-  ...(openaiApiKey ? OPENAI_MODELS : []),
-  ...(geminiApiKey ? GOOGLE_MODELS : []),
-];
 
 @Controller('tasks')
 export class TasksController {
   constructor(
     private readonly tasksService: TasksService,
     private readonly messagesService: MessagesService,
+    private readonly configService: ConfigService,
+    private readonly performanceMonitor: PerformanceMonitorService,
   ) {}
 
   @Post()
@@ -68,70 +66,115 @@ export class TasksController {
 
   @Get('models')
   async getModels() {
-    // Return default models for UI testing when proxy is not available or fails
-    const defaultModels: BytebotAgentModel[] = [
-      {
-        provider: 'anthropic',
-        name: 'claude-3-5-sonnet-20241022',
-        title: 'Claude 3.5 Sonnet',
-        contextWindow: 200000,
-      },
-      {
-        provider: 'openai',
-        name: 'gpt-4o',
-        title: 'GPT-4o',
-        contextWindow: 128000,
-      },
-      {
-        provider: 'google',
-        name: 'gemini-2.5-pro',
-        title: 'Gemini 2.5 Pro',
-        contextWindow: 1000000,
-      },
-    ];
+    // Build models array dynamically using process.env
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const routewayApiKey = process.env.ROUTEWAY_API_KEY;
 
-    if (proxyUrl) {
-      try {
-        const response = await fetch(`${proxyUrl}/model/info`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+    let dynamicModels: any[] = [];
 
-        if (!response.ok) {
-          throw new HttpException(
-            `Failed to fetch models from proxy: ${response.statusText}`,
-            HttpStatus.BAD_GATEWAY,
-          );
-        }
-
-        const proxyModels = await response.json();
-
-        // Map proxy response to BytebotAgentModel format
-        const models: BytebotAgentModel[] = proxyModels.data.map(
-          (model: any) => ({
-            provider: 'proxy',
-            name: model.litellm_params.model,
-            title: model.model_name,
-            contextWindow: 128000,
-          }),
-        );
-
-        return models;
-      } catch (error) {
-        // Fall back to default models if proxy fails
-        return defaultModels;
-      }
+    // Add models conditionally
+    if (anthropicApiKey) {
+      dynamicModels = [...dynamicModels, ...ANTHROPIC_MODELS];
+    }
+    if (openaiApiKey) {
+      dynamicModels = [...dynamicModels, ...OPENAI_MODELS];
+    }
+    if (geminiApiKey) {
+      dynamicModels = [...dynamicModels, ...GOOGLE_MODELS];
+    }
+    if (groqApiKey) {
+      dynamicModels = [...dynamicModels, ...GROQ_MODELS];
+    }
+    if (routewayApiKey) {
+      dynamicModels = [...dynamicModels, ...ROUTEWAY_MODELS];
     }
 
-    // Return default models if no proxy, or fallback models if API keys are invalid
-    return models.length > 0 ? models : defaultModels;
+    // Always add Ollama and OpenCode models
+    dynamicModels = [...dynamicModels, ...OLLAMA_MODELS];
+    dynamicModels = [...dynamicModels, ...OPENCODE_MODELS];
+
+    return dynamicModels;
   }
 
-  @Get(':id')
-  async findById(@Param('id') id: string): Promise<Task> {
-    return this.tasksService.findById(id);
+  @Get('performance')
+  async getPerformanceMetrics(
+    @Query('provider') provider?: string,
+    @Query('model') model?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : 100;
+    return {
+      metrics: this.performanceMonitor.getMetrics(provider, model, limitNum),
+      stats: this.performanceMonitor.getProviderStats(provider),
+      recentErrors: this.performanceMonitor.getRecentErrors(5),
+      topSlowest: this.performanceMonitor.getTopSlowest(5),
+    };
+  }
+
+  @Post('/browseros/connect')
+  @HttpCode(HttpStatus.OK)
+  async connectBrowserOSSimple(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Validate BYTEBOT_DESKTOP_BASE_URL is set
+      const desktopUrl = process.env.BYTEBOT_DESKTOP_BASE_URL || 'http://localhost:9990';
+
+      // Check for common environment variable issues
+      const warnings: string[] = [];
+      
+      if (!process.env.BROWSEROS_APP_COMMAND) {
+        warnings.push('BROWSEROS_APP_COMMAND environment variable is not set (using default: "browseros")');
+      }
+      
+      if (!process.env.BYTEBOT_DESKTOP_VNC_URL) {
+        warnings.push('BYTEBOT_DESKTOP_VNC_URL environment variable is not set - VNC connection may fail');
+      }
+
+      // Make direct call to computer-use service to launch BrowserOS
+      const response = await fetch(`${desktopUrl}/computer-use`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'application',
+          application: 'browseros',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Failed to launch BrowserOS: ${response.status} ${errorText}`;
+        
+        // Add helpful context for common issues
+        if (response.status === 404) {
+          errorMessage += ' - bytebotd service may not be running or BYTEBOT_DESKTOP_BASE_URL is incorrect';
+        } else if (response.status === 500) {
+          errorMessage += ' - BrowserOS application may not be installed or BROWSEROS_APP_COMMAND is incorrect';
+        }
+        
+        throw new HttpException(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      let successMessage = 'BrowserOS launched successfully';
+      if (warnings.length > 0) {
+        successMessage += ` (warnings: ${warnings.join(', ')})`;
+      }
+
+      return {
+        success: true,
+        message: successMessage,
+      };
+    } catch (error: any) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        `Failed to connect to BrowserOS: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':id/messages')
@@ -177,7 +220,7 @@ export class TasksController {
     @Param('id') taskId: string,
     @Query('limit') limit?: string,
     @Query('page') page?: string,
-  ) {
+  ): Promise<any[]> {
     const options = {
       limit: limit ? parseInt(limit, 10) : undefined,
       page: page ? parseInt(page, 10) : undefined,
@@ -186,10 +229,64 @@ export class TasksController {
     return this.messagesService.findProcessedMessages(taskId, options);
   }
 
+  @Get(':id')
+  async findById(@Param('id') id: string): Promise<Task> {
+    return this.tasksService.findById(id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Param('id') id: string): Promise<void> {
     await this.tasksService.delete(id);
+  }
+
+
+
+  @Post('aios/connect')
+  @HttpCode(HttpStatus.OK)
+  async connectAIOS(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Validate BYTEBOT_DESKTOP_BASE_URL is set
+      const desktopUrl = this.configService.get<string>('BYTEBOT_DESKTOP_BASE_URL');
+      if (!desktopUrl) {
+        throw new HttpException(
+          'BYTEBOT_DESKTOP_BASE_URL environment variable is not configured. Please set it to the bytebotd service URL (e.g., http://localhost:9990).',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Make direct call to computer-use service to launch AIOS
+      const response = await fetch(`${desktopUrl}/computer-use`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'application',
+          application: 'aios',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new HttpException(
+          `Failed to launch AIOS: ${response.status} ${errorText}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      return {
+        success: true,
+        message: 'AIOS launched successfully',
+      };
+    } catch (error: any) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        `Failed to connect to AIOS: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Post(':id/takeover')

@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -11,6 +11,8 @@ import {
 import type { Server, Socket } from 'socket.io';
 import { spawn, IPty } from 'node-pty';
 import * as os from 'os';
+import { Roles } from '../auth/auth.decorators';
+import { WsAuthGuard } from '../auth/ws-auth.guard';
 
 type TerminalInputPayload = {
   data?: string;
@@ -26,6 +28,8 @@ type TerminalResizePayload = {
   cors: { origin: '*', credentials: true },
   transports: ['websocket'],
 })
+@UseGuards(WsAuthGuard)
+@Roles('operator', 'admin')
 export class TerminalGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
@@ -87,7 +91,7 @@ export class TerminalGateway
     const session = this.sessions.get(client.id);
     if (!session) return;
 
-    const data = typeof payload === 'string' ? payload : payload.data || '';
+    const data = typeof payload === 'string' ? payload : (payload && payload.data) || '';
     if (data) {
       session.write(data);
     }

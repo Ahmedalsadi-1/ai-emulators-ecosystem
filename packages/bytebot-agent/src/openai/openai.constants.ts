@@ -6,12 +6,22 @@ export const OPENAI_MODELS: BytebotAgentModel[] = [
     name: 'o3-2025-04-16',
     title: 'o3',
     contextWindow: 200000,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
   },
   {
     provider: 'openai',
     name: 'gpt-4.1-2025-04-14',
     title: 'GPT-4.1',
     contextWindow: 1047576,
+    capabilities: {
+      toolCalling: true,
+      vision: true,
+      streaming: true,
+    },
   },
 ];
 

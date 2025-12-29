@@ -9,7 +9,10 @@ export type Application =
   | "browseros"
   | "terminal"
   | "desktop"
-  | "directory";
+  | "directory"
+  | "turix"
+  | "aios"
+  | "open-interface";
 
 // Define individual computer action types
 export type MoveMouseAction = {

@@ -264,6 +264,50 @@ export class ComputerUseService {
   private async application(action: ApplicationAction): Promise<void> {
     const execAsync = promisify(exec);
 
+    // Helper to parse command string into executable and arguments
+    const parseCommand = (
+      commandString: string,
+    ): { command: string; args: string[] } => {
+      const tokens: string[] = [];
+      let currentToken = '';
+      let inQuotes = false;
+      let quoteChar = '';
+
+      for (let i = 0; i < commandString.length; i++) {
+        const char = commandString[i];
+        const prevChar = i > 0 ? commandString[i - 1] : '';
+
+        if (inQuotes) {
+          if (char === quoteChar && prevChar !== '\\') {
+            inQuotes = false;
+            quoteChar = '';
+          } else {
+            currentToken += char;
+          }
+        } else if (char === '"' || char === "'") {
+          inQuotes = true;
+          quoteChar = char;
+        } else if (char === ' ') {
+          if (currentToken.length > 0) {
+            tokens.push(currentToken);
+            currentToken = '';
+          }
+        } else {
+          currentToken += char;
+        }
+      }
+
+      if (currentToken.length > 0) {
+        tokens.push(currentToken);
+      }
+
+      if (tokens.length === 0) {
+        throw new Error(`Invalid command string: ${commandString}`);
+      }
+
+      return { command: tokens[0], args: tokens.slice(1) };
+    };
+
     // Helper to spawn a command and forget about it
     const spawnAndForget = (
       command: string,
@@ -279,15 +323,81 @@ export class ComputerUseService {
       child.unref(); // Allow the parent process to exit independently
     };
 
+    // Helper to spawn a command string (which may include arguments)
+    const spawnCommandString = (
+      commandString: string,
+      sudo: boolean = true,
+      options: Record<string, any> = {},
+    ): void => {
+      try {
+        const { command, args } = parseCommand(commandString);
+        this.logger.debug(
+          `Parsed command: ${command}, args: [${args.join(', ')}]`,
+        );
+
+        if (sudo) {
+          // Run via sudo for GUI applications
+          spawnAndForget('sudo', ['-u', 'user', command, ...args], options);
+        } else {
+          // Run directly
+          spawnAndForget(command, args, options);
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to spawn command string: ${commandString}`,
+          error,
+        );
+        throw error;
+      }
+    };
+
+    // Platform detection
+    const isMacOS = process.platform === 'darwin';
+    const isLinux = process.platform === 'linux';
+
+    this.logger.debug(
+      `Platform: ${process.platform} (macOS: ${isMacOS}, Linux: ${isLinux})`,
+    );
+
     if (action.application === 'desktop') {
-      spawnAndForget('sudo', ['-u', 'user', 'wmctrl', '-k', 'on']);
+      if (isLinux) {
+        spawnAndForget('sudo', ['-u', 'user', 'wmctrl', '-k', 'on']);
+      } else if (isMacOS) {
+        spawnAndForget('osascript', [
+          '-e',
+          'tell application "Finder" to set collapsed of every window of desktop to true',
+        ]);
+      }
       return;
     }
 
-    const browserosCommand =
-      process.env.BROWSEROS_APP_COMMAND || 'browseros';
+    const browserosCommand = process.env.BROWSEROS_APP_COMMAND || 'browseros';
     const browserosWmClass =
       process.env.BROWSEROS_APP_WMCLASS || 'browseros.BrowserOS';
+
+    const turixCommand = process.env.TURIX_APP_COMMAND || 'open -a "Turix"';
+    const turixWmClass = process.env.TURIX_APP_WMCLASS || 'Turix';
+
+    const aiosCommand = process.env.AIOS_APP_COMMAND || 'python -m uvicorn runtime.launch:app --host 0.0.0.0 --port 8000';
+    const aiosWmClass = process.env.AIOS_APP_WMCLASS || 'aios.AIOS';
+
+    const openInterfaceCommand =
+      process.env.OPEN_INTERFACE_APP_COMMAND || 'open -a "Open Interface"';
+    const openInterfaceWmClass =
+      process.env.OPEN_INTERFACE_APP_WMCLASS || 'Open-Interface';
+
+    this.logger.debug(
+      `Turix command: ${turixCommand}, wmclass: ${turixWmClass}`,
+    );
+    this.logger.debug(
+      `BrowserOS command: ${browserosCommand}, wmclass: ${browserosWmClass}`,
+    );
+    this.logger.debug(
+      `AIOS command: ${aiosCommand}, wmclass: ${aiosWmClass}`,
+    );
+    this.logger.debug(
+      `Open-Interface command: ${openInterfaceCommand}, wmclass: ${openInterfaceWmClass}`,
+    );
 
     const commandMap: Record<string, string> = {
       firefox: 'firefox-esr',
@@ -297,6 +407,9 @@ export class ComputerUseService {
       browseros: browserosCommand,
       terminal: 'xfce4-terminal',
       directory: 'thunar',
+      turix: turixCommand,
+      aios: aiosCommand,
+      'open-interface': openInterfaceCommand,
     };
 
     const processMap: Record<Application, string> = {
@@ -308,63 +421,156 @@ export class ComputerUseService {
       terminal: 'xfce4-terminal.Xfce4-Terminal',
       directory: 'Thunar',
       desktop: 'xfdesktop.Xfdesktop',
+      turix: turixWmClass,
+      aios: aiosWmClass,
+      'open-interface': openInterfaceWmClass,
     };
 
-    // check if the application is already open using wmctrl -lx
+    // Check if the application is already open
     let appOpen = false;
+    const appIdentifier = processMap[action.application];
+
+    this.logger.debug(
+      `Checking if ${action.application} is open (identifier: ${appIdentifier})`,
+    );
+
     try {
-      const { stdout } = await execAsync(
-        `sudo -u user wmctrl -lx | grep ${processMap[action.application]}`,
-        { timeout: 5000 }, // 5 second timeout
-      );
-      appOpen = stdout.trim().length > 0;
-    } catch (error: any) {
+      if (isLinux) {
+        // On Linux, use wmctrl -lx
+        const { stdout } = await execAsync(
+          `sudo -u user wmctrl -lx | grep "${appIdentifier}"`,
+          { timeout: 5000 }, // 5 second timeout
+        );
+        appOpen = stdout.trim().length > 0;
+        this.logger.debug(
+          `Linux check result: appOpen=${appOpen}, stdout length=${stdout.trim().length}`,
+        );
+       } else if (isMacOS) {
+        // On macOS, use osascript to check if app is running
+        const appName =
+          action.application === 'browseros'
+            ? 'BrowserOS'
+            : action.application === 'turix'
+              ? 'Turix'
+              : action.application === 'aios'
+                ? 'AIOS'
+                : action.application === 'open-interface'
+                  ? 'Open Interface'
+                : action.application.charAt(0).toUpperCase() +
+                  action.application.slice(1);
+
+        const { stdout } = await execAsync(
+          `osascript -e 'tell application "System Events" to return name of every process whose name is "${appName}"'`,
+          { timeout: 5000 },
+        );
+        appOpen = stdout.trim().length > 0;
+        this.logger.debug(
+          `macOS check result: appOpen=${appOpen}, appName=${appName}, stdout=${stdout.trim()}`,
+        );
+      }
+    } catch (error) {
       // grep returns exit code 1 when no match is found – treat as "not open"
+      // osascript returns error if app not found – treat as "not open"
       // Also handle timeout errors
-      if (error.code !== 1 && !error.message?.includes('timeout')) {
-        throw error;
+      const err = error as {
+        code?: number;
+        message?: string;
+        killed?: boolean;
+        stack?: string;
+      };
+      if (err.code !== 1 && !err.message?.includes('timeout') && !err.killed) {
+        this.logger.error(
+          `Error checking if app is open: ${err.message}`,
+          err.stack,
+        );
+        // Don't throw, treat as not open
       }
     }
 
     if (appOpen) {
       this.logger.log(`Application ${action.application} is already open`);
 
-      // Fire and forget - activate window
-      spawnAndForget('sudo', [
-        '-u',
-        'user',
-        'wmctrl',
-        '-x',
-        '-a',
-        processMap[action.application],
-      ]);
+      if (isLinux) {
+        // Fire and forget - activate window on Linux
+        spawnAndForget('sudo', [
+          '-u',
+          'user',
+          'wmctrl',
+          '-x',
+          '-a',
+          appIdentifier,
+        ]);
 
-      // Fire and forget - maximize window
-      spawnAndForget('sudo', [
-        '-u',
-        'user',
-        'wmctrl',
-        '-x',
-        '-r',
-        processMap[action.application],
-        '-b',
-        'add,maximized_vert,maximized_horz',
-      ]);
+        // Fire and forget - maximize window on Linux
+        spawnAndForget('sudo', [
+          '-u',
+          'user',
+          'wmctrl',
+          '-x',
+          '-r',
+          appIdentifier,
+          '-b',
+          'add,maximized_vert,maximized_horz',
+        ]);
+      } else if (isMacOS) {
+        // On macOS, use osascript to activate and maximize
+        const appName =
+          action.application === 'browseros'
+            ? 'BrowserOS'
+            : action.application === 'turix'
+              ? 'Turix'
+              : action.application === 'aios'
+                ? 'AIOS'
+                : action.application.charAt(0).toUpperCase() +
+                  action.application.slice(1);
+
+        spawnAndForget('osascript', [
+          '-e',
+          `tell application "${appName}" to activate`,
+          '-e',
+          `tell application "${appName}" to set bounds of front window to {0, 0, 2000, 1200}`,
+        ]);
+
+        this.logger.log(`Activated and maximized ${appName} on macOS`);
+      }
 
       return;
     }
 
-    // application is not open, open it - fire and forget
-    spawnAndForget('sudo', [
-      '-u',
-      'user',
-      'nohup',
-      commandMap[action.application],
-    ]);
+    // Application is not open, open it - use proper command execution
+    const commandString = commandMap[action.application];
+    this.logger.log(
+      `Launching ${action.application} with command: ${commandString}`,
+    );
 
-    this.logger.log(`Application ${action.application} launched`);
+    try {
+      if (isLinux) {
+        // On Linux, use nohup with proper command parsing
+        const { command, args } = parseCommand(commandString);
+        spawnAndForget('sudo', ['-u', 'user', 'nohup', command, ...args]);
+      } else if (isMacOS) {
+        // On macOS, execute the command string directly (e.g., "open -a Turix")
+        spawnCommandString(commandString, false); // No sudo needed on macOS for open command
+      } else {
+        // Fallback: try to spawn the command directly
+        spawnCommandString(commandString, isLinux); // Use sudo only on Linux
+      }
 
-    // Just return immediately
+      this.logger.log(
+        `Application ${action.application} launched successfully`,
+      );
+    } catch (error) {
+      const err = error as { message?: string; stack?: string };
+      this.logger.error(
+        `Failed to launch application ${action.application}: ${err.message}`,
+        err.stack,
+      );
+      throw error;
+    }
+
+    // Wait a brief moment for the application to start
+    await this.delay(1000);
+
     return;
   }
 

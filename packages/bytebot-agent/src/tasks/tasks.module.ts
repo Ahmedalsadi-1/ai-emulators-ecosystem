@@ -1,14 +1,16 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { TasksGateway } from './tasks.gateway';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MessagesModule } from '../messages/messages.module';
+import { AgentModule } from '../agent/agent.module';
+import { PerformanceMonitorService } from '../agent/performance-monitor.service';
 
 @Module({
-  imports: [PrismaModule, MessagesModule],
+  imports: [PrismaModule, MessagesModule, forwardRef(() => AgentModule)],
   controllers: [TasksController],
-  providers: [TasksService, TasksGateway],
+  providers: [TasksService, TasksGateway, PerformanceMonitorService],
   exports: [TasksService, TasksGateway],
 })
 export class TasksModule {}

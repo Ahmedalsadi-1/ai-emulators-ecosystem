@@ -27,6 +27,10 @@ import { InputCaptureService } from './input-capture.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { OpenAIService } from '../openai/openai.service';
 import { GoogleService } from '../google/google.service';
+import { GroqService } from '../groq/groq.service';
+import { OllamaService } from '../ollama/ollama.service';
+import { OpenCodeService } from '../opencode/opencode.service';
+import { RoutewayService } from '../routeway/routeway.service';
 import {
   BytebotAgentModel,
   BytebotAgentService,
@@ -39,6 +43,7 @@ import {
 import { SummariesService } from '../summaries/summaries.service';
 import { handleComputerToolUse } from './agent.computer-use';
 import { ProxyService } from '../proxy/proxy.service';
+import { PerformanceMonitorService } from './performance-monitor.service';
 
 @Injectable()
 export class AgentProcessor {
@@ -55,15 +60,51 @@ export class AgentProcessor {
     private readonly anthropicService: AnthropicService,
     private readonly openaiService: OpenAIService,
     private readonly googleService: GoogleService,
+    private readonly groqService: GroqService,
     private readonly proxyService: ProxyService,
+    private readonly ollamaService: OllamaService,
+    private readonly openCodeService: OpenCodeService,
+    private readonly routewayService: RoutewayService,
     private readonly inputCaptureService: InputCaptureService,
+    private readonly performanceMonitor: PerformanceMonitorService,
   ) {
+    console.log('🚀 AgentProcessor constructor called!');
+    console.log('🔧 Services injected:', {
+      groq: !!this.groqService,
+      anthropic: !!this.anthropicService,
+      openai: !!this.openaiService,
+      google: !!this.googleService,
+      routeway: !!this.routewayService,
+    });
+    this.logger.log('AgentProcessor constructor called');
+    this.logger.log('GroqService injected:', !!this.groqService);
+
     this.services = {
       anthropic: this.anthropicService,
       openai: this.openaiService,
       google: this.googleService,
+      groq: this.groqService,
       proxy: this.proxyService,
+      'ollama-local': this.ollamaService,
+      'opencode-local': this.openCodeService,
+      routeway: this.routewayService,
     };
+
+    // Debug: Log which services are actually available
+    console.log('=== SERVICE INJECTION STATUS ===');
+    console.log('anthropic:', !!this.anthropicService);
+    console.log('openai:', !!this.openaiService);
+    console.log('google:', !!this.googleService);
+    console.log('groq:', !!this.groqService);
+    console.log('proxy:', !!this.proxyService);
+    console.log('ollama:', !!this.ollamaService);
+    console.log('opencode:', !!this.openCodeService);
+    console.log('routeway:', !!this.routewayService);
+    console.log('================================');
+
+    // Force log to stdout
+    process.stdout.write('SERVICES MAP: ' + JSON.stringify(Object.keys(this.services)) + '\n');
+    this.logger.log('Services registered:', Object.keys(this.services));
     this.logger.log('AgentProcessor initialized');
   }
 
@@ -136,6 +177,8 @@ export class AgentProcessor {
       return;
     }
 
+    let currentModel: BytebotAgentModel | null = null;
+
     try {
       const task: Task = await this.tasksService.findById(taskId);
 
@@ -182,13 +225,33 @@ export class AgentProcessor {
         `Sending ${messages.length} messages to LLM for processing`,
       );
 
-      const model = task.model as unknown as BytebotAgentModel;
-      let agentResponse: BytebotAgentResponse;
+      currentModel = task.model as unknown as BytebotAgentModel;
+      const model = currentModel;
+      let agentResponse: BytebotAgentResponse | undefined;
+
+      // DEBUG: Check services map
+      const availableServices = Object.keys(this.services);
+      const requestedProvider = model.provider;
+
+      if (!this.services[requestedProvider]) {
+        this.logger.error(`Service not found. Available: ${availableServices.join(', ')}, Requested: ${requestedProvider}`);
+        // Try to find similar keys
+        const similar = availableServices.filter(s => s.includes('groq') || s.includes('q'));
+        if (similar.length > 0) {
+          this.logger.error(`Similar services found: ${similar.join(', ')}`);
+        }
+      }
+
+      console.log('=== SERVICE LOOKUP DEBUG ===');
+      console.log('Requested provider:', model.provider);
+      console.log('Available services:', Object.keys(this.services));
+      console.log('Service found:', !!this.services[model.provider]);
 
       const service = this.services[model.provider];
       if (!service) {
-        this.logger.warn(
-          `No service found for model provider: ${model.provider}`,
+        console.log('SERVICE NOT FOUND - Failing task');
+        this.logger.error(
+          `No service found for model provider: ${model.provider}. Available services: ${Object.keys(this.services).join(', ')}`,
         );
         await this.tasksService.update(taskId, {
           status: TaskStatus.FAILED,
@@ -198,13 +261,42 @@ export class AgentProcessor {
         return;
       }
 
-      agentResponse = await service.generateMessage(
-        AGENT_SYSTEM_PROMPT,
-        messages,
-        model.name,
-        true,
-        this.abortController.signal,
-      );
+       console.log('Using service for provider:', model.provider);
+
+       // Check if model supports tool calling
+       const supportsToolCalling = model.capabilities?.toolCalling ?? true; // Default to true for backward compatibility
+       if (!supportsToolCalling) {
+         this.logger.warn(`Model ${model.name} does not support tool calling, disabling tools`);
+       }
+
+       // Performance monitoring
+       const startTime = Date.now();
+       let success = false;
+
+       try {
+         agentResponse = await service.generateMessage(
+           AGENT_SYSTEM_PROMPT,
+           messages,
+           model.name,
+           supportsToolCalling,
+           this.abortController.signal,
+         );
+         success = true;
+       } catch (error) {
+         success = false;
+         throw error;
+       } finally {
+         const responseTime = Date.now() - startTime;
+         this.performanceMonitor.recordMetrics({
+           provider: model.provider,
+           model: model.name,
+           responseTime,
+           inputTokens: agentResponse?.tokenUsage?.inputTokens || 0,
+           outputTokens: agentResponse?.tokenUsage?.outputTokens || 0,
+           totalTokens: agentResponse?.tokenUsage?.totalTokens || 0,
+           success,
+         });
+       }
 
       const messageContentBlocks = agentResponse.contentBlocks;
 
@@ -389,15 +481,41 @@ export class AgentProcessor {
       if (error?.name === 'BytebotAgentInterrupt') {
         this.logger.warn(`Processing aborted for task ID: ${taskId}`);
       } else {
+        // Check for specific model limitation errors
+        let errorMessage = error.message;
+        let shouldFailTask = true;
+
+        if (error.message?.includes('tool calling') && error.message?.includes('not supported')) {
+          errorMessage = `Model ${currentModel?.name || 'unknown'} does not support tool calling. Please select a different model.`;
+          this.logger.warn(`Model limitation detected: ${errorMessage}`);
+        } else if (error.message?.includes('context window') || error.message?.includes('token limit')) {
+          errorMessage = `Model ${currentModel?.name || 'unknown'} exceeded context window. Task may need to be broken down.`;
+          this.logger.warn(`Context window exceeded for model ${currentModel?.name || 'unknown'}`);
+        } else if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
+          errorMessage = `Rate limit or quota exceeded for ${currentModel?.provider || 'unknown'} provider. Please try again later.`;
+          shouldFailTask = false; // Don't fail permanently, user can retry
+          this.logger.warn(`Rate limit hit for provider ${currentModel?.provider || 'unknown'}`);
+        }
+
         this.logger.error(
-          `Error during task processing iteration for task ID: ${taskId} - ${error.message}`,
+          `Error during task processing iteration for task ID: ${taskId} - ${errorMessage}`,
           error.stack,
         );
-        await this.tasksService.update(taskId, {
-          status: TaskStatus.FAILED,
-        });
-        this.isProcessing = false;
-        this.currentTaskId = null;
+
+        if (shouldFailTask) {
+          await this.tasksService.update(taskId, {
+            status: TaskStatus.FAILED,
+          });
+          this.isProcessing = false;
+          this.currentTaskId = null;
+        } else {
+          // For retryable errors, mark as needs help so user can retry
+          await this.tasksService.update(taskId, {
+            status: TaskStatus.NEEDS_HELP,
+          });
+          this.isProcessing = false;
+          this.currentTaskId = null;
+        }
       }
     }
   }

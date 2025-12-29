@@ -11,6 +11,13 @@ const API_CONFIG = {
   credentials: "include" as RequestCredentials,
 };
 
+const DESKTOP_API_CONFIG = {
+  baseUrl: "/api/proxy/desktop",
+  headers: {
+    "Content-Type": "application/json",
+  },
+};
+
 /**
  * Generic API request handler
  */
@@ -37,6 +44,38 @@ async function apiRequest<T>(
     return await response.json();
   } catch (error) {
     console.error(`Error in API request to ${endpoint}:`, error);
+    return null;
+  }
+}
+
+async function desktopRequest<T>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T | null> {
+  try {
+    const token =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem("bytebot:authToken")
+        : null;
+
+    const response = await fetch(`${DESKTOP_API_CONFIG.baseUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        ...DESKTOP_API_CONFIG.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Desktop API request failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error in desktop API request to ${endpoint}:`, error);
     return null;
   }
 }
@@ -221,20 +260,140 @@ export async function fetchTaskCounts(): Promise<Record<string, number>> {
 }
 
 export async function fetchModels(): Promise<Model[]> {
+  console.log("Fetching models from /api/tasks/models");
   try {
-    const response = await fetch("/api/tasks/models", {
+    const response = await fetch(`${API_CONFIG.baseUrl}/models`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
+      headers: API_CONFIG.headers,
+      // Remove credentials for Electron compatibility
+      // credentials: API_CONFIG.credentials,
     });
+
+    console.log("Fetch response status:", response.status);
     if (!response.ok) {
-      throw new Error("Failed to fetch models");
+      throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
     }
-    return await response.json();
+
+    const data = await response.json();
+    console.log("Fetched models data:", data?.length || 0, "models");
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.models || [];
   } catch (error) {
     console.error("Error fetching models:", error);
-    return [];
+    throw error;
   }
+}
+
+/**
+ * Controller API functions
+ */
+
+export interface ControllerStatus {
+  status: string;
+  message: string;
+  components?: any;
+  version?: string;
+  uptime?: number;
+}
+
+export async function getAIOSStatus(): Promise<ControllerStatus> {
+  return (await desktopRequest<ControllerStatus>("/aios/status")) || {
+    status: "error",
+    message: "Failed to get AIOS status"
+  };
+}
+
+export async function getFactifAIStatus(): Promise<ControllerStatus> {
+  return (await desktopRequest<ControllerStatus>("/factif-ai/status")) || {
+    status: "error",
+    message: "Failed to get Factif-AI status"
+  };
+}
+
+export async function getAIOSCoreStatus(): Promise<any> {
+  return await desktopRequest("/aios/core/status");
+}
+
+export async function listAIOSLLMs(): Promise<any> {
+  return await desktopRequest("/aios/llms");
+}
+
+export async function selectAIOSLLMs(llms: any[]): Promise<any> {
+  return await desktopRequest("/aios/llms/select", {
+    method: "POST",
+    body: JSON.stringify({ llms }),
+  });
+}
+
+export async function getSelectedAIOSLLMs(): Promise<any> {
+  return await desktopRequest("/aios/llms/selected");
+}
+
+export async function submitAIOSAgent(agentId: string, config: any): Promise<any> {
+  return await desktopRequest("/aios/agents/submit", {
+    method: "POST",
+    body: JSON.stringify({ agent_id: agentId, agent_config: config }),
+  });
+}
+
+export async function getAIOSAgentStatus(executionId: number): Promise<any> {
+  return await desktopRequest(`/aios/agents/${executionId}/status`);
+}
+
+export async function listAIOSAgentProcesses(): Promise<any> {
+  return await desktopRequest("/aios/agents/ps");
+}
+
+export async function refreshAIOSConfiguration(): Promise<any> {
+  return await desktopRequest("/aios/core/refresh", {
+    method: "POST",
+  });
+}
+
+export async function getFactifAIModes(): Promise<any> {
+  return await desktopRequest("/factif-ai/modes");
+}
+
+export async function setFactifAIMode(mode: string): Promise<any> {
+  return await desktopRequest("/factif-ai/modes", {
+    method: "POST",
+    body: JSON.stringify({ mode }),
+  });
+}
+
+export async function sendFactifAIChatMessage(
+  message: string,
+  mode?: string,
+  context?: any
+): Promise<any> {
+  return await desktopRequest("/factif-ai/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, mode, context }),
+  });
+}
+
+export async function getFactifAIHistory(): Promise<any> {
+  return await desktopRequest("/factif-ai/history");
+}
+
+export async function clearFactifAIHistory(): Promise<any> {
+  return await desktopRequest("/factif-ai/history", {
+    method: "DELETE",
+  });
+}
+
+export async function executeFactifAIAction(action: any): Promise<any> {
+  return await desktopRequest("/factif-ai/actions/execute", {
+    method: "POST",
+    body: JSON.stringify(action),
+  });
+}
+
+export async function getFactifAIFileSystemInfo(path?: string): Promise<any> {
+  const url = path ? `/factif-ai/filesystem?path=${encodeURIComponent(path)}` : '/factif-ai/filesystem';
+  return await desktopRequest(url);
 }
 
 /**
@@ -256,4 +415,11 @@ export async function resumeTask(taskId: string): Promise<Task | null> {
  */
 export async function cancelTask(taskId: string): Promise<Task | null> {
   return apiRequest<Task>(`/tasks/${taskId}/cancel`, { method: "POST" });
+}
+
+/**
+ * Connects to BrowserOS directly
+ */
+  export async function connectBrowserOSSimple(): Promise<{ success: boolean; message: string } | null> {
+   return apiRequest<{ success: boolean; message: string }>(`/tasks/browseros/connect`, { method: "POST" });
 }

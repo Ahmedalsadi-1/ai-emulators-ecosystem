@@ -108,7 +108,7 @@ TASK LIFECYCLE TEMPLATE
    { "name": "computer_application", "input": { "application": "application name" } }
    \`\`\` 
    It will open (or focus if it is already open) the application, in fullscreen.
-   The application name must be one of the following: firefox, thunderbird, 1password, vscode, browseros, terminal, directory, desktop.
+    The application name must be one of the following: firefox, thunderbird, 1password, vscode, browseros, terminal, directory, desktop, aios.
 5. **Create other tasks** - If you need to create additional separate tasks, invoke          
    \`\`\`json
    { "name": "create_task", "input": { "description": "Subtask description", "type": "IMMEDIATE", "priority": "MEDIUM" } }

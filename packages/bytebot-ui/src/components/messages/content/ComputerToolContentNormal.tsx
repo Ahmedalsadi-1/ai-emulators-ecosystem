@@ -26,6 +26,10 @@ const applicationMap: Record<Application, string> = {
   terminal: "Terminal",
   directory: "File Manager",
   desktop: "Desktop",
+  browseros: "BrowserOS",
+  turix: "Turix",
+  aios: "AIOS",
+  "open-interface": "Open Interface",
 };
 
 function ToolDetailsNormal({ block }: { block: ComputerToolUseContentBlock }) {

@@ -1,6 +1,6 @@
-# KRONOS Desktop Application
+# Bytebot Desktop Application
 
-Electron-based desktop application with Floating Pill UI aesthetic for KRONOS AI Agent.
+Electron-based desktop application for Bytebot AI Agent with compact expandable UI.
 
 ## Development
 
@@ -12,9 +12,9 @@ Runs the Next.js development server on http://localhost:9992
 
 ### Electron Dev Mode
 ```bash
-npm run electron:dev
+npm run dev  # From repo root
 ```
-Runs Electron in development mode, loading from the Next.js dev server.
+Runs Electron in development mode, loading from the Next.js dev server and automatically starting all services.
 
 ## Building
 
@@ -26,27 +26,26 @@ Builds the Next.js application for production.
 
 ### Electron Build
 ```bash
-npm run electron:build
+npm run dist  # From repo root
 ```
 Builds the Electron application distributables for macOS, Windows, and Linux.
 
 ## Architecture
 
-- **Main Process** (`electron/main.ts`): Electron main process
-- **Preload Script** (`electron/preload.ts`): Secure bridge between main and renderer
+- **Main Process** (`electron-main.js`): Electron main process with service orchestration
+- **Preload Script** (`electron-preload.js`): Secure bridge exposing `window.electronAPI`
 - **Renderer Process**: Next.js application with React
 
 ## UI Design
 
-- **Floating Pill Aesthetic**: Centered pill-shaped interface
-- **Glassmorphism**: Blur effects with 85% opacity
-- **Transparent Window**: Frameless window with pure black background
-- **Drag Region**: Entire pill is draggable
-- **No Scrollbars**: Clean, minimalist design
-- **Inner Border**: Subtle 1px white/5 border for depth
+- **Compact Expandable UI**: 400x300px initial window expanding to task-specific sizes
+- **Glassmorphism**: Blur effects with backdrop filters
+- **Custom Title Bar**: Minimize, maximize, close controls with window management
+- **Navigation Pills**: Expandable interface with Tasks, Desktop, Web, Settings tabs
+- **Responsive Design**: Adapts to different window sizes and use cases
 
 ## Platform Support
 
-- **macOS**: DMG distribution, dock menu, Cmd+ shortcuts
-- **Windows**: NSIS installer
-- **Linux**: AppImage and DEB packages
+- **macOS**: DMG distribution with native macOS integration
+- **Windows**: NSIS installer with Windows-specific optimizations
+- **Linux**: AppImage and DEB packages for broad Linux compatibility

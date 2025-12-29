@@ -171,7 +171,7 @@ export class ProxyService implements BytebotAgentService {
               break;
             }
             case MessageContentType.Image: {
-              const imageBlock = block as ImageContentBlock;
+              const imageBlock = block;
               chatMessages.push({
                 role: 'user',
                 content: [
@@ -204,7 +204,7 @@ export class ProxyService implements BytebotAgentService {
               break;
             }
             case MessageContentType.Thinking: {
-              const thinkingBlock = block as ThinkingContentBlock;
+              const thinkingBlock = block;
               const message: ChatCompletionMessageParam = {
                 role: 'assistant',
                 content: null,
@@ -214,7 +214,7 @@ export class ProxyService implements BytebotAgentService {
               break;
             }
             case MessageContentType.ToolResult: {
-              const toolResultBlock = block as ToolResultContentBlock;
+              const toolResultBlock = block;
 
               if (
                 toolResultBlock.content.every(

@@ -301,6 +301,7 @@ export const _applicationTool = {
           'terminal',
           'desktop',
           'directory',
+          'turix',
         ],
         description: 'The application to open or focus',
       },

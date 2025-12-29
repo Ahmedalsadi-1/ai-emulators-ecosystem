@@ -40,7 +40,7 @@ export default function PillHome() {
             }}
             transition={{
               duration: 0.6,
-              ease: [0.25, 0.1, 0.25],
+              ease: [0.25, 0.1, 0.25, 1],
             }}
             className={`
               relative flex h-[80px] w-full max-w-[1000px]

@@ -10,6 +10,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 @WebSocketGateway({
+  path: '/api/proxy/tasks',
   cors: {
     origin: '*',
     methods: ['GET', 'POST'],

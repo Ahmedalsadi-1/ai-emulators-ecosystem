@@ -35,4 +35,7 @@ export enum ApplicationName {
   TERMINAL = 'terminal',
   DESKTOP = 'desktop',
   DIRECTORY = 'directory',
+  TURIX = 'turix',
+  AIOS = 'aios',
+  OPEN_INTERFACE = 'open-interface',
 }

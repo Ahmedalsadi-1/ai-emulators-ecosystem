@@ -6,14 +6,24 @@ export type DesktopApplication =
   | "terminal"
   | "desktop"
   | "directory"
-  | "browseros";
+  | "browseros"
+  | "turix"
+  | "aios"
+  | "open-interface";
 
 export async function openDesktopApplication(
   application: DesktopApplication,
 ): Promise<boolean> {
+  const token =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("bytebot:authToken")
+      : null;
   const response = await fetch("/api/proxy/desktop/computer-use", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({
       action: "application",
       application,
