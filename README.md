@@ -2,11 +2,11 @@
 
 <img src="docs/images/bytebot-logo.png" width="500" alt="Bytebot Logo">
 
-# Bytebot: Open-Source AI Desktop Agent
+# Bytebot: AI Desktop Agent with Multi-Environment Automation
 
 <a href="https://trendshift.io/repositories/14624" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14624" alt="bytebot-ai%2Fbytebot | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-**An AI that has its own computer to complete tasks for you**
+**AI that controls multiple desktop environments to complete complex tasks autonomously**
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/bytebot?referralCode=L9lKXQ)
 
@@ -17,294 +17,494 @@
 [🌐 Website](https://bytebot.ai) • [📚 Documentation](https://docs.bytebot.ai) • [💬 Discord](https://discord.com/invite/d9ewZkWPTP) • [𝕏 Twitter](https://x.com/bytebot_ai)
 
 <!-- Keep these links. Translations will automatically update with the README. -->
-[Deutsch](https://zdoc.app/de/bytebot-ai/bytebot) | 
-[Español](https://zdoc.app/es/bytebot-ai/bytebot) | 
-[français](https://zdoc.app/fr/bytebot-ai/bytebot) | 
-[日本語](https://zdoc.app/ja/bytebot-ai/bytebot) | 
-[한국어](https://zdoc.app/ko/bytebot-ai/bytebot) | 
-[Português](https://zdoc.app/pt/bytebot-ai/bytebot) | 
-[Русский](https://zdoc.app/ru/bytebot-ai/bytebot) | 
+[Deutsch](https://zdoc.app/de/bytebot-ai/bytebot) |
+[Español](https://zdoc.app/es/bytebot-ai/bytebot) |
+[français](https://zdoc.app/fr/bytebot-ai/bytebot) |
+[日本語](https://zdoc.app/ja/bytebot-ai/bytebot) |
+[한국어](https://zdoc.app/ko/bytebot-ai/bytebot) |
+[Português](https://zdoc.app/pt/bytebot-ai/bytebot) |
+[Русский](https://zdoc.app/ru/bytebot-ai/bytebot) |
 [中文](https://zdoc.app/zh/bytebot-ai/bytebot)
 </div>
 
 ---
 
-https://github.com/user-attachments/assets/f271282a-27a3-43f3-9b99-b34007fdd169
+## 🎯 What Makes Bytebot Revolutionary
 
-https://github.com/user-attachments/assets/72a43cf2-bd87-44c5-a582-e7cbe176f37f
+Bytebot is not just another AI assistant—it's an AI that owns and controls **multiple complete desktop environments**. Unlike browser-only agents or traditional RPA tools, Bytebot provides AI with full access to:
 
-## What is a Desktop Agent?
+- **Multiple Desktop Environments**: Debian Linux, Kali Linux, and custom environments
+- **Real Applications**: Browsers, IDEs, office tools, password managers, email clients
+- **File System Access**: Download, organize, and process files autonomously
+- **Complex Workflows**: Multi-step processes across different applications and websites
+- **Visual Automation**: Real-time screen control with mouse and keyboard automation
 
-A desktop agent is an AI that has its own computer. Unlike browser-only agents or traditional RPA tools, Bytebot comes with a full virtual desktop where it can:
+**Think of Bytebot as a virtual team of AI specialists, each with their own specialized desktop environment.**
 
-- Use any application (browsers, email clients, office tools, IDEs)
-- Download and organize files with its own file system
-- Log into websites and applications using password managers
-- Read and process documents, PDFs, and spreadsheets
-- Complete complex multi-step workflows across different programs
+---
 
-Think of it as a virtual employee with their own computer who can see the screen, move the mouse, type on the keyboard, and complete tasks just like a human would.
+## 🚀 Live Demo
 
-## Why Give AI Its Own Computer?
+### Multi-Desktop Task Automation
+```
+User: "Research cybersecurity tools and create a comparison report"
 
-When AI has access to a complete desktop environment, it unlocks capabilities that aren't possible with browser-only agents or API integrations:
+Bytebot spins up Kali Linux desktop → Opens browser → Researches tools →
+Creates comparison document → Downloads relevant PDFs → Organizes findings
+```
 
-### Complete Task Autonomy
+### Real-World Business Automation
+```
+User: "Process vendor invoices from three different portals"
 
-Give Bytebot a task like "Download all invoices from our vendor portals and organize them into a folder" and it will:
+Bytebot: Debian Desktop → Portal A (login + download) → Portal B → Portal C →
+Extract data from PDFs → Create consolidated report → Email results
+```
 
-- Open the browser
-- Navigate to each portal
-- Handle authentication (including 2FA via password managers)
-- Download the files to its local file system
-- Organize them into a folder
+---
 
-### Process Documents
+## 🏗️ Architecture Overview
 
-Upload files directly to Bytebot's desktop and it can:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Bytebot Ecosystem                       │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
+│  │ Debian      │ │ Kali Linux  │ │ Custom Env  │  ← Desktops │
+│  │ Desktop     │ │ Desktop     │ │ Desktop     │           │
+│  │ (Port 9990) │ │ (Port 9993) │ │ (Port 999x) │           │
+│  └─────────────┘ └─────────────┘ └─────────────┘           │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
+│  │ AI Agent    │ │ Web UI      │ │ PostgreSQL  │  ← Services │
+│  │ (Port 9991) │ │ (Port 9992) │ │ (Port 5432) │           │
+│  └─────────────┘ └─────────────┘ └─────────────┘           │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Docker Network: bytebot-full_bytebot-network       │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- Read entire PDFs into its context
-- Extract data from complex documents
-- Cross-reference information across multiple files
-- Create new documents based on analysis
-- Handle formats that APIs can't access
+### Services Breakdown
 
-### Use Real Applications
+- **AI Agent (NestJS)**: Task orchestration, AI provider integration, WebSocket communication
+- **Web UI (Next.js)**: Task management interface, real-time desktop viewing, multi-workspace support
+- **Desktop Environments**: Containerized Linux environments with VNC/noVNC for remote access
+- **Database (PostgreSQL)**: Task persistence, user data, configuration storage
 
-Bytebot isn't limited to web interfaces. It can:
+---
 
-- Use desktop applications like text editors, VS Code, or email clients
-- Run scripts and command-line tools
-- Install new software as needed
-- Configure applications for specific workflows
+## ⚡ Quick Start (5 Minutes)
 
-## Quick Start
-
-### Deploy in 2 Minutes
-
-**Option 1: Railway (Easiest)**
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/bytebot?referralCode=L9lKXQ)
-
-Just click and add your AI provider API key.
-
-**Option 2: Docker Compose**
-
+### Option 1: One-Command Docker Setup
 ```bash
 git clone https://github.com/bytebot-ai/bytebot.git
 cd bytebot
-
-# Add your AI provider key (choose one)
-echo "ANTHROPIC_API_KEY=sk-ant-..." > docker/.env
-# Or: echo "OPENAI_API_KEY=sk-..." > docker/.env
-# Or: echo "GEMINI_API_KEY=..." > docker/.env
-
-docker-compose -f docker/docker-compose.yml up -d
-
-# Open http://localhost:9992
+docker compose -f docker/docker-compose.full.yml up -d
+open http://localhost:9992
 ```
 
-[Full deployment guide →](https://docs.bytebot.ai/quickstart)
-
-## How It Works
-
-Bytebot consists of four integrated components:
-
-1. **Virtual Desktop**: A complete Ubuntu Linux environment with pre-installed applications
-2. **AI Agent**: Understands your tasks and controls the desktop to complete them
-3. **Task Interface**: Web UI where you create tasks and watch Bytebot work
-4. **APIs**: REST endpoints for programmatic task creation and desktop control
-
-### Key Features
-
-- **Natural Language Tasks**: Just describe what you need done
-- **File Uploads**: Drop files onto tasks for Bytebot to process
-- **Live Desktop View**: Watch Bytebot work in real-time
-- **Takeover Mode**: Take control when you need to help or configure something
-- **Password Manager Support**: Install 1Password, Bitwarden, etc. for automatic authentication
-- **Persistent Environment**: Install programs and they stay available for future tasks
-
-## Example Tasks
-
-### Basic Examples
-
-```
-"Go to Wikipedia and create a summary of quantum computing"
-"Research flights from NYC to London and create a comparison document"
-"Take screenshots of the top 5 news websites"
+### Option 2: Individual Services (Development)
+```bash
+# Start all services
+cd bytebot/packages/bytebotd && npm run start:dev &
+cd ../bytebot-agent && npm run start:dev &
+cd ../bytebot-ui && npm run dev &
+cd ../../ && npm start &
 ```
 
-### Document Processing
+### Option 3: Railway (Cloud)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/bytebot?referralCode=L9lKXQ)
 
+---
+
+## 🎮 Using Bytebot
+
+### 1. Access the Interface
+Open `http://localhost:9992` in your browser. You'll see the floating pill interface.
+
+### 2. Create Your First Workspace
+- Click the "+" button in the Desktop section
+- Choose your environment: "Bytebot Desktop", "Debian Desktop", or "Kali Desktop"
+- Each workspace connects to a different VNC environment
+
+### 3. Give Tasks to Your AI
 ```
-"Read the uploaded contracts.pdf and extract all payment terms and deadlines"
-"Process these 5 invoice PDFs and create a summary report"
-"Download and analyze the latest financial report and answer: What were the key risks mentioned?"
+"Download the latest security reports from NIST and create a summary"
+"Set up a development environment with Node.js, Python, and VS Code"
+"Research competitor pricing and create a comparison spreadsheet"
 ```
 
-### Multi-Application Workflows
+### 4. Watch Real-Time Automation
+- See the AI navigate browsers, install software, and complete tasks
+- Take control anytime with "Takeover Mode"
+- View live screen updates via VNC streaming
 
+---
+
+## 🛠️ Advanced Features
+
+### Multi-Desktop Environments
+
+**Desktop 1 - Bytebot Desktop**: General-purpose Ubuntu environment
+- Pre-installed: Firefox, VS Code, LibreOffice, password managers
+- Best for: General automation, web tasks, document processing
+
+**Desktop 2 - Debian Desktop**: Clean Debian Linux environment
+- Minimal installation with essential tools
+- Best for: Development, testing, custom software installation
+
+**Desktop 3 - Kali Desktop**: Cybersecurity-focused environment
+- Pre-installed: Security tools, penetration testing software
+- Best for: Security research, network analysis, ethical hacking
+
+### AI Provider Integration
+
+Bytebot works with all major AI providers:
+
+```bash
+# Environment variables for different providers
+ANTHROPIC_API_KEY=sk-ant-...     # Claude (Recommended)
+OPENAI_API_KEY=sk-...            # GPT models
+GEMINI_API_KEY=...               # Google Gemini
+GROQ_API_KEY=...                 # Fast inference
 ```
-"Download last month's bank statements from our three banks and consolidate them"
-"Check all our vendor portals for new invoices and create a summary report"
-"Log into our CRM, export the customer list, and update records in the ERP system"
+
+### Real-Time Collaboration
+
+- **WebSocket Communication**: Live task updates and desktop streaming
+- **Multi-User Support**: JWT authentication with RBAC
+- **Audit Logging**: Complete action tracking and compliance
+- **Takeover Mode**: Human intervention when AI needs help
+
+---
+
+## 📊 API Reference
+
+### REST Endpoints
+
+```bash
+# Tasks
+POST   /tasks                    # Create new task
+GET    /tasks                    # List tasks
+GET    /tasks/:id                # Get task details
+DELETE /tasks/:id                # Delete task
+POST   /tasks/:id/cancel         # Cancel running task
+
+# AI Models
+GET    /tasks/models             # List available models
+
+# Desktop Control
+POST   /computer-use             # Direct desktop actions
+GET    /vnc                       # VNC connection info
 ```
 
-## Programmatic Control
+### WebSocket Events
 
-### Create Tasks via API
+```javascript
+// Connect to task updates
+const socket = io('http://localhost:9991/tasks');
+
+// Listen for task progress
+socket.on('task:progress', (data) => {
+  console.log('Task update:', data);
+});
+
+// Send desktop commands
+socket.emit('desktop:action', {
+  action: 'click_mouse',
+  coordinates: [500, 300]
+});
+```
+
+### Programmatic Usage
 
 ```python
 import requests
 
-# Simple task
+# Create a task
 response = requests.post('http://localhost:9991/tasks', json={
-    'description': 'Download the latest sales report and create a summary'
+    'description': 'Research AI trends and create a report',
+    'model': 'claude-3-5-sonnet-20241022'
 })
 
-# Task with file upload
-files = {'files': open('contracts.pdf', 'rb')}
-response = requests.post('http://localhost:9991/tasks',
-    data={'description': 'Review these contracts for important dates'},
+# Upload files
+files = {'files': open('data.pdf', 'rb')}
+requests.post('http://localhost:9991/tasks',
+    data={'description': 'Analyze this document'},
     files=files
 )
 ```
 
-### Direct Desktop Control
+---
 
+## 🔧 Detailed Setup Guide
+
+### Prerequisites
+- Docker & Docker Compose
+- Node.js 20+ (for development)
+- 4GB+ RAM, 10GB+ disk space
+
+### Production Deployment
+
+1. **Clone and Configure**
 ```bash
-# Take a screenshot
-curl -X POST http://localhost:9990/computer-use \
-  -H "Content-Type: application/json" \
-  -d '{"action": "screenshot"}'
-
-# Click at specific coordinates
-curl -X POST http://localhost:9990/computer-use \
-  -H "Content-Type: application/json" \
-  -d '{"action": "click_mouse", "coordinate": [500, 300]}'
-```
-
-[Full API documentation →](https://docs.bytebot.ai/api-reference/introduction)
-
-## Setting Up Your Desktop Agent
-
-### 1. Deploy Bytebot
-
-Use one of the deployment methods above to get Bytebot running.
-
-### 2. Configure the Desktop
-
-Use the Desktop tab in the UI to:
-
-- Install additional programs you need
-- Set up password managers for authentication
-- Configure applications with your preferences
-- Log into websites you want Bytebot to access
-
-### 3. Start Giving Tasks
-
-Create tasks in natural language and watch Bytebot complete them using the configured desktop.
-
-## Use Cases
-
-### Business Process Automation
-
-- Invoice processing and data extraction
-- Multi-system data synchronization
-- Report generation from multiple sources
-- Compliance checking across platforms
-
-### Development & Testing
-
-- Automated UI testing
-- Cross-browser compatibility checks
-- Documentation generation with screenshots
-- Code deployment verification
-
-### Research & Analysis
-
-- Competitive analysis across websites
-- Data gathering from multiple sources
-- Document analysis and summarization
-- Market research compilation
-
-## Architecture
-
-Bytebot is built with:
-
-- **Desktop**: Ubuntu 22.04 with XFCE, Firefox, VS Code, and other tools
-- **Agent**: NestJS service that coordinates AI and desktop actions
-- **UI**: Next.js application for task management
-- **AI Support**: Works with Anthropic Claude, OpenAI GPT, Google Gemini
-- **Deployment**: Docker containers for easy self-hosting
-
-## Why Self-Host?
-
-- **Data Privacy**: Everything runs on your infrastructure
-- **Full Control**: Customize the desktop environment as needed
-- **No Limits**: Use your own AI API keys without platform restrictions
-- **Flexibility**: Install any software, access any systems
-
-## Advanced Features
-
-### Multiple AI Providers
-
-Use any AI provider through our [LiteLLM integration](https://docs.bytebot.ai/deployment/litellm):
-
-- Azure OpenAI
-- AWS Bedrock
-- Local models via Ollama
-- 100+ other providers
-
-### Enterprise Deployment
-
-Deploy on Kubernetes with Helm:
-
-```bash
-# Clone the repository
 git clone https://github.com/bytebot-ai/bytebot.git
 cd bytebot
-
-# Install with Helm
-helm install bytebot ./helm \
-  --set agent.env.ANTHROPIC_API_KEY=sk-ant-...
+cp docker/.env.example docker/.env.production
 ```
 
-[Enterprise deployment guide →](https://docs.bytebot.ai/deployment/helm)
+2. **Configure Environment**
+```bash
+# docker/.env.production
+ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=postgresql://postgres:password@postgres:5432/bytebotdb
+BYTEBOT_AUTH_ENABLED=true
+BYTEBOT_AUTH_SECRET=your-secret-key
+```
 
-## Community & Support
+3. **Deploy**
+```bash
+docker compose -f docker/docker-compose.production.yml --env-file docker/.env.production up -d
+```
 
-- **Discord**: [Join our community](https://discord.com/invite/d9ewZkWPTP) for help and discussions
-- **Documentation**: Comprehensive guides at [docs.bytebot.ai](https://docs.bytebot.ai)
-- **GitHub Issues**: Report bugs and request features
+### Development Setup
 
-## Contributing
+1. **Install Dependencies**
+```bash
+cd bytebot
+npm install
+cd packages/bytebotd && npm install
+cd ../bytebot-agent && npm install
+cd ../bytebot-ui && npm install
+```
 
-We welcome contributions! Whether it's:
+2. **Start Services**
+```bash
+# Terminal 1: Desktop service
+cd packages/bytebotd && npm run start:dev
 
-- 🐛 Bug fixes
-- ✨ New features
-- 📚 Documentation improvements
-- 🌐 Translations
+# Terminal 2: AI Agent
+cd packages/bytebot-agent && npm run start:dev
 
-Please:
+# Terminal 3: Web UI
+cd packages/bytebot-ui && npm run dev
 
-1. Check existing [issues](https://github.com/bytebot-ai/bytebot/issues) first
-2. Open an issue to discuss major changes
-3. Submit PRs with clear descriptions
-4. Join our [Discord](https://discord.com/invite/d9ewZkWPTP) to discuss ideas
+# Terminal 4: Electron (optional)
+cd ../../ && npm start
+```
 
-## License
+### Adding Custom Desktops
 
-Bytebot is open source under the Apache 2.0 license.
+1. **Create New Dockerfile**
+```dockerfile
+FROM ghcr.io/bytebot-ai/bytebot-desktop:edge
+# Add your customizations
+RUN apt-get update && apt-get install -y your-tools
+```
+
+2. **Add to docker-compose.full.yml**
+```yaml
+bytebot-desktop-custom:
+  build:
+    context: ../packages/
+    dockerfile: bytebotd/custom.Dockerfile
+  ports:
+    - "9994:9990"
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**"Failed to fetch" Error**
+```bash
+# Check if services are running
+docker ps
+
+# Check service logs
+docker logs bytebot-agent
+docker logs bytebot-ui
+
+# Verify network connectivity
+docker exec bytebot-ui curl -s http://bytebot-agent:9991/tasks/models
+```
+
+**VNC Connection Issues**
+```bash
+# Check desktop containers
+docker ps | grep desktop
+
+# Test VNC proxy
+curl -I http://localhost:9992/api/proxy/websockify
+curl -I http://localhost:9992/api/proxy/kali-websockify
+```
+
+**Port Conflicts**
+```bash
+# Kill conflicting processes
+lsof -ti :9990,9991,9992 | xargs kill -9
+
+# Or use different ports in docker-compose
+ports:
+  - "9995:9990"  # Change host port
+```
+
+**Database Connection Issues**
+```bash
+# Check PostgreSQL
+docker logs bytebot-postgres
+
+# Reset database
+docker compose down -v
+docker compose up -d
+```
+
+### Debug Commands
+
+```bash
+# View all logs
+docker compose -f docker/docker-compose.full.yml logs
+
+# Check container health
+docker stats
+
+# Access container shell
+docker exec -it bytebot-ui sh
+docker exec -it bytebot-agent sh
+```
+
+---
+
+## 🧪 Development
+
+### Project Structure
+```
+bytebot/
+├── packages/
+│   ├── bytebotd/          # Desktop service (VNC, computer use)
+│   ├── bytebot-agent/     # AI orchestration (NestJS)
+│   └── bytebot-ui/        # Web interface (Next.js)
+├── docker/                # Container configurations
+└── docs/                  # Documentation
+```
+
+### Key Technologies
+- **Backend**: NestJS, TypeScript, Prisma
+- **Frontend**: Next.js, React, Tailwind CSS
+- **Desktop**: Ubuntu/Debian/Kali, VNC, noVNC
+- **AI**: Anthropic Claude, OpenAI, Google Gemini, Groq
+- **Database**: PostgreSQL
+- **Deployment**: Docker, Docker Compose
+
+### Contributing
+
+1. **Fork and Clone**
+```bash
+git clone https://github.com/your-username/bytebot.git
+cd bytebot
+```
+
+2. **Setup Development Environment**
+```bash
+npm install
+cd packages/bytebot-ui && npm install
+cd ../bytebot-agent && npm install
+cd ../bytebotd && npm install
+```
+
+3. **Start Development Services**
+```bash
+# Use the development docker setup
+docker compose -f docker/docker-compose.development.yml up -d
+cd packages/bytebot-agent && npm run start:dev &
+cd ../bytebot-ui && npm run dev &
+```
+
+4. **Run Tests**
+```bash
+cd packages/bytebot-agent && npm test
+cd ../bytebot-ui && npm test
+```
+
+### Code Standards
+- **TypeScript**: Strict mode enabled
+- **Linting**: ESLint with auto-fix
+- **Formatting**: Prettier
+- **Testing**: Jest for unit tests
+- **Commits**: Conventional commits
+
+---
+
+## 🌟 Use Cases & Examples
+
+### Business Automation
+- **Invoice Processing**: Download from vendor portals, extract data, create reports
+- **Data Synchronization**: Cross-reference systems, update records
+- **Compliance Monitoring**: Check multiple platforms, generate audit reports
+
+### Development & Testing
+- **Environment Setup**: Install dependencies, configure tools, set up databases
+- **UI Testing**: Automated browser testing across different environments
+- **Documentation**: Generate screenshots, create setup guides
+
+### Research & Analysis
+- **Market Research**: Gather data from multiple sources, create comparisons
+- **Security Research**: Use Kali desktop for penetration testing automation
+- **Document Analysis**: Process PDFs, extract information, generate summaries
+
+### Creative Tasks
+- **Content Creation**: Research topics, gather images, create presentations
+- **Data Visualization**: Process datasets, create charts and graphs
+- **Report Generation**: Compile information from multiple sources
+
+---
+
+## 📈 Performance & Scaling
+
+### Resource Requirements
+- **Minimum**: 4GB RAM, 10GB disk, 2 CPU cores
+- **Recommended**: 8GB RAM, 20GB disk, 4 CPU cores
+- **Production**: 16GB RAM, 50GB disk, 8 CPU cores
+
+### Scaling Options
+- **Horizontal**: Multiple desktop containers for different tasks
+- **Vertical**: Larger containers for resource-intensive workloads
+- **Kubernetes**: Helm charts for enterprise deployment
+
+---
+
+## 🤝 Community & Support
+
+- **📚 Documentation**: [docs.bytebot.ai](https://docs.bytebot.ai)
+- **💬 Discord**: [Join our community](https://discord.com/invite/d9ewZkWPTP)
+- **🐛 Issues**: [GitHub Issues](https://github.com/bytebot-ai/bytebot/issues)
+- **📰 Blog**: Updates and tutorials on [bytebot.ai/blog](https://bytebot.ai/blog)
+
+### Contributing Guidelines
+- Check existing issues before creating new ones
+- Use conventional commits for PRs
+- Include tests for new features
+- Update documentation for API changes
+
+---
+
+## 📄 License
+
+Bytebot is open source under the **Apache 2.0 License**.
 
 ---
 
 <div align="center">
 
-**Give your AI its own computer. See what it can do.**
+**Give your AI multiple computers. Watch what it can accomplish.**
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/bytebot?referralCode=L9lKXQ)
 
 <sub>Built by [Tantl Labs](https://tantl.com) and the open source community</sub>
 
-</div>
+</div></content>
+<parameter name="filePath">bytebot/README.md

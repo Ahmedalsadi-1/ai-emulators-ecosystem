@@ -1,0 +1,90 @@
+name: bytebot-full
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bytebot-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=bytebotdb
+    networks:
+      - bytebot-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  bytebot-desktop-debian:
+    image: ghcr.io/bytebot-ai/bytebot-desktop:edge
+    container_name: bytebot-desktop-debian
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: computer-debian
+    privileged: true
+    ports:
+      - "9990:9990"  # websockify (noVNC) for Debian
+    environment:
+      - DISPLAY=:0
+      - NODE_ENV=development
+    networks:
+      - bytebot-network
+
+  bytebot-desktop-kali:
+    image: ghcr.io/bytebot-ai/bytebot-desktop:edge
+    container_name: bytebot-desktop-kali
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: computer-kali
+    privileged: true
+    ports:
+      - "9993:9990"  # websockify (noVNC) for Kali on port 9993
+    environment:
+      - DISPLAY=:0
+      - NODE_ENV=development
+    networks:
+      - bytebot-network
+
+  bytebot-agent:
+    image: ghcr.io/bytebot-ai/bytebot-agent:edge
+    container_name: bytebot-agent
+    restart: unless-stopped
+    ports:
+      - "9991:9991"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bytebotdb
+      - BYTEBOT_DESKTOP_BASE_URL=http://bytebot-desktop-debian:9990
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+      - bytebot-desktop-debian
+    networks:
+      - bytebot-network
+
+  bytebot-ui:
+    image: ghcr.io/bytebot-ai/bytebot-ui:edge
+    container_name: bytebot-ui
+    restart: unless-stopped
+    ports:
+      - "9992:9992"
+    environment:
+      - BYTEBOT_AGENT_BASE_URL=http://bytebot-agent:9991
+      - BYTEBOT_DESKTOP_VNC_URL=ws://host.docker.internal:9990/websockify
+      - BYTEBOT_DESKTOP_KALI_VNC_URL=ws://host.docker.internal:9993/websockify
+      - NODE_ENV=development
+    depends_on:
+      - bytebot-agent
+      - bytebot-desktop-debian
+      - bytebot-desktop-kali
+    networks:
+      - bytebot-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  bytebot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
