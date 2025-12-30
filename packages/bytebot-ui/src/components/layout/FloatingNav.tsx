@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
+import { KronosLogo } from "@/components/branding/KronosLogo";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -25,7 +25,7 @@ function SoundWaveIcon() {
       {[10, 16, 22, 14].map((height, index) => (
         <span
           key={`wave-${height}`}
-          className="w-1 animate-pulse rounded-full bg-sky-300/80 shadow-[0_0_10px_rgba(125,211,252,0.8)] dark:bg-sky-300/80"
+          className="w-1 animate-pulse rounded-full bg-[#d0d0d0]"
           style={{
             height: `${height}px`,
             animationDelay: `${index * 0.12}s`,
@@ -66,26 +66,13 @@ export function FloatingNav({
       }
     >
       <div className={embedded ? "w-full" : "mx-auto w-full max-w-5xl"}>
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/65 bg-white/55 px-4 py-3 shadow-[0_18px_50px_rgba(148,163,184,0.28),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0c1424]/85 dark:shadow-[0_20px_60px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-[#161719]/90 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),_0_20px_60px_rgba(0,0,0,0.5)]">
           <Link href="/" className="flex items-center gap-3">
-            <div className="relative h-11 w-11">
-              <Image
-                src="/bytebot-logo.png"
-                alt="Bytebot logo"
-                fill
-                className="object-contain dark:hidden"
-                priority
-              />
-              <Image
-                src="/bytebot-logo.png"
-                alt="Bytebot logo"
-                fill
-                className="hidden object-contain dark:block"
-                priority
-              />
+            <div className="flex items-center justify-center">
+              <KronosLogo size={56} className="h-9 w-auto opacity-95" />
             </div>
-            <span className="text-sm font-semibold tracking-[0.22em] text-slate-500 dark:text-slate-200">
-              bytebot
+            <span className="text-xs font-semibold tracking-[0.2em] text-[#e6e6e6]">
+              KRONOS-OS
             </span>
           </Link>
 
@@ -96,10 +83,10 @@ export function FloatingNav({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`rounded-md px-5 py-2 text-sm font-semibold uppercase tracking-[0.16em] transition-all ${
+                  className={`rounded-md border border-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition-all ${
                     isActive
-                      ? "bg-sky-200/80 text-slate-600 shadow-[0_0_18px_rgba(56,189,248,0.35)] dark:bg-sky-300/20 dark:text-sky-100 dark:shadow-[0_0_20px_rgba(56,189,248,0.65)]"
-                      : "text-slate-400 hover:bg-white/70 hover:text-slate-600 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                      ? "bg-[#2a2b2e] text-[#f3f3f3] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                      : "bg-[#1a1b1d] text-[#9a9a9a] hover:bg-[#222327] hover:text-[#d0d0d0]"
                   }`}
                 >
                   {item.label}
@@ -108,15 +95,15 @@ export function FloatingNav({
             })}
           </div>
 
-          <div className="flex items-center gap-3 text-slate-500 dark:text-slate-200">
-            <div className="flex items-center rounded-md border border-white/70 bg-white/70 p-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div className="flex items-center gap-3 text-[#cfcfcf]">
+            <div className="flex items-center rounded-md border border-white/10 bg-[#1a1b1d] p-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a9a9a] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
               <button
                 type="button"
                 onClick={() => setTheme("light")}
                 className={`rounded-md px-3 py-1 transition-all ${
                   mounted && !isDark
-                    ? "bg-white text-slate-600 shadow-[0_0_12px_rgba(59,130,246,0.3)]"
-                    : "text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-white"
+                    ? "bg-[#2a2b2e] text-[#f3f3f3]"
+                    : "text-[#9a9a9a] hover:text-[#d0d0d0]"
                 }`}
               >
                 Light
@@ -126,8 +113,8 @@ export function FloatingNav({
                 onClick={() => setTheme("dark")}
                 className={`rounded-md px-3 py-1 transition-all ${
                   mounted && isDark
-                    ? "bg-white/20 text-white shadow-[0_0_12px_rgba(56,189,248,0.4)]"
-                    : "text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-white"
+                    ? "bg-[#2a2b2e] text-[#f3f3f3]"
+                    : "text-[#9a9a9a] hover:text-[#d0d0d0]"
                 }`}
               >
                 Dark

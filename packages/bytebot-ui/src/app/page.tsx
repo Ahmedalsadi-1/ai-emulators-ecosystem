@@ -3,9 +3,19 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { fetchModels, startTask } from "@/utils/taskUtils";
 import type { Model } from "@/types";
-import { ChevronRight, Monitor, ListTodo, Settings, Zap } from "lucide-react";
+import {
+  ChevronRight,
+  ListTodo,
+  Monitor,
+  Moon,
+  Settings,
+  Signal,
+  Sun,
+} from "lucide-react";
+import { KronosLogo } from "@/components/branding/KronosLogo";
 
 // Electron API types are defined in @/types/electron.d.ts
 
@@ -17,6 +27,17 @@ export default function Home() {
   const [isSending, setIsSending] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
+  const { theme, setTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || !window.electronAPI) return;
+    window.electronAPI.expandToTab("home");
+  }, [isMounted]);
 
   useEffect(() => {
     let isMounted = true;
@@ -105,158 +126,183 @@ export default function Home() {
     }
   };
 
+  const handleHome = async () => {
+    setIsExpanded(false);
+    if (window.electronAPI) {
+      await window.electronAPI.expandToTab("home");
+    }
+  };
+
   const canSend = Boolean(selectedModel) && !isSending;
   const canSubmit = canSend && Boolean(command.trim());
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(1200px_circle_at_top,_rgba(186,220,255,0.7),_transparent_60%),linear-gradient(180deg,_#f6f8ff_0%,_#edf3ff_52%,_#e4edf9_100%)] text-slate-700 dark:bg-[radial-gradient(1200px_circle_at_top,_rgba(56,189,248,0.18),_transparent_60%),linear-gradient(180deg,_#05070d_0%,_#0b1220_55%,_#0a0f1a_100%)] dark:text-slate-100">
-      <div className="pointer-events-none absolute inset-0 opacity-45 [background-size:14px_14px] [background-image:radial-gradient(circle_at_1px_1px,_rgba(148,163,184,0.2)_1px,_transparent_0)] dark:opacity-20" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#f3f3f3] via-[#ededed] to-[#e6e6e6] text-slate-900 dark:bg-gradient-to-b dark:from-[#0b0b0b] dark:via-[#0e0f12] dark:to-[#0a0b0e] dark:text-slate-100">
+      <div className="pointer-events-none absolute inset-0 opacity-30 [background-size:52px_52px] [background-image:linear-gradient(90deg,rgba(15,23,42,0.08)_1px,transparent_1px),linear-gradient(0deg,rgba(15,23,42,0.08)_1px,transparent_1px)] dark:opacity-20 dark:[background-image:linear-gradient(90deg,rgba(248,250,252,0.05)_1px,transparent_1px),linear-gradient(0deg,rgba(248,250,252,0.05)_1px,transparent_1px)]" />
 
-      <main className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8">
+      <main className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className={`w-full ${isExpanded ? 'max-w-6xl' : 'max-w-sm'}`}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className={`w-full ${isExpanded ? "max-w-6xl" : "max-w-4xl"} transition-all duration-300`}
         >
-          <div className={`relative overflow-hidden rounded-xl border border-white/70 bg-white/60 shadow-[0_0_70px_rgba(148,163,184,0.35)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0b1424]/85 dark:shadow-[0_0_80px_rgba(56,189,248,0.2)] transition-all duration-300 ${isExpanded ? 'px-8 py-16' : 'px-4 py-6'}`}>
-            <div className="absolute -right-24 -top-32 h-56 w-56 rounded-full bg-sky-200/70 blur-3xl dark:bg-sky-400/20" />
-            <div className="absolute -left-24 -bottom-32 h-60 w-60 rounded-full bg-cyan-200/60 blur-3xl dark:bg-cyan-300/15" />
-
-            <div className="relative z-10 flex flex-col items-center gap-6">
-              {/* Compact Logo/Icon */}
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-sky-500 shadow-lg">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-
-              <div className="text-center">
-                <h1 className={`font-semibold uppercase tracking-[0.2em] text-cyan-400 drop-shadow-[0_0_18px_rgba(56,189,248,0.35)] dark:text-cyan-300 transition-all duration-300 ${isExpanded ? 'text-3xl' : 'text-xl'}`}>
-                  BYTEBOT
-                </h1>
-                <p className={`text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-300 transition-all duration-300 ${isExpanded ? 'mt-4' : 'mt-2'}`}>
-                  AI Automation
-                </p>
-              </div>
-
-              {!isExpanded ? (
-                /* Compact Navigation Pills */
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    onClick={() => handleExpand('tasks')}
-                    className="flex items-center gap-2 rounded-md border border-white/70 bg-white/65 px-3 py-2 text-xs font-semibold tracking-[0.08em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all hover:bg-white/80 hover:text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:hover:bg-white/10"
-                  >
-                    <ListTodo className="w-4 h-4 text-slate-400 dark:text-slate-200" />
-                    Tasks
-                  </button>
-                  <button
-                    onClick={() => handleExpand('desktop')}
-                    className="flex items-center gap-2 rounded-md border border-white/70 bg-white/65 px-3 py-2 text-xs font-semibold tracking-[0.08em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all hover:bg-white/80 hover:text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:hover:bg-white/10"
-                  >
-                    <Monitor className="w-4 h-4 text-slate-400 dark:text-slate-200" />
-                    Desktop
-                  </button>
-                  <button
-                    onClick={() => handleExpand('web')}
-                    className="flex items-center gap-2 rounded-md border border-white/70 bg-white/65 px-3 py-2 text-xs font-semibold tracking-[0.08em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all hover:bg-white/80 hover:text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:hover:bg-white/10"
-                  >
-                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-200" />
-                    Web
-                  </button>
-                  <button
-                    onClick={() => handleExpand('settings')}
-                    className="flex items-center gap-2 rounded-md border border-white/70 bg-white/65 px-3 py-2 text-xs font-semibold tracking-[0.08em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all hover:bg-white/80 hover:text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:hover:bg-white/10"
-                  >
-                    <Settings className="w-4 h-4 text-slate-400 dark:text-slate-200" />
-                    Settings
-                  </button>
-                </div>
-              ) : (
-                /* Expanded Content */
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full"
-                >
-                  <div className="text-center mb-8">
-                    <p className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-400 dark:text-slate-300">
-                      What do you want to
-                    </p>
-                    <h2 className="mt-2 text-2xl font-semibold uppercase tracking-[0.2em] text-cyan-400 drop-shadow-[0_0_18px_rgba(56,189,248,0.35)] dark:text-cyan-300">
-                      AUTOMATE?
-                    </h2>
-                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-300">
-                      Tell bytebot what you need
-                    </p>
-                  </div>
-
-                  {/* Task Input Form */}
-                  <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
-                    <div className="flex flex-col gap-3">
-                      <input
-                        type="text"
-                        placeholder="Describe what you want to automate"
-                        className="w-full bg-transparent px-3 py-2 text-sm font-medium text-slate-500 placeholder:text-slate-400 border border-white/70 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-400 dark:border-white/10 dark:text-slate-200 dark:placeholder:text-slate-500"
-                        value={command}
-                        onChange={(e) => setCommand(e.target.value)}
-                      />
-                       <div className="flex items-center gap-3">
-                         {/* Models Status Indicator */}
-                         <div className="text-[10px] font-semibold tracking-[0.2em] text-slate-400 dark:text-slate-300">
-                           {modelsError ? (
-                             <span className="text-red-400">⚠️ Models: Error</span>
-                           ) : models.length > 0 ? (
-                             <span className="text-green-400">✓ Models: {models.length} loaded</span>
-                           ) : (
-                             <span className="text-yellow-400">⟳ Loading models...</span>
-                           )}
-                         </div>
-                         <div className="flex items-center rounded-md border border-white/70 bg-white/70 px-3 py-2 text-[11px] font-semibold tracking-[0.12em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                          <span className="mr-2 text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">Model</span>
-                          <select
-                            className="bg-transparent text-[11px] font-semibold tracking-[0.12em] text-slate-500 focus:outline-none dark:text-slate-200"
-                            value={selectedModel?.name || ''}
-                            onChange={(e) => handleModelChange(e.target.value)}
-                          >
-                            <option value="">Select model...</option>
-                            {models.map((model) => (
-                              <option key={model.name} value={model.name}>
-                                {model.title}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+          <div
+            className={`relative border-2 border-slate-300/80 bg-[#f1f1f1] shadow-[0_18px_45px_rgba(15,23,42,0.2)] dark:border-slate-700/60 dark:bg-[#121316] ${isExpanded ? "p-7" : "p-5"} rounded-2xl`}
+          >
+            <div
+              className={`border border-slate-300/70 bg-[#f9f9f9] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-700/50 dark:bg-[#0e1013] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] ${isExpanded ? "p-6" : "p-4"} rounded-xl`}
+            >
+              <div className="flex flex-col gap-5">
+                <div className="rounded-md border border-slate-300/70 bg-[#f0f0f0] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-700/60 dark:bg-[#14161a]">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em]">
+                      <KronosLogo size={64} className="h-10 w-auto" />
+                      KRONOS-OS
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em]">
+                      {[
+                        { id: "home", label: "Home" },
+                        { id: "tasks", label: "Tasks" },
+                        { id: "desktop", label: "Desktop" },
+                        { id: "web", label: "Web" },
+                        { id: "settings", label: "Settings" },
+                      ].map((tab) => (
                         <button
-                          type="submit"
-                          disabled={!canSubmit}
-                          className="flex items-center gap-2 rounded-md border border-white/70 bg-white/80 px-4 py-2 text-xs font-semibold tracking-[0.08em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20"
+                          key={tab.id}
+                          type="button"
+                          onClick={() =>
+                            tab.id === "home" ? handleHome() : handleExpand(tab.id)
+                          }
+                          className={`rounded-md border px-3 py-1 transition-all ${
+                            tab.id === "home"
+                              ? "border-slate-400/80 bg-white text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-500/60 dark:bg-[#1a1c20] dark:text-white"
+                              : "border-slate-300/70 bg-white/70 text-slate-500 hover:bg-white hover:text-slate-800 dark:border-slate-700/60 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                          }`}
                         >
-                          Auto <ChevronRight className="w-4 h-4" />
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center rounded-md border border-slate-300/70 bg-white/80 p-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700/60 dark:bg-[#1a1c20] dark:text-slate-300">
+                        <button
+                          type="button"
+                          onClick={() => setTheme("light")}
+                          className={`flex items-center gap-1 rounded px-2 py-1 transition-all ${
+                            isMounted && theme === "light"
+                              ? "bg-slate-900 text-white"
+                              : "hover:bg-slate-200/70 dark:hover:bg-white/10"
+                          }`}
+                        >
+                          <Sun className="h-3 w-3" />
+                          Light
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTheme("dark")}
+                          className={`flex items-center gap-1 rounded px-2 py-1 transition-all ${
+                            isMounted && theme === "dark"
+                              ? "bg-slate-900 text-white"
+                              : "hover:bg-slate-200/70 dark:hover:bg-white/10"
+                          }`}
+                        >
+                          <Moon className="h-3 w-3" />
+                          Dark
                         </button>
                       </div>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300/70 bg-white/80 text-slate-500 dark:border-slate-700/60 dark:bg-[#1a1c20] dark:text-slate-300">
+                        <Signal className="h-4 w-4" />
+                      </div>
                     </div>
-                  </form>
-
-                  {/* Quick Actions */}
-                  <div className="mt-8 grid gap-3 sm:grid-cols-2 max-w-md mx-auto">
-                    {[
-                      "Open my email",
-                      "Schedule a meeting",
-                      "Organize downloads",
-                      "Set up development environment",
-                    ].map((action) => (
-                      <button
-                        key={action}
-                        onClick={() => handleQuickAction(action)}
-                        disabled={isSending}
-                        className="rounded-lg border border-white/70 bg-white/55 px-4 py-3 text-sm font-semibold text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] transition-all hover:bg-white/80 hover:text-slate-600 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:hover:bg-white/10"
-                      >
-                        {action}
-                      </button>
-                    ))}
                   </div>
-                </motion.div>
-              )}
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-[1.05fr_1fr] lg:items-center">
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500 dark:text-slate-300">
+                      What do you want to
+                    </p>
+                    <h1
+                      className={`font-semibold uppercase tracking-[0.22em] text-slate-900 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)] dark:text-slate-100 ${
+                        isExpanded ? "text-4xl" : "text-3xl"
+                      }`}
+                    >
+                      Automate?
+                    </h1>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-300">
+                      Tell Kronos what you need, and watch it happen
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <form onSubmit={handleSubmit} className="w-full">
+                      <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-300/70 bg-white/80 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-700/60 dark:bg-[#1b1d22]">
+                        <input
+                          type="text"
+                          placeholder="Describe what you want to automate"
+                          className="flex-1 bg-transparent px-2 py-2 text-sm font-semibold uppercase tracking-[0.12em] text-slate-600 placeholder:text-slate-400 focus:outline-none dark:text-slate-200"
+                          value={command}
+                          onChange={(e) => setCommand(e.target.value)}
+                        />
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 rounded-md border border-slate-300/70 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:border-slate-700/60 dark:bg-[#111319] dark:text-slate-200">
+                            <span>Model</span>
+                            <select
+                              className="bg-transparent text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 focus:outline-none dark:text-slate-200"
+                              value={selectedModel?.name || ""}
+                              onChange={(e) => handleModelChange(e.target.value)}
+                            >
+                              <option value="">Select</option>
+                              {models.map((model) => (
+                                <option key={model.name} value={model.name}>
+                                  {model.title}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={!canSubmit}
+                            className="flex items-center gap-2 rounded-md border border-slate-400/70 bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600/70 dark:bg-[#111319] dark:text-slate-200 dark:hover:bg-[#1b1d22]"
+                          >
+                            Auto <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-300">
+                        {modelsError ? (
+                          <span className="text-red-500">Models error</span>
+                        ) : models.length > 0 ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            Models ready ({models.length})
+                          </span>
+                        ) : (
+                          <span className="text-amber-500">Loading models...</span>
+                        )}
+                      </div>
+                    </form>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        "Open my email",
+                        "Schedule a meeting",
+                        "Organize downloads",
+                        "Set up development environment",
+                      ].map((action) => (
+                        <button
+                          key={action}
+                          onClick={() => handleQuickAction(action)}
+                          disabled={isSending}
+                          className="rounded-md border border-slate-300/70 bg-white/80 px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all hover:bg-white hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/60 dark:bg-[#15171c] dark:text-slate-300 dark:hover:bg-[#1e2026]"
+                        >
+                          {action}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>

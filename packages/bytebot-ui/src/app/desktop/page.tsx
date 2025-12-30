@@ -28,8 +28,8 @@ import {
   Send,
   Settings,
   Terminal,
-
 } from "lucide-react";
+import { KronosLogo } from "@/components/branding/KronosLogo";
 
 type PanelTab = "agent" | "code";
 
@@ -76,13 +76,13 @@ function ControlPill({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-md border px-4 py-2 text-[11px] font-semibold tracking-[0.14em] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${
+      className={`flex items-center gap-2 rounded-md border px-4 py-2 text-[10px] font-semibold tracking-[0.12em] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all ${
         active
-          ? "border-sky-200/80 bg-white/80 text-slate-600 shadow-[0_0_16px_rgba(56,189,248,0.25)] dark:border-sky-400/40 dark:bg-white/10 dark:text-white"
-          : "border-white/70 bg-white/65 text-slate-500 hover:bg-white/80 hover:text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20"
+          ? "border-white/20 bg-[#2a2b2e] text-[#f2f2f2] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+          : "border-white/10 bg-[#1a1b1d] text-[#b0b0b0] hover:bg-[#222327] hover:text-[#e0e0e0]"
       }`}
     >
-      <span className="text-slate-400 dark:text-slate-200">{icon}</span>
+      <span className="text-[#bdbdbd]">{icon}</span>
       {label}
     </button>
   );
@@ -333,9 +333,9 @@ export default function DesktopPage() {
 
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(1200px_circle_at_top,_rgba(186,220,255,0.65),_transparent_60%),linear-gradient(180deg,_#f4f7ff_0%,_#e9f1ff_55%,_#e2ecf7_100%)] text-slate-700 dark:bg-[radial-gradient(1200px_circle_at_top,_rgba(56,189,248,0.22),_transparent_60%),linear-gradient(180deg,_#05070d_0%,_#0b1220_55%,_#0a0f1a_100%)] dark:text-slate-100">
-      <div className="absolute inset-0 bg-white/30 dark:bg-slate-950/60" />
-      <div className="pointer-events-none absolute inset-0 opacity-40 [background-size:14px_14px] [background-image:radial-gradient(circle_at_1px_1px,_rgba(148,163,184,0.2)_1px,_transparent_0)] dark:opacity-20" />
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0b0c] text-[#e6e6e6]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_circle_at_top,_rgba(42,42,42,0.35),_transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_bottom,_rgba(8,8,8,0.9),_transparent_70%)]" />
 
       <FloatingNav />
 
@@ -346,18 +346,22 @@ export default function DesktopPage() {
           transition={{ duration: 0.6 }}
           className="w-full max-w-6xl"
         >
-          <div className="rounded-xl border border-white/60 bg-white/45 p-6 shadow-[0_30px_80px_rgba(148,163,184,0.35)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/70 bg-white/55 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/10 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <div className="flex items-center gap-2">
+          <div className="rounded-lg border border-white/10 bg-[#141517]/85 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),_0_40px_90px_rgba(0,0,0,0.65)]">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-[#1b1c1e]/90 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#e6e6e6]">
+                  <KronosLogo size={48} className="h-8 w-auto" />
+                  KRON-DESKTOP
+                </div>
                 {panelTabs.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setActivePanel(tab.id)}
-                    className={`rounded-md px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition-all ${
+                    className={`rounded-md border border-white/10 px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] transition-all ${
                       activePanel === tab.id
-                        ? "bg-slate-900/90 text-white shadow-[0_0_12px_rgba(15,23,42,0.25)] dark:bg-white/15 dark:text-white"
-                        : "text-slate-400 hover:bg-white/70 hover:text-slate-600 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+                        ? "bg-[#2a2b2e] text-[#f3f3f3] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                        : "bg-[#1a1b1d] text-[#9a9a9a] hover:bg-[#222327] hover:text-[#d0d0d0]"
                     }`}
                   >
                     {tab.label}
@@ -366,14 +370,14 @@ export default function DesktopPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex items-center rounded-md border border-white/70 bg-white/70 px-3 py-2 text-[11px] font-semibold tracking-[0.12em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                  <span className="mr-2 text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+                <div className="flex items-center rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-2 text-[9px] font-semibold tracking-[0.08em] text-[#c7c7c7] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <span className="mr-2 text-[8px] uppercase tracking-[0.16em] text-[#9a9a9a]">
                     Model
                   </span>
                   <select
                     value={selectedModel?.name || ""}
                     onChange={(event) => handleModelChange(event.target.value)}
-                    className="bg-transparent text-[11px] font-semibold tracking-[0.12em] text-slate-500 focus:outline-none dark:text-slate-200"
+                    className="bg-transparent text-[9px] font-semibold tracking-[0.08em] text-[#cfcfcf] focus:outline-none"
                   >
                     {models.map((model) => (
                       <option key={model.name} value={model.name}>
@@ -381,10 +385,10 @@ export default function DesktopPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="ml-2 h-4 w-4 text-slate-400" />
+                  <ChevronDown className="ml-2 h-4 w-4 text-[#8f8f8f]" />
                 </div>
                 {taskStatus && (
-                  <span className="rounded-md border border-white/70 bg-white/70 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:border-white/10 dark:bg-white/10 dark:text-slate-300">
+                  <span className="rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#9a9a9a]">
                     {taskStatus}
                   </span>
                 )}
@@ -393,13 +397,13 @@ export default function DesktopPage() {
 
             <div className="mt-6 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
               <div className="flex flex-col gap-4">
-                <div className="rounded-xl border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                  <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+                <div className="rounded-lg border border-white/10 bg-[#17181b]/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a6a6a6]">
                     <span>{activePanel === "agent" ? "Agent Feed" : "Code Log"}</span>
                     <button
                       type="button"
                       onClick={handleClearPanel}
-                      className="rounded-md border border-white/70 bg-white/70 px-3 py-1 text-[10px] font-semibold tracking-[0.2em] text-slate-400 transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+                      className="rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-1 text-[9px] font-semibold tracking-[0.14em] text-[#9a9a9a] transition-all hover:bg-[#222327] hover:text-[#d0d0d0]"
                     >
                       Clear
                     </button>
@@ -407,29 +411,25 @@ export default function DesktopPage() {
 
                   <div className="mt-4 h-[360px] space-y-2 overflow-auto pr-1">
                     {activePanel === "agent" && messages.length === 0 && (
-                      <div className="text-xs text-slate-400 dark:text-slate-300">
-                        No messages yet.
-                      </div>
+                      <div className="text-xs text-[#8f8f8f]">No messages yet.</div>
                     )}
                     {activePanel === "code" && logs.length === 0 && (
-                      <div className="text-xs text-slate-400 dark:text-slate-300">
-                        No logs yet.
-                      </div>
+                      <div className="text-xs text-[#8f8f8f]">No logs yet.</div>
                     )}
 
                     {activePanel === "agent" &&
                       messages.map((entry) => (
                         <div
                           key={entry.id}
-                          className="rounded-md border border-white/70 bg-white/70 px-2 py-2 text-[11px] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+                          className="rounded-md border border-white/10 bg-[#1b1c1e] px-2 py-2 text-[10px] text-[#cfcfcf] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                         >
-                          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-slate-400 dark:text-slate-300">
+                          <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.14em] text-[#9a9a9a]">
                             <span>
                               {entry.role === "USER" ? "You" : "Bytebot"}
                             </span>
                             <span>{entry.time}</span>
                           </div>
-                          <p className="mt-1 whitespace-pre-line text-[12px] leading-snug text-slate-500 dark:text-slate-200">
+                          <p className="mt-1 whitespace-pre-line text-[10px] leading-snug text-[#d8d8d8]">
                             {entry.text}
                           </p>
                         </div>
@@ -439,13 +439,13 @@ export default function DesktopPage() {
                       logs.map((log) => (
                         <div
                           key={log.id}
-                          className="rounded-md border border-white/70 bg-white/70 px-2 py-2 text-[11px] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+                          className="rounded-md border border-white/10 bg-[#1b1c1e] px-2 py-2 text-[10px] text-[#cfcfcf] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                         >
-                          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-slate-400 dark:text-slate-300">
+                          <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.14em] text-[#9a9a9a]">
                             <span>Log</span>
                             <span>{log.time}</span>
                           </div>
-                          <p className="mt-1 text-[12px] leading-snug text-slate-500 dark:text-slate-200">
+                          <p className="mt-1 text-[10px] leading-snug text-[#d8d8d8]">
                             {log.message}
                           </p>
                         </div>
@@ -453,21 +453,21 @@ export default function DesktopPage() {
                   </div>
                 </div>
 
-                <div className={`rounded-xl border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl transition-all duration-200 ${
+                <div className={`rounded-lg border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-200 ${
                   keyboardNavigationActive
-                    ? 'border-blue-300/70 bg-blue-50/30 shadow-[0_0_20px_rgba(59,130,246,0.15)] dark:border-blue-600/40 dark:bg-blue-900/10'
-                    : 'border-white/70 bg-white/55 dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                    ? 'border-white/20 bg-[#222327]'
+                    : 'border-white/10 bg-[#17181b]/85'
                 }`}>
-                  <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+                  <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a6a6a6]">
                     <span>Controllers</span>
                     <div className="flex items-center gap-2">
                       {keyboardNavigationActive && (
-                        <span className="rounded-md border border-blue-200/60 bg-blue-50/60 px-2 py-0.5 text-[9px] text-blue-600 dark:border-blue-800/40 dark:bg-blue-900/20 dark:text-blue-400">
+                        <span className="rounded-md border border-white/15 bg-[#2a2b2e] px-2 py-0.5 text-[9px] text-[#d0d0d0]">
                           Keyboard Mode
                         </span>
                       )}
                       {activeControllerIds.length > 0 && (
-                        <span className="rounded-md border border-sky-200/60 bg-sky-50/60 px-2 py-0.5 text-[9px] text-sky-600 dark:border-sky-800/40 dark:bg-sky-900/20 dark:text-sky-400">
+                        <span className="rounded-md border border-white/15 bg-[#2a2b2e] px-2 py-0.5 text-[9px] text-[#cfcfcf]">
                           {activeControllerIds.length} active
                         </span>
                       )}
@@ -488,12 +488,12 @@ export default function DesktopPage() {
                             title={`${controller.label} controller${isActive ? ' (active)' : ''}${isPrimary ? ' (primary)' : ''} - Press Ctrl/Cmd+click for multi-selection`}
                             aria-label={`${controller.label} controller${isActive ? ' (active)' : ''}${isPrimary ? ' (primary)' : ''} - Press Ctrl/Cmd+click for multi-selection`}
                             aria-pressed={isActive}
-                            className={`flex items-center gap-1 rounded-md border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${
+                            className={`flex items-center gap-1 rounded-md border px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] transition-all focus:outline-none focus:ring-2 focus:ring-white/20 ${
                               isPrimary
-                                ? "border-blue-200/80 bg-blue-50/80 text-slate-600 shadow-[0_0_12px_rgba(59,130,246,0.25)] dark:border-blue-400/40 dark:bg-blue-900/20 dark:text-white"
+                                ? "border-white/20 bg-[#2a2b2e] text-[#f3f3f3] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
                                 : isActive
-                                ? "border-sky-200/80 bg-white/80 text-slate-600 shadow-[0_0_12px_rgba(56,189,248,0.25)] dark:border-sky-400/40 dark:bg-white/10 dark:text-white"
-                                : "border-white/70 bg-white/70 text-slate-400 hover:bg-white hover:text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-300"
+                                ? "border-white/15 bg-[#222327] text-[#d0d0d0]"
+                                : "border-white/10 bg-[#1a1b1d] text-[#9a9a9a] hover:bg-[#222327] hover:text-[#d0d0d0]"
                             }`}
                           >
                              {status && (
@@ -524,15 +524,15 @@ export default function DesktopPage() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <div className="rounded-xl border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                  <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+                <div className="rounded-lg border border-white/10 bg-[#17181b]/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a6a6a6]">
                     <span>Live Desktop View</span>
-                    <span className="rounded-md border border-white/70 bg-white/70 px-3 py-1 text-[10px] font-semibold tracking-[0.2em] text-slate-400 dark:border-white/10 dark:bg-white/10 dark:text-slate-300">
-                      Controller: {activeControllerLabel}
+                    <span className="rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-1 text-[8px] font-semibold tracking-[0.14em] text-[#bdbdbd]">
+                      Controlled by {activeControllerLabel}
                     </span>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#9a9a9a]">
                     {workspaces.map((workspace) => (
                       <button
                         key={workspace.id}
@@ -540,8 +540,8 @@ export default function DesktopPage() {
                         onClick={() => setActiveWorkspace(workspace.id)}
                         className={`rounded-md border px-3 py-1.5 transition-all ${
                           activeWorkspace === workspace.id
-                            ? "border-sky-200/80 bg-white/80 text-slate-600 shadow-[0_0_12px_rgba(56,189,248,0.25)] dark:border-sky-400/40 dark:bg-white/10 dark:text-white"
-                            : "border-white/70 bg-white/70 text-slate-400 hover:bg-white hover:text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-300"
+                            ? "border-white/15 bg-[#2a2b2e] text-[#f3f3f3] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                            : "border-white/10 bg-[#1a1b1d] text-[#9a9a9a] hover:bg-[#222327] hover:text-[#d0d0d0]"
                         }`}
                       >
                         {workspace.label}
@@ -551,22 +551,22 @@ export default function DesktopPage() {
                       <button
                         type="button"
                         onClick={() => setShowNewWorkspaceDropdown(!showNewWorkspaceDropdown)}
-                        className="flex items-center gap-2 rounded-md border border-white/70 bg-white/70 px-3 py-1.5 text-slate-400 hover:bg-white hover:text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-300"
+                        className="flex items-center gap-2 rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-1.5 text-[#9a9a9a] transition-all hover:bg-[#222327] hover:text-[#d0d0d0]"
                       >
                         <Plus className="h-3 w-3" />
                         New
                         <ChevronDown className={`h-3 w-3 transition-transform ${showNewWorkspaceDropdown ? 'rotate-180' : ''}`} />
                       </button>
                       {showNewWorkspaceDropdown && (
-                        <div className="absolute top-full mt-1 w-48 rounded-md border border-white/70 bg-white/90 shadow-lg dark:border-white/10 dark:bg-white/10">
-                          <div className="p-2">
-                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-300 mb-2">
+                        <div className="absolute top-full z-20 mt-1 w-52 rounded-md border border-white/10 bg-[#1b1c1e] shadow-[0_14px_40px_rgba(0,0,0,0.6)]">
+                          <div className="p-2 text-[10px] text-[#b6b6b6]">
+                            <label className="mb-2 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9a9a9a]">
                               Screen Type
                             </label>
                             <select
                               value={newWorkspaceScreen}
                               onChange={(e) => setNewWorkspaceScreen(e.target.value as 'bytebot' | 'debian' | 'kali')}
-                              className="w-full rounded border border-white/70 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-white/5"
+                              className="w-full rounded border border-white/10 bg-[#111214] px-2 py-1 text-[10px] text-[#d0d0d0]"
                             >
                               <option value="bytebot">Bytebot Desktop</option>
                               <option value="debian">Debian Desktop</option>
@@ -578,7 +578,7 @@ export default function DesktopPage() {
                                 handleAddWorkspace(newWorkspaceScreen);
                                 setShowNewWorkspaceDropdown(false);
                               }}
-                              className="mt-2 w-full rounded bg-sky-500 px-2 py-1 text-xs text-white hover:bg-sky-600"
+                              className="mt-2 w-full rounded border border-white/10 bg-[#2a2b2e] px-2 py-1 text-[10px] font-semibold text-[#f0f0f0] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
                             >
                               Create Workspace
                             </button>
@@ -590,7 +590,7 @@ export default function DesktopPage() {
 
 
 
-                   <div className="mt-2 overflow-hidden rounded-lg border border-white/60 bg-white/50 dark:border-white/10 dark:bg-white/5">
+                   <div className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-[#0f1012] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_18px_40px_rgba(0,0,0,0.65)]">
                      <div className="aspect-[4/3] w-full">
                        <VncViewer
                          viewOnly={false}
@@ -600,13 +600,13 @@ export default function DesktopPage() {
                           "/api/proxy/websockify" // bytebot default
                         }
                        />
+                     </div>
                    </div>
-                 </div>
 
                  {/* Controller Presets */}
                  {presets.length > 0 && (
-                   <div className="rounded-xl border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                     <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+                   <div className="rounded-lg border border-white/10 bg-[#17181b]/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                     <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a6a6a6]">
                        <span>Controller Presets</span>
                        <button
                          type="button"
@@ -621,7 +621,7 @@ export default function DesktopPage() {
                              addLog('❌ At least one controller must be active');
                            }
                          }}
-                         className="rounded-md border border-white/70 bg-white/70 px-2 py-1 text-[9px] font-semibold tracking-[0.2em] text-slate-400 transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+                        className="rounded-md border border-white/10 bg-[#1a1b1d] px-2 py-1 text-[9px] font-semibold tracking-[0.2em] text-[#9a9a9a] transition-all hover:bg-[#222327] hover:text-[#d0d0d0]"
                        >
                          Save
                        </button>
@@ -635,7 +635,7 @@ export default function DesktopPage() {
                                loadPreset(preset.id);
                                addLog(`✅ Preset "${preset.name}" loaded`);
                              }}
-                             className="rounded-md border border-white/70 bg-white/70 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400 transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-300"
+                             className="rounded-md border border-white/10 bg-[#1a1b1d] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#a6a6a6] transition-all hover:bg-[#222327] hover:text-[#d0d0d0]"
                            >
                              {preset.name}
                            </button>
@@ -647,7 +647,7 @@ export default function DesktopPage() {
                                  addLog(`🗑️ Preset "${preset.name}" deleted`);
                                }
                              }}
-                             className="rounded-md border border-red-200/70 bg-red-50/70 px-1 py-1 text-[8px] font-semibold text-red-500 transition-all hover:bg-red-100 dark:border-red-800/40 dark:bg-red-900/20 dark:text-red-400"
+                             className="rounded-md border border-[#3b2a2a] bg-[#1a1414] px-1 py-1 text-[8px] font-semibold text-[#d5a8a8] transition-all hover:bg-[#241b1b]"
                            >
                              ✕
                            </button>
@@ -658,23 +658,26 @@ export default function DesktopPage() {
                  )}
               </div>
 
-                <div className="rounded-xl border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                <div className="rounded-lg border border-white/10 bg-[#17181b]/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#9a9a9a]">
+                    Smart Prompt
+                  </div>
                   <form
                     onSubmit={handleSend}
                     className="flex flex-wrap items-center gap-3"
                   >
-                    <div className="flex flex-1 items-center gap-3 rounded-md border border-white/70 bg-white/70 px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] dark:border-white/10 dark:bg-white/10">
+                    <div className="flex flex-1 items-center gap-3 rounded-md border border-white/10 bg-[#101113] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                       <input
                         value={command}
                         onChange={(event) => setCommand(event.target.value)}
                         placeholder="Describe what you want to automate"
-                        className="flex-1 bg-transparent text-sm text-slate-500 focus:outline-none dark:text-slate-200"
+                        className="flex-1 bg-transparent text-[12px] text-[#d4d4d4] focus:outline-none"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={isLoading || !command.trim() || !selectedModel}
-                      className="flex h-10 w-10 items-center justify-center rounded-md border border-white/70 bg-white/80 text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all hover:bg-white disabled:opacity-50 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20"
+                      className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-[#1a1b1d] text-[#c7c7c7] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all hover:bg-[#222327] disabled:opacity-50"
                     >
                       <Send className="h-4 w-4" />
                     </button>
@@ -707,7 +710,7 @@ export default function DesktopPage() {
                        icon={<Settings className="h-4 w-4" />}
                        onClick={() => router.push("/settings")}
                      />
-                    <button className="flex items-center gap-2 rounded-md border border-white/70 bg-white/70 px-4 py-2 text-[11px] font-semibold tracking-[0.14em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20">
+                    <button className="flex items-center gap-2 rounded-md border border-white/10 bg-[#1a1b1d] px-4 py-2 text-[9px] font-semibold tracking-[0.12em] text-[#b0b0b0] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all hover:bg-[#222327] hover:text-[#e0e0e0]">
                       <EyeOff className="h-4 w-4" />
                       Hide Bytebot
                     </button>
@@ -726,14 +729,14 @@ export default function DesktopPage() {
       {/* Keyboard Shortcuts Help Modal */}
       {showKeyboardHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="max-h-[80vh] w-full max-w-md overflow-auto rounded-xl border border-white/60 bg-white/95 p-6 shadow-[0_30px_80px_rgba(148,163,184,0.35)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/95 dark:shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
+          <div className="max-h-[80vh] w-full max-w-md overflow-auto rounded-lg border border-white/10 bg-[#151618] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),_0_30px_80px_rgba(0,0,0,0.7)]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+              <h3 className="text-lg font-semibold text-[#e6e6e6]">
                 Keyboard Shortcuts
               </h3>
               <button
                 onClick={() => setShowKeyboardHelp(false)}
-                className="rounded-md p-1 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                className="rounded-md p-1 text-[#9a9a9a] hover:text-[#d0d0d0]"
               >
                 ✕
               </button>
@@ -741,44 +744,44 @@ export default function DesktopPage() {
 
             <div className="space-y-4">
               <div>
-                <h4 className="mb-2 font-semibold text-slate-600 dark:text-slate-300">
+                <h4 className="mb-2 font-semibold text-[#cfcfcf]">
                   Controller Selection
                 </h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">1-5</span>
-                    <span className="text-slate-700 dark:text-slate-200">Switch to controller</span>
+                    <span className="text-[#9a9a9a]">1-5</span>
+                    <span className="text-[#e0e0e0]">Switch to controller</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Ctrl/Cmd + 1-5</span>
-                    <span className="text-slate-700 dark:text-slate-200">Toggle multi-selection</span>
+                    <span className="text-[#9a9a9a]">Ctrl/Cmd + 1-5</span>
+                    <span className="text-[#e0e0e0]">Toggle multi-selection</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Escape</span>
-                    <span className="text-slate-700 dark:text-slate-200">Clear selection</span>
+                    <span className="text-[#9a9a9a]">Escape</span>
+                    <span className="text-[#e0e0e0]">Clear selection</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Tab</span>
-                    <span className="text-slate-700 dark:text-slate-200">Next controller</span>
+                    <span className="text-[#9a9a9a]">Tab</span>
+                    <span className="text-[#e0e0e0]">Next controller</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Shift + Tab</span>
-                    <span className="text-slate-700 dark:text-slate-200">Previous controller</span>
+                    <span className="text-[#9a9a9a]">Shift + Tab</span>
+                    <span className="text-[#e0e0e0]">Previous controller</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Arrow Keys</span>
-                    <span className="text-slate-700 dark:text-slate-200">Navigate controllers</span>
+                    <span className="text-[#9a9a9a]">Arrow Keys</span>
+                    <span className="text-[#e0e0e0]">Navigate controllers</span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h4 className="mb-2 font-semibold text-slate-600 dark:text-slate-300">
+                <h4 className="mb-2 font-semibold text-[#cfcfcf]">
                   Tips
                 </h4>
-                <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                  <li>• Blue border indicates primary controller</li>
-                  <li>• Light blue indicates active secondary controllers</li>
+                <ul className="text-sm text-[#b0b0b0] space-y-1">
+                  <li>• Brighter panel indicates primary controller</li>
+                  <li>• Dimmer panel indicates active secondary controllers</li>
                   <li>• Use Ctrl/Cmd+click for multi-selection in UI</li>
                   <li>• Controllers maintain individual configurations</li>
                 </ul>
@@ -788,8 +791,8 @@ export default function DesktopPage() {
 
                  {/* Controller Workflows */}
                  {workflows.length > 0 && (
-                   <div className="rounded-xl border border-white/70 bg-white/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                     <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-300">
+                   <div className="rounded-lg border border-white/10 bg-[#17181b]/85 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                     <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a6a6a6]">
                        <span>Workflows</span>
                        <button
                          type="button"
@@ -802,7 +805,7 @@ export default function DesktopPage() {
                              addLog('❌ Workflow name required');
                            }
                          }}
-                         className="rounded-md border border-white/70 bg-white/70 px-2 py-1 text-[9px] font-semibold tracking-[0.2em] text-slate-400 transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+                         className="rounded-md border border-white/10 bg-[#1a1b1d] px-2 py-1 text-[9px] font-semibold tracking-[0.2em] text-[#9a9a9a] transition-all hover:bg-[#222327] hover:text-[#d0d0d0]"
                        >
                          Create
                        </button>
@@ -823,8 +826,8 @@ export default function DesktopPage() {
                              }}
                              className={`rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] transition-all ${
                                workflow.isActive
-                                 ? 'border-green-200/70 bg-green-50/70 text-green-600 dark:border-green-800/40 dark:bg-green-900/20 dark:text-green-400'
-                                 : 'border-white/70 bg-white/70 text-slate-400 hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-slate-300'
+                                 ? 'border-white/20 bg-[#2a2b2e] text-[#f0f0f0]'
+                                 : 'border-white/10 bg-[#1a1b1d] text-[#9a9a9a] hover:bg-[#222327] hover:text-[#d0d0d0]'
                              }`}
                            >
                              {workflow.isActive ? 'Active' : workflow.name}
@@ -837,7 +840,7 @@ export default function DesktopPage() {
                                  addLog(`🗑️ Workflow "${workflow.name}" deleted`);
                                }
                              }}
-                             className="rounded-md border border-red-200/70 bg-red-50/70 px-1 py-1 text-[8px] font-semibold text-red-500 transition-all hover:bg-red-100 dark:border-red-800/40 dark:bg-red-900/20 dark:text-red-400"
+                             className="rounded-md border border-[#3b2a2a] bg-[#1a1414] px-1 py-1 text-[8px] font-semibold text-[#d5a8a8] transition-all hover:bg-[#241b1b]"
                            >
                              ✕
                            </button>

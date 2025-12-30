@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { useTheme } from "next-themes";
+import { KronosLogo } from "@/components/branding/KronosLogo";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -13,7 +12,6 @@ import {
 import { usePathname } from "next/navigation";
 
 export function Header() {
-  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
@@ -48,17 +46,7 @@ export function Header() {
         {/* Logo without link */}
         <div>
           {mounted ? (
-            <Image
-              src={
-                resolvedTheme === "dark"
-                  ? "/bytebot-logo.png"
-                  : "/bytebot-logo.png"
-              }
-              alt="Bytebot Logo"
-              width={140}
-              height={44}
-              className="h-10 w-auto"
-            />
+            <KronosLogo size={140} className="h-12 w-auto" alt="Kronos logo" />
           ) : (
             <div className="h-8 w-[110px]" />
           )}
