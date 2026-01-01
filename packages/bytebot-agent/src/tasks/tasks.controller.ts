@@ -9,6 +9,7 @@ import {
   HttpCode,
   Query,
   HttpException,
+  Logger,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -30,6 +31,15 @@ const proxyUrl = process.env.BYTEBOT_LLM_PROXY_URL;
 
 @Controller('tasks')
 export class TasksController {
+  private readonly logger = new Logger(TasksController.name);
+
+  // Fallback chain: Routeway → Groq → OpenAI (Anthropic EXCLUDED)
+  private readonly FALLBACK_CHAIN: { provider: string; name: string }[] = [
+    { provider: 'routeway', name: 'deepseek/deepseek-chat-v3.2' },
+    { provider: 'groq', name: 'llama-3.3-70b-versatile' },
+    { provider: 'openai', name: 'gpt-4o' },
+  ];
+
   constructor(
     private readonly tasksService: TasksService,
     private readonly messagesService: MessagesService,
@@ -37,10 +47,93 @@ export class TasksController {
     private readonly performanceMonitor: PerformanceMonitorService,
   ) {}
 
+  private isFallbackableError(error: any): boolean {
+    const status = error.status || error.statusCode;
+    const message = error.message || '';
+
+    return (
+      status === 422 ||
+      status === 429 ||
+      status >= 500 ||
+      message.includes('timeout') ||
+      message.includes('TIMEOUT') ||
+      message.includes('Timeout') ||
+      message.includes('rate limit') ||
+      message.includes('Rate limit') ||
+      message.includes('overloaded') ||
+      message.includes('context length') ||
+      message.includes('token limit')
+    );
+  }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
-    return this.tasksService.create(createTaskDto);
+    const originalModel = createTaskDto.model;
+    let lastError: any;
+
+    // Try original model first
+    try {
+      return await this.tasksService.create(createTaskDto);
+    } catch (error) {
+      lastError = error;
+
+      // Check if fallbackable error
+      if (this.isFallbackableError(error)) {
+        this.logger.log(
+          `Model ${originalModel?.provider}/${originalModel?.name} failed with ${error.status || 'unknown'}, attempting fallback chain`,
+        );
+
+        // Try fallback chain (Routeway → Groq → OpenAI)
+        for (const fallback of this.FALLBACK_CHAIN) {
+          // Skip if same as original model
+          if (
+            originalModel &&
+            originalModel.provider === fallback.provider &&
+            originalModel.name === fallback.name
+          ) {
+            continue;
+          }
+
+          // Skip Anthropic (not in fallback chain)
+          if (fallback.provider === 'anthropic') {
+            continue;
+          }
+
+          try {
+            const fallbackDto = { ...createTaskDto, model: fallback };
+            this.logger.log(
+              `FALLBACK: Trying ${fallback.provider}/${fallback.name} instead of ${originalModel?.provider}/${originalModel?.name}`,
+            );
+
+            const result = await this.tasksService.create(fallbackDto);
+
+            this.logger.log(
+              `FALLBACK SUCCESS: ${fallback.provider}/${fallback.name} succeeded after ${originalModel?.provider}/${originalModel?.name} failed`,
+            );
+
+            // Record fallback metric
+            this.performanceMonitor.recordFallback(
+              originalModel?.provider || 'unknown',
+              originalModel?.name || 'unknown',
+              fallback.provider,
+              fallback.name,
+            );
+
+            return result;
+          } catch (fallbackError) {
+            this.logger.debug(
+              `FALLBACK FAILED: ${fallback.provider}/${fallback.name} failed with ${fallbackError.status || 'unknown'}`,
+            );
+            lastError = fallbackError;
+            continue;
+          }
+        }
+      }
+
+      // No fallback worked, throw original error
+      throw lastError;
+    }
   }
 
   @Get()
@@ -65,20 +158,26 @@ export class TasksController {
   }
 
   @Get('models')
-  async getModels() {
+  async getModels(@Query('toolCalling') toolCalling?: string) {
     // Build models array dynamically using process.env
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    // NOTE: Anthropic models are EXCLUDED - Routeway → Groq → OpenAI chain only
     const openaiApiKey = process.env.OPENAI_API_KEY;
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const groqApiKey = process.env.GROQ_API_KEY;
     const routewayApiKey = process.env.ROUTEWAY_API_KEY;
 
+    console.log('[Models] API Keys check:', {
+      anthropic: false, // Explicitly excluded
+      openai: !!openaiApiKey,
+      gemini: !!geminiApiKey,
+      groq: !!groqApiKey,
+      routeway: !!routewayApiKey
+    });
+
     let dynamicModels: any[] = [];
 
-    // Add models conditionally
-    if (anthropicApiKey) {
-      dynamicModels = [...dynamicModels, ...ANTHROPIC_MODELS];
-    }
+    // NOTE: Anthropic models are EXCLUDED - no fallback to Anthropic allowed
+    // Only Routeway → Groq → OpenAI chain is supported
     if (openaiApiKey) {
       dynamicModels = [...dynamicModels, ...OPENAI_MODELS];
     }
@@ -86,15 +185,26 @@ export class TasksController {
       dynamicModels = [...dynamicModels, ...GOOGLE_MODELS];
     }
     if (groqApiKey) {
+      console.log('[Models] Adding GROQ models:', GROQ_MODELS.length);
       dynamicModels = [...dynamicModels, ...GROQ_MODELS];
     }
     if (routewayApiKey) {
+      console.log('[Models] Adding ROUTEWAY models:', ROUTEWAY_MODELS.length);
       dynamicModels = [...dynamicModels, ...ROUTEWAY_MODELS];
     }
 
+    console.log('[Models] Total models:', dynamicModels.length);
     // Always add Ollama and OpenCode models
     dynamicModels = [...dynamicModels, ...OLLAMA_MODELS];
     dynamicModels = [...dynamicModels, ...OPENCODE_MODELS];
+
+    // Filter for tool-capable models if requested
+    if (toolCalling === 'true') {
+      dynamicModels = dynamicModels.filter((model) => 
+        model.capabilities?.toolCalling === true
+      );
+      console.log('[Models] Filtered to tool-capable models:', dynamicModels.length);
+    }
 
     return dynamicModels;
   }

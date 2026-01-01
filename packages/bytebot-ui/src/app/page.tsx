@@ -17,6 +17,11 @@ import {
 } from "lucide-react";
 import { KronosLogo } from "@/components/branding/KronosLogo";
 
+const FALLBACK_CHAIN: Model[] = [
+  { provider: 'groq', name: 'llama-3.3-70b-versatile', title: 'Llama 3.3 70B (Fallback)', capabilities: { toolCalling: true, vision: false, streaming: true } },
+  { provider: 'openai', name: 'o3-2025-04-16', title: 'o3 (Final Fallback)', capabilities: { toolCalling: true, vision: false, streaming: true } },
+];
+
 // Electron API types are defined in @/types/electron.d.ts
 
 export default function Home() {
@@ -27,6 +32,7 @@ export default function Home() {
   const [isSending, setIsSending] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
+  const [fallbackActive, setFallbackActive] = useState(false);
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
   const getModelKey = (model: Model) => `${model.provider}:${model.name}`;
@@ -111,8 +117,42 @@ export default function Home() {
         model: selectedModel,
       });
       setCommand("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start task:", error);
+      const shouldFallback = 
+        selectedModel.provider === "routeway" && 
+        [422, 429, 500, 502, 503, 504].includes(error.status);
+      
+      if (shouldFallback) {
+        console.warn(`Routeway error (${error.status}), attempting fallback chain...`);
+        let fallbackSuccess = false;
+        
+        for (let i = 0; i < FALLBACK_CHAIN.length; i++) {
+          const fallback = FALLBACK_CHAIN[i];
+          console.warn(`Trying fallback ${i + 1}/${FALLBACK_CHAIN.length}:`, fallback.provider, fallback.name);
+          setFallbackActive(true);
+          
+          try {
+            await startTask({
+              description: taskCommand,
+              model: fallback,
+            });
+            console.warn("Fallback successful:", fallback.name);
+            setCommand("");
+            fallbackSuccess = true;
+            break;
+          } catch (fallbackError: any) {
+            console.warn(`Fallback ${fallback.name} failed:`, fallbackError.status || fallbackError.message);
+            if (i === FALLBACK_CHAIN.length - 1) {
+              console.error("All fallbacks exhausted:", fallbackError);
+            }
+          }
+        }
+        
+        if (!fallbackSuccess) {
+          console.error("All fallback models failed");
+        }
+      }
     }
 
     setIsSending(false);
@@ -272,6 +312,11 @@ export default function Home() {
                               ))}
                             </select>
                           </div>
+                           {fallbackActive && (
+                            <div className="bg-amber-500/20 border border-amber-500/50 rounded px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-amber-200">
+                              Using Fallback Chain
+                            </div>
+                          )}
                           <button
                             type="submit"
                             disabled={!canSubmit}
