@@ -21,16 +21,18 @@ fi
 # Configuration
 COMPOSE_FILE="docker-compose.full.yml"
 PROJECT_NAME="bytebot"
-PORTS=(5432 9990 9991 9992 9993)
+PORTS=(5432 9990 9991 9993 9994)
 
 FRESH_START=0
 SKIP_PULL=0
+START_UI=0
 
 usage() {
     echo "Usage: $0 [--fresh] [--skip-pull] [--help]"
     echo ""
     echo "  --fresh       Stop existing containers, pull latest images, and recreate."
     echo "  --skip-pull   Skip pulling images (use local cache)."
+    echo "  --with-ui     Start the dockerized bytebot-ui service (default: off)."
     echo "  --help        Show this help message."
 }
 
@@ -44,6 +46,10 @@ while [[ $# -gt 0 ]]; do
             SKIP_PULL=1
             shift
             ;;
+        --with-ui)
+            START_UI=1
+            shift
+            ;;
         --help|-h)
             usage
             exit 0
@@ -55,6 +61,10 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [ $START_UI -eq 1 ]; then
+    PORTS+=(9992)
+fi
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║         Bytebot Multi-Desktop Startup Script              ║${NC}"
@@ -150,6 +160,13 @@ else
     echo ""
 fi
 
+# Build BrowserOS image fresh when requested
+if [ $FRESH_START -eq 1 ]; then
+    echo -e "${YELLOW}Building BrowserOS desktop image (no cache)...${NC}"
+    $COMPOSE_CMD -f $COMPOSE_FILE build --no-cache browseros-desktop
+    echo ""
+fi
+
 # Start services with proper health check dependencies
 echo -e "${YELLOW}🚀 Starting Bytebot services...${NC}"
 echo ""
@@ -174,6 +191,9 @@ $COMPOSE_CMD -f $COMPOSE_FILE up $UP_FLAGS bytebot-desktop-debian
 echo -e "${BLUE}   Starting Kali desktop...${NC}"
 $COMPOSE_CMD -f $COMPOSE_FILE up $UP_FLAGS bytebot-desktop-kali
 
+echo -e "${BLUE}   Starting BrowserOS desktop...${NC}"
+$COMPOSE_CMD -f $COMPOSE_FILE up $UP_FLAGS browseros-desktop
+
 # Wait for desktops to be healthy
 echo -e "${BLUE}   Waiting for desktops to be ready...${NC}"
 echo -e "${YELLOW}   (This may take up to 60 seconds)${NC}"
@@ -188,8 +208,12 @@ echo -e "${BLUE}   Waiting for agent to be ready...${NC}"
 sleep 10
 
 # Start UI
-echo -e "${BLUE}   Starting Bytebot UI...${NC}"
-$COMPOSE_CMD -f $COMPOSE_FILE up $UP_FLAGS bytebot-ui
+if [ $START_UI -eq 1 ]; then
+    echo -e "${BLUE}   Starting Bytebot UI...${NC}"
+    $COMPOSE_CMD -f $COMPOSE_FILE --profile ui up $UP_FLAGS bytebot-ui
+else
+    echo -e "${YELLOW}   Skipping Bytebot UI container (using local UI)${NC}"
+fi
 
 echo ""
 echo -e "${GREEN}✅ All services started${NC}"
@@ -222,11 +246,22 @@ else
     echo -e "${RED}❌ Kali VNC (port 9993): Not reachable${NC}"
 fi
 
-# Test UI
-if curl -sf --max-time 5 "http://localhost:9992" > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Bytebot UI (port 9992): Reachable${NC}"
+# Test BrowserOS VNC
+if curl -sf --max-time 5 "http://localhost:9994" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ BrowserOS VNC (port 9994): Reachable${NC}"
 else
-    echo -e "${RED}❌ Bytebot UI (port 9992): Not reachable${NC}"
+    echo -e "${RED}❌ BrowserOS VNC (port 9994): Not reachable${NC}"
+fi
+
+# Test UI
+if [ $START_UI -eq 1 ]; then
+    if curl -sf --max-time 5 "http://localhost:9992" > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Bytebot UI (port 9992): Reachable${NC}"
+    else
+        echo -e "${RED}❌ Bytebot UI (port 9992): Not reachable${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️  Bytebot UI (port 9992): Skipped (local UI expected)${NC}"
 fi
 
 # Test Agent API
@@ -242,9 +277,10 @@ echo -e "${BLUE}║                    Startup Complete!                      �
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo "Access Points:"
-echo "  🌐 UI:           http://localhost:9992"
+echo "  🌐 UI:           http://localhost:9992 (local)"
 echo "  🖥️  Debian VNC:  http://localhost:9990/vnc.html"
 echo "  🔪 Kali VNC:     http://localhost:9993/vnc.html"
+echo "  🌐 BrowserOS:    http://localhost:9994/vnc.html"
 echo "  🤖 Agent API:    http://localhost:9991"
 echo ""
 echo "Useful Commands:"

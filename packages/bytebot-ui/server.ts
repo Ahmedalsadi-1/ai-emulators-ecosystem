@@ -9,17 +9,24 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = process.env.HOSTNAME || "localhost";
+const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = parseInt(process.env.PORT || "9992", 10);
 
-// Backend URLs
-const BYTEBOT_AGENT_BASE_URL = process.env.BYTEBOT_AGENT_BASE_URL;
+// Backend URLs - Use NEXT_PUBLIC_* for consistency (works in both server and client)
+const BYTEBOT_AGENT_BASE_URL = process.env.NEXT_PUBLIC_BYTEBOT_AGENT_BASE_URL || process.env.BYTEBOT_AGENT_BASE_URL;
 const BYTEBOT_DESKTOP_VNC_URL = process.env.BYTEBOT_DESKTOP_VNC_URL;
 const BYTEBOT_DESKTOP_BASE_URL = process.env.BYTEBOT_DESKTOP_BASE_URL;
+const DEBIAN_DESKTOP_VNC_URL =
+  process.env.DEBIAN_DESKTOP_VNC_URL ||
+  process.env.NEXT_PUBLIC_DEBIAN_DESKTOP_VNC_URL ||
+  BYTEBOT_DESKTOP_VNC_URL;
 const KALI_DESKTOP_VNC_URL =
   process.env.BYTEBOT_DESKTOP_KALI_VNC_URL ||
   process.env.KALI_DESKTOP_VNC_URL ||
   "ws://localhost:9993/websockify";
+const BROWSEROS_DESKTOP_VNC_URL =
+  process.env.BROWSEROS_DESKTOP_VNC_URL ||
+  process.env.NEXT_PUBLIC_BROWSEROS_DESKTOP_VNC_URL;
 
 const resolveDesktopBaseUrl = () => {
   if (BYTEBOT_DESKTOP_BASE_URL) return BYTEBOT_DESKTOP_BASE_URL;
@@ -60,11 +67,13 @@ const tasksHttpProxy = BYTEBOT_AGENT_BASE_URL ? createProxyMiddleware({
 }) : null;
 
 // WebSocket proxy for Socket.IO connections to backend
-const tasksWsProxy = BYTEBOT_AGENT_BASE_URL ? createProxyMiddleware({
-  target: BYTEBOT_AGENT_BASE_URL,
-  ws: true,
-  pathRewrite: { "^/api/proxy/tasks": "/socket.io" },
-}) : null;
+const tasksWsProxy = BYTEBOT_AGENT_BASE_URL
+  ? createProxyMiddleware({
+      target: BYTEBOT_AGENT_BASE_URL,
+      ws: true,
+      changeOrigin: true,
+    })
+  : null;
 
 const desktopProxy = createProxyMiddleware({
   target: DESKTOP_BASE_URL,
@@ -86,11 +95,12 @@ const authProxy = createProxyMiddleware({
 });
 
 // General API proxy to backend
-console.log("Setting up API proxy with target:", BYTEBOT_AGENT_BASE_URL);
+console.log("Setting up API proxy with target:", BYTEBOT_AGENT_BASE_URL || "(not configured - using fallback handlers)");
 const apiProxy = BYTEBOT_AGENT_BASE_URL ? createProxyMiddleware({
   target: BYTEBOT_AGENT_BASE_URL,
   changeOrigin: true,
-  pathRewrite: { "^/api": "" }, // Remove /api prefix when proxying
+  // Don't strip /api - bytebot-agent uses global prefix "api"
+  // So /api/tasks/models → /api/tasks/models on target
 }) : null;
 
 vncProxy.on("error", (error, req, res) => {
@@ -146,6 +156,31 @@ expressApp.use("/api/proxy/websockify", (req, res) => {
   });
 });
 
+// Debian VNC proxy (explicit desktop 2)
+expressApp.use("/api/proxy/debian-websockify", (req, res) => {
+  if (!DEBIAN_DESKTOP_VNC_URL) {
+    console.error("DEBIAN_DESKTOP_VNC_URL not configured");
+    res.status(500).json({ error: "DEBIAN_DESKTOP_VNC_URL not configured" });
+    return;
+  }
+
+  console.log("Proxying debian websockify request");
+  let targetUrl: URL;
+  try {
+    targetUrl = new URL(DEBIAN_DESKTOP_VNC_URL);
+  } catch (error) {
+    res.status(400).json({ error: "DEBIAN_DESKTOP_VNC_URL is invalid" });
+    return;
+  }
+
+  req.url =
+    targetUrl.pathname +
+    (req.url?.replace(/^\/api\/proxy\/debian-websockify/, "") || "");
+  vncProxy.web(req, res, {
+    target: `${targetUrl.protocol}//${targetUrl.host}`,
+  });
+});
+
 // Kali VNC proxy (must be before generic /api proxy)
 expressApp.use("/api/proxy/kali-websockify", (req, res) => {
   console.log("Proxying kali websockify request");
@@ -165,11 +200,47 @@ expressApp.use("/api/proxy/kali-websockify", (req, res) => {
   });
 });
 
+// BrowserOS VNC proxy (must be before generic /api proxy)
+expressApp.use("/api/proxy/browseros-websockify", (req, res) => {
+  if (!BROWSEROS_DESKTOP_VNC_URL) {
+    console.error("BROWSEROS_DESKTOP_VNC_URL not configured");
+    res.status(500).json({ error: "BROWSEROS_DESKTOP_VNC_URL not configured" });
+    return;
+  }
+
+  console.log("Proxying browseros websockify request");
+  let targetUrl: URL;
+  try {
+    targetUrl = new URL(BROWSEROS_DESKTOP_VNC_URL);
+  } catch (error) {
+    res.status(400).json({ error: "BROWSEROS_DESKTOP_VNC_URL is invalid" });
+    return;
+  }
+
+  req.url =
+    targetUrl.pathname +
+    (req.url?.replace(/^\/api\/proxy\/browseros-websockify/, "") || "");
+  vncProxy.web(req, res, {
+    target: `${targetUrl.protocol}//${targetUrl.host}`,
+  });
+});
+
+// Generic API proxy for all other /api/* routes (runs after specific routes)
 expressApp.use("/api", (req, res, next) => {
-  console.log(`API request: ${req.method} ${req.url}`);
+  // Mounted at /api, so req.url is the remainder (e.g., "/tasks/models")
+  // Prepend /api to get the full path for bytebot-agent (which uses global prefix "api")
+  const originalUrl = req.url;
+  req.url = "/api" + req.url;
+  console.log(`API request: ${req.method} ${originalUrl} → proxying to ${req.url}`);
+  
   if (apiProxy) {
-    return apiProxy(req, res, next);
+    apiProxy(req, res, (err) => {
+      // Restore URL after proxy (for logging/cleanup)
+      req.url = originalUrl;
+      if (err) next(err);
+    });
   } else {
+    req.url = originalUrl; // restore for error response
     res.status(500).json({ error: "BYTEBOT_AGENT_BASE_URL not configured" });
   }
 });
@@ -219,6 +290,48 @@ app
         });
       }
 
+      if (pathname.startsWith("/api/proxy/debian-websockify")) {
+        if (!DEBIAN_DESKTOP_VNC_URL) {
+          socket.destroy();
+          return;
+        }
+        let targetUrl: URL;
+        try {
+          targetUrl = new URL(DEBIAN_DESKTOP_VNC_URL);
+        } catch (error) {
+          socket.destroy();
+          return;
+        }
+        request.url =
+          targetUrl.pathname +
+          (request.url?.replace(/^\/api\/proxy\/debian-websockify/, "") || "");
+        console.log("Proxying debian websockify upgrade request: ", request.url);
+        return vncProxy.ws(request, socket as any, head, {
+          target: `${targetUrl.protocol}//${targetUrl.host}`,
+        });
+      }
+
+      if (pathname.startsWith("/api/proxy/browseros-websockify")) {
+        if (!BROWSEROS_DESKTOP_VNC_URL) {
+          socket.destroy();
+          return;
+        }
+        let targetUrl: URL;
+        try {
+          targetUrl = new URL(BROWSEROS_DESKTOP_VNC_URL);
+        } catch (error) {
+          socket.destroy();
+          return;
+        }
+        request.url =
+          targetUrl.pathname +
+          (request.url?.replace(/^\/api\/proxy\/browseros-websockify/, "") || "");
+        console.log("Proxying browseros websockify upgrade request: ", request.url);
+        return vncProxy.ws(request, socket as any, head, {
+          target: `${targetUrl.protocol}//${targetUrl.host}`,
+        });
+      }
+
       if (pathname.startsWith("/api/proxy/websockify")) {
         if (!BYTEBOT_DESKTOP_VNC_URL) {
           socket.destroy();
@@ -236,26 +349,6 @@ app
           targetUrl.pathname +
           (request.url?.replace(/^\/api\/proxy\/websockify/, "") || "");
         console.log("Proxying websockify upgrade request: ", request.url);
-        return vncProxy.ws(request, socket as any, head, {
-          target: `${targetUrl.protocol}//${targetUrl.host}`,
-        });
-      }
-
-      if (pathname.startsWith("/api/proxy/kali-websockify")) {
-        let targetUrl: URL;
-        try {
-          targetUrl = new URL(KALI_DESKTOP_VNC_URL);
-        } catch (error) {
-          socket.destroy();
-          return;
-        }
-        request.url =
-          targetUrl.pathname +
-          (request.url?.replace(/^\/api\/proxy\/kali-websockify/, "") || "");
-        console.log(
-          "Proxying kali websockify upgrade request: ",
-          request.url,
-        );
         return vncProxy.ws(request, socket as any, head, {
           target: `${targetUrl.protocol}//${targetUrl.host}`,
         });

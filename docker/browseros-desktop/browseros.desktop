@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=BrowserOS
+Exec=env APPIMAGE_EXTRACT_AND_RUN=1 /opt/browseros/BrowserOS.AppImage --no-sandbox
+Terminal=false
+X-GNOME-Autostart-enabled=true

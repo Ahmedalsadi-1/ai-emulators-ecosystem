@@ -15,6 +15,12 @@ services:
       - bytebot-network
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   bytebot-desktop-debian:
     image: ghcr.io/bytebot-ai/bytebot-desktop:edge
@@ -25,14 +31,14 @@ services:
     hostname: computer-debian
     privileged: true
     ports:
-      - "9990:9990"  # websockify (noVNC) for Debian
+      - "9990:6080"  # websockify (noVNC) for Debian
     environment:
       - DISPLAY=:0
       - NODE_ENV=development
     networks:
       - bytebot-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9990/health"]
+      test: ["CMD-SHELL", "nc -z localhost 6080 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -47,14 +53,37 @@ services:
     hostname: computer-kali
     privileged: true
     ports:
-      - "9993:9990"  # websockify (noVNC) for Kali on port 9993
+      - "9993:6080"  # websockify (noVNC) for Kali
     environment:
       - DISPLAY=:0
       - NODE_ENV=development
     networks:
       - bytebot-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9990/health"]
+      test: ["CMD-SHELL", "nc -z localhost 6080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  browseros-desktop:
+    build:
+      context: ./browseros-desktop
+    image: bytebot-browseros-desktop:local
+    container_name: browseros-desktop
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: browseros
+    privileged: true
+    ports:
+      - "9994:6080"  # websockify (noVNC) for BrowserOS
+    environment:
+      - DISPLAY=:1
+      - NODE_ENV=development
+    networks:
+      - bytebot-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6080 > /dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -62,7 +91,7 @@ services:
 
   bytebot-agent:
     image: ghcr.io/bytebot-ai/bytebot-agent:edge
-    pull_policy: always
+    pull_policy: never
     container_name: bytebot-agent
     restart: unless-stopped
     ports:
@@ -71,6 +100,13 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bytebotdb
       - BYTEBOT_DESKTOP_BASE_URL=http://bytebot-desktop-debian:9990
       - NODE_ENV=development
+      - BYTEBOT_AUTH_BYPASS=true
+      # API Keys from .env file
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ROUTEWAY_API_KEY=${ROUTEWAY_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,18 +114,31 @@ services:
         condition: service_healthy
     networks:
       - bytebot-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9991 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   bytebot-ui:
     image: ghcr.io/bytebot-ai/bytebot-ui:edge
     pull_policy: always
     container_name: bytebot-ui
+    profiles:
+      - ui
     restart: unless-stopped
     ports:
       - "9992:9992"
     environment:
       - BYTEBOT_AGENT_BASE_URL=http://bytebot-agent:9991
-      - BYTEBOT_DESKTOP_VNC_URL=ws://host.docker.internal:9990/websockify
-      - BYTEBOT_DESKTOP_KALI_VNC_URL=ws://host.docker.internal:9993/websockify
+      - BYTEBOT_DESKTOP_VNC_URL=ws://bytebot-desktop-debian:6080/websockify
+      - DEBIAN_DESKTOP_VNC_URL=ws://bytebot-desktop-debian:6080/websockify
+      - BYTEBOT_DESKTOP_KALI_VNC_URL=ws://bytebot-desktop-kali:6080/websockify
+      - BROWSEROS_DESKTOP_VNC_URL=ws://browseros-desktop:6080/websockify
+      - NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT=ws://browseros-desktop:6080/websockify
+      - NEXT_PUBLIC_BROWSEROS_WEBSOCKIFY_PATH=/api/proxy/browseros-websockify
+      - NEXT_PUBLIC_BROWSEROS_VNC_PASSWORD=browseros
       - NODE_ENV=development
     depends_on:
       bytebot-agent:
@@ -98,10 +147,18 @@ services:
         condition: service_healthy
       bytebot-desktop-kali:
         condition: service_healthy
+      browseros-desktop:
+        condition: service_healthy
     networks:
       - bytebot-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9992 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 networks:
   bytebot-network:
