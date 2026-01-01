@@ -2,15 +2,17 @@
 
 import React, { useRef, useEffect, useState } from "react";
 
+type ControllerType = "bytebot" | "debian" | "kali" | "browseros";
+
 interface VncViewerProps {
   viewOnly?: boolean;
-  controllerType?: 'bytebot' | 'debian' | 'kali' | 'browseros';
+  controllerType?: ControllerType;
   proxyPath?: string;
   onStatusChange?: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
 }
 
 // Map controller type to proxy path
-const getProxyPathForController = (controllerType?: string): string => {
+const getProxyPathForController = (controllerType?: ControllerType): string => {
   switch (controllerType) {
     case 'debian':
       return '/api/proxy/debian-websockify';
@@ -24,8 +26,36 @@ const getProxyPathForController = (controllerType?: string): string => {
   }
 };
 
+const getDirectVncUrlForController = (controllerType?: ControllerType): string | undefined => {
+  switch (controllerType) {
+    case 'debian':
+      return process.env.NEXT_PUBLIC_DEBIAN_DESKTOP_VNC_URL;
+    case 'kali':
+      return (
+        process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_KALI_VNC_URL ||
+        process.env.NEXT_PUBLIC_KALI_DESKTOP_VNC_URL
+      );
+    case 'browseros':
+      return process.env.NEXT_PUBLIC_BROWSEROS_DESKTOP_VNC_URL;
+    case 'bytebot':
+    default:
+      return process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL;
+  }
+};
+
+const normalizeWsUrl = (rawUrl: string): string => {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol === "http:") url.protocol = "ws:";
+    if (url.protocol === "https:") url.protocol = "wss:";
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+};
+
 // Get VNC password based on controller type
-const getVncPassword = (controllerType?: string): string | undefined => {
+const getVncPassword = (controllerType?: ControllerType): string | undefined => {
   switch (controllerType) {
     case 'debian':
       return process.env.NEXT_PUBLIC_DEBIAN_VNC_PASSWORD || process.env.NEXT_PUBLIC_BYTEBOT_VNC_PASSWORD;
@@ -69,19 +99,25 @@ export function VncViewer({
   }, []);
 
   // Set wsUrl and notify connecting
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const resolveWsUrl = (): string | null => {
+    const directUrl = getDirectVncUrlForController(controllerType);
+    if (directUrl) return normalizeWsUrl(directUrl);
+    if (typeof window === "undefined" || !proxyPath) return null;
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${window.location.host}${proxyPath}`;
+    return `${proto}://${window.location.host}${proxyPath}`;
+  };
+
+  useEffect(() => {
+    const url = resolveWsUrl();
+    if (!url) return;
     setWsUrl(url);
     onStatusChange?.('connecting');
-  }, [proxyPath, onStatusChange]);
+  }, [controllerType, proxyPath, onStatusChange]);
 
   const retryConnection = () => {
     setVncError(null);
-    if (typeof window === "undefined") return;
-    const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${window.location.host}${proxyPath}`;
+    const url = resolveWsUrl();
+    if (!url) return;
     setWsUrl(url);
     onStatusChange?.('connecting');
   };
