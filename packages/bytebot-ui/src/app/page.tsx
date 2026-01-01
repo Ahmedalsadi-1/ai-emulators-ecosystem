@@ -29,6 +29,11 @@ export default function Home() {
   const [modelsError, setModelsError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
+  const getModelKey = (model: Model) => `${model.provider}:${model.name}`;
+  const pickRoutewayDefault = (candidates: Model[]): Model | null =>
+    candidates.find((model) => model.provider === "routeway" && model.capabilities?.toolCalling) ||
+    candidates[0] ||
+    null;
 
   useEffect(() => {
     setIsMounted(true);
@@ -52,21 +57,32 @@ export default function Home() {
         if (!isMounted) return;
 
         console.log("Loaded models:", result.length);
-        setModels(result);
+        // Filter to only tool-capable models for reliable tool usage
+        const toolModels = result.filter((m) => m.capabilities?.toolCalling);
+        const filteredModels = toolModels.filter((model) => model.provider !== "anthropic");
+        console.log("Tool-capable models:", toolModels.length);
+        setModels(filteredModels);
         setModelsError(null);
 
         const storedModel = window.localStorage.getItem("bytebot:model");
         const stored =
           storedModel &&
-          result.find(
+          filteredModels.find(
             (model) =>
-              model.name === storedModel || model.title === storedModel,
+              getModelKey(model) === storedModel ||
+              model.name === storedModel ||
+              model.title === storedModel,
           );
 
         if (stored) {
           setSelectedModel(stored);
-        } else if (result.length > 0) {
-          setSelectedModel(result[0]);
+        } else {
+          const preferred =
+            pickRoutewayDefault(filteredModels) ||
+            pickRoutewayDefault(toolModels) ||
+            result[0] ||
+            null;
+          setSelectedModel(preferred);
         }
       } catch (error) {
         console.error("Failed to load models:", error);
@@ -89,7 +105,7 @@ export default function Home() {
     setIsSending(true);
 
     try {
-      window.localStorage.setItem("bytebot:model", selectedModel.name);
+      window.localStorage.setItem("bytebot:model", getModelKey(selectedModel));
       await startTask({
         description: taskCommand,
         model: selectedModel,
@@ -107,8 +123,8 @@ export default function Home() {
     await queueTask(command);
   };
 
-  const handleModelChange = (modelName: string) => {
-    const model = models.find((m) => m.name === modelName);
+  const handleModelChange = (modelKey: string) => {
+    const model = models.find((m) => getModelKey(m) === modelKey);
     setSelectedModel(model || null);
   };
 
@@ -140,27 +156,27 @@ export default function Home() {
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#f3f3f3] via-[#ededed] to-[#e6e6e6] text-slate-900 dark:bg-gradient-to-b dark:from-[#0b0b0b] dark:via-[#0e0f12] dark:to-[#0a0b0e] dark:text-slate-100">
       <div className="pointer-events-none absolute inset-0 opacity-30 [background-size:52px_52px] [background-image:linear-gradient(90deg,rgba(15,23,42,0.08)_1px,transparent_1px),linear-gradient(0deg,rgba(15,23,42,0.08)_1px,transparent_1px)] dark:opacity-20 dark:[background-image:linear-gradient(90deg,rgba(248,250,252,0.05)_1px,transparent_1px),linear-gradient(0deg,rgba(248,250,252,0.05)_1px,transparent_1px)]" />
 
-      <main className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
+      <main className="relative z-10 flex min-h-screen items-center justify-center px-4 py-6">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className={`w-full ${isExpanded ? "max-w-6xl" : "max-w-4xl"} transition-all duration-300`}
+          className={`w-full ${isExpanded ? "max-w-6xl" : "max-w-5xl"} transition-all duration-300`}
         >
           <div
-            className={`relative border-2 border-slate-300/80 bg-[#f1f1f1] shadow-[0_18px_45px_rgba(15,23,42,0.2)] dark:border-slate-700/60 dark:bg-[#121316] ${isExpanded ? "p-7" : "p-5"} rounded-2xl`}
+            className={`relative border border-slate-300/80 bg-[#f1f1f1] shadow-[0_12px_30px_rgba(15,23,42,0.15)] dark:border-slate-700/60 dark:bg-[#1a1a1a] ${isExpanded ? "p-5" : "p-4"} rounded-lg`}
           >
             <div
-              className={`border border-slate-300/70 bg-[#f9f9f9] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-700/50 dark:bg-[#0e1013] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] ${isExpanded ? "p-6" : "p-4"} rounded-xl`}
+              className={`border border-slate-300/70 bg-[#f9f9f9] dark:border-slate-700/50 dark:bg-[#151515] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${isExpanded ? "p-4" : "p-3"} rounded-md`}
             >
-              <div className="flex flex-col gap-5">
-                <div className="rounded-md border border-slate-300/70 bg-[#f0f0f0] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-700/60 dark:bg-[#14161a]">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em]">
-                      <KronosLogo size={64} className="h-10 w-auto" />
+              <div className="flex flex-col gap-3">
+                <div className="rounded-md border border-slate-300/70 bg-[#f0f0f0] px-3 py-2 dark:border-slate-700/60 dark:bg-[#1e1e1e]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em]">
+                      <KronosLogo size={48} className="h-8 w-auto" />
                       KRONOS-OS
                     </div>
-                    <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em]">
+                    <div className="flex flex-wrap items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
                       {[
                         { id: "home", label: "Home" },
                         { id: "tasks", label: "Tasks" },
@@ -174,10 +190,10 @@ export default function Home() {
                           onClick={() =>
                             tab.id === "home" ? handleHome() : handleExpand(tab.id)
                           }
-                          className={`rounded-md border px-3 py-1 transition-all ${
+                          className={`rounded px-2 py-1 transition-all ${
                             tab.id === "home"
-                              ? "border-slate-400/80 bg-white text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-500/60 dark:bg-[#1a1c20] dark:text-white"
-                              : "border-slate-300/70 bg-white/70 text-slate-500 hover:bg-white hover:text-slate-800 dark:border-slate-700/60 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                              ? "border-slate-400/80 bg-slate-200 text-slate-800 dark:border-slate-600 dark:bg-[#2a2a2a] dark:text-white"
+                              : "border-slate-300/70 bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:border-slate-700/60 dark:text-slate-400 dark:hover:bg-[#2a2a2a] dark:hover:text-white"
                           }`}
                         >
                           {tab.label}
@@ -185,17 +201,16 @@ export default function Home() {
                       ))}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center rounded-md border border-slate-300/70 bg-white/80 p-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700/60 dark:bg-[#1a1c20] dark:text-slate-300">
+                      <div className="flex items-center rounded border border-slate-300/70 bg-white/80 p-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:border-slate-700/60 dark:bg-[#1e1e1e] dark:text-slate-400">
                         <button
                           type="button"
                           onClick={() => setTheme("light")}
                           className={`flex items-center gap-1 rounded px-2 py-1 transition-all ${
                             isMounted && theme === "light"
-                              ? "bg-slate-900 text-white"
-                              : "hover:bg-slate-200/70 dark:hover:bg-white/10"
+                              ? "bg-slate-600 text-white"
+                              : "hover:bg-slate-100 dark:hover:bg-[#2a2a2a]"
                           }`}
                         >
-                          <Sun className="h-3 w-3" />
                           Light
                         </button>
                         <button
@@ -203,59 +218,55 @@ export default function Home() {
                           onClick={() => setTheme("dark")}
                           className={`flex items-center gap-1 rounded px-2 py-1 transition-all ${
                             isMounted && theme === "dark"
-                              ? "bg-slate-900 text-white"
-                              : "hover:bg-slate-200/70 dark:hover:bg-white/10"
+                              ? "bg-slate-600 text-white"
+                              : "hover:bg-slate-100 dark:hover:bg-[#2a2a2a]"
                           }`}
                         >
-                          <Moon className="h-3 w-3" />
                           Dark
                         </button>
-                      </div>
-                      <div className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300/70 bg-white/80 text-slate-500 dark:border-slate-700/60 dark:bg-[#1a1c20] dark:text-slate-300">
-                        <Signal className="h-4 w-4" />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-[1.05fr_1fr] lg:items-center">
-                  <div className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate-500 dark:text-slate-300">
+                <div className="grid gap-4 lg:grid-cols-[1fr_1fr] lg:items-center">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                       What do you want to
                     </p>
                     <h1
-                      className={`font-semibold uppercase tracking-[0.22em] text-slate-900 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)] dark:text-slate-100 ${
-                        isExpanded ? "text-4xl" : "text-3xl"
+                      className={`font-semibold uppercase tracking-[0.18em] text-slate-900 dark:text-slate-100 ${
+                        isExpanded ? "text-2xl" : "text-xl"
                       }`}
                     >
                       Automate?
                     </h1>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-300">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                       Tell Kronos what you need, and watch it happen
                     </p>
                   </div>
 
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-3">
                     <form onSubmit={handleSubmit} className="w-full">
-                      <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-300/70 bg-white/80 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-slate-700/60 dark:bg-[#1b1d22]">
+                      <div className="flex flex-wrap items-center gap-2 rounded border border-slate-300/70 bg-white/80 px-3 py-2 dark:border-slate-700/60 dark:bg-[#1e1e1e]">
                         <input
                           type="text"
                           placeholder="Describe what you want to automate"
-                          className="flex-1 bg-transparent px-2 py-2 text-sm font-semibold uppercase tracking-[0.12em] text-slate-600 placeholder:text-slate-400 focus:outline-none dark:text-slate-200"
+                          className="flex-1 bg-transparent px-2 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-slate-600 placeholder:text-slate-400 focus:outline-none dark:text-slate-200"
                           value={command}
                           onChange={(e) => setCommand(e.target.value)}
                         />
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-2 rounded-md border border-slate-300/70 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:border-slate-700/60 dark:bg-[#111319] dark:text-slate-200">
+                          <div className="flex items-center gap-2 rounded border border-slate-300/70 bg-white px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700/60 dark:bg-[#111319] dark:text-slate-200">
                             <span>Model</span>
                             <select
                               className="bg-transparent text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 focus:outline-none dark:text-slate-200"
-                              value={selectedModel?.name || ""}
+                              value={selectedModel ? getModelKey(selectedModel) : ""}
                               onChange={(e) => handleModelChange(e.target.value)}
                             >
                               <option value="">Select</option>
                               {models.map((model) => (
-                                <option key={model.name} value={model.name}>
+                                <option key={getModelKey(model)} value={getModelKey(model)}>
                                   {model.title}
                                 </option>
                               ))}

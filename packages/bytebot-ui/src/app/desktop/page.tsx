@@ -37,6 +37,11 @@ type WorkspaceOption = {
   screen: 'bytebot' | 'debian' | 'kali';
 };
 
+const pickRoutewayDefault = (candidates: Model[]): Model | null =>
+  candidates.find((model) => model.provider === "routeway" && model.capabilities?.toolCalling) ||
+  candidates[0] ||
+  null;
+
 // VNC Environment Warning Component
 function VncEnvWarning() {
   const [dismissed, setDismissed] = useState(false);
@@ -490,20 +495,26 @@ export default function DesktopPage() {
         const result = await fetchModels();
         if (!isMounted) return;
 
-        setModels(result);
+        const filteredModels = result.filter((model) => model.provider !== "anthropic");
+        setModels(filteredModels);
         setModelFetchError(null);
 
         // Set default selected model
         const storedModel = window.localStorage.getItem("bytebot:model");
         const stored =
           storedModel &&
-          result.find(
+          filteredModels.find(
             (model) =>
               getModelKey(model) === storedModel ||
               model.name === storedModel ||
               model.title === storedModel,
           );
-        setSelectedModel(stored || result[0] || null);
+        setSelectedModel(
+          stored ||
+            pickRoutewayDefault(filteredModels) ||
+            pickRoutewayDefault(result) ||
+            null,
+        );
       } catch (error) {
         if (!isMounted) return;
         const errorMessage = error instanceof Error ? error.message : String(error);
