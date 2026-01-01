@@ -21,11 +21,12 @@ fi
 # Configuration
 COMPOSE_FILE="docker-compose.full.yml"
 PROJECT_NAME="bytebot"
-PORTS=(5432 9990 9991 9993 9994)
+PORTS=(5432 9990 9991 9993 9994 9995)
 
 FRESH_START=0
 SKIP_PULL=0
 START_UI=0
+START_OS_AI=0
 
 usage() {
     echo "Usage: $0 [--fresh] [--skip-pull] [--help]"
@@ -33,6 +34,7 @@ usage() {
     echo "  --fresh       Stop existing containers, pull latest images, and recreate."
     echo "  --skip-pull   Skip pulling images (use local cache)."
     echo "  --with-ui     Start the dockerized bytebot-ui service (default: off)."
+    echo "  --with-os-ai  Start the OS AI backend if available (default: off)."
     echo "  --help        Show this help message."
 }
 
@@ -50,6 +52,10 @@ while [[ $# -gt 0 ]]; do
             START_UI=1
             shift
             ;;
+        --with-os-ai)
+            START_OS_AI=1
+            shift
+            ;;
         --help|-h)
             usage
             exit 0
@@ -64,6 +70,9 @@ done
 
 if [ $START_UI -eq 1 ]; then
     PORTS+=(9992)
+fi
+if [ $START_OS_AI -eq 1 ]; then
+    PORTS+=(8765)
 fi
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
@@ -185,6 +194,9 @@ echo -e "${BLUE}   Waiting for PostgreSQL to be ready...${NC}"
 sleep 5
 
 # Start desktop containers
+echo -e "${BLUE}   Starting Bytebot desktop...${NC}"
+$COMPOSE_CMD -f $COMPOSE_FILE up $UP_FLAGS bytebot-desktop
+
 echo -e "${BLUE}   Starting Debian desktop...${NC}"
 $COMPOSE_CMD -f $COMPOSE_FILE up $UP_FLAGS bytebot-desktop-debian
 
@@ -215,6 +227,37 @@ else
     echo -e "${YELLOW}   Skipping Bytebot UI container (using local UI)${NC}"
 fi
 
+if [ $START_OS_AI -eq 1 ]; then
+    echo -e "${BLUE}   Starting OS AI backend...${NC}"
+    ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+    OS_AI_DIR="${ROOT_DIR}/os-ai-computer-use"
+    OS_AI_LOG="${OS_AI_DIR}/os-ai-backend.log"
+
+    if [ ! -d "$OS_AI_DIR" ] || [ ! -f "${OS_AI_DIR}/main.py" ]; then
+        echo -e "${YELLOW}⚠️  OS AI backend not found at ${OS_AI_DIR}${NC}"
+    elif check_port 8765; then
+        echo -e "${YELLOW}⚠️  OS AI backend already running on port 8765${NC}"
+    else
+        if [ -x "${OS_AI_DIR}/.venv/bin/python" ]; then
+            PYTHON_BIN="${OS_AI_DIR}/.venv/bin/python"
+        else
+            PYTHON_BIN="$(command -v python3 || true)"
+        fi
+
+        if [ -z "$PYTHON_BIN" ]; then
+            echo -e "${RED}❌ Python not found; cannot start OS AI backend${NC}"
+        else
+            (cd "$OS_AI_DIR" && nohup "$PYTHON_BIN" main.py > "$OS_AI_LOG" 2>&1 &)
+            sleep 2
+            if check_port 8765; then
+                echo -e "${GREEN}✅ OS AI backend started (ws://127.0.0.1:8765/ws?token=secret)${NC}"
+            else
+                echo -e "${RED}❌ OS AI backend failed to start (see ${OS_AI_LOG})${NC}"
+            fi
+        fi
+    fi
+fi
+
 echo ""
 echo -e "${GREEN}✅ All services started${NC}"
 echo ""
@@ -234,9 +277,16 @@ echo ""
 
 # Test Debian VNC
 if curl -sf --max-time 5 "http://localhost:9990" > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Debian VNC (port 9990): Reachable${NC}"
+    echo -e "${GREEN}✅ Bytebot VNC (port 9990): Reachable${NC}"
 else
-    echo -e "${RED}❌ Debian VNC (port 9990): Not reachable${NC}"
+    echo -e "${RED}❌ Bytebot VNC (port 9990): Not reachable${NC}"
+fi
+
+# Test Debian VNC
+if curl -sf --max-time 5 "http://localhost:9995" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Debian VNC (port 9995): Reachable${NC}"
+else
+    echo -e "${RED}❌ Debian VNC (port 9995): Not reachable${NC}"
 fi
 
 # Test Kali VNC
@@ -271,6 +321,14 @@ else
     echo -e "${YELLOW}⚠️  Bytebot Agent (port 9991): Not responding to health check (may still be initializing)${NC}"
 fi
 
+if [ $START_OS_AI -eq 1 ]; then
+    if check_port 8765; then
+        echo -e "${GREEN}✅ OS AI backend (port 8765): Reachable${NC}"
+    else
+        echo -e "${RED}❌ OS AI backend (port 8765): Not reachable${NC}"
+    fi
+fi
+
 echo ""
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║                    Startup Complete!                      ║${NC}"
@@ -278,10 +336,14 @@ echo -e "${BLUE}╚════════════════════�
 echo ""
 echo "Access Points:"
 echo "  🌐 UI:           http://localhost:9992 (local)"
-echo "  🖥️  Debian VNC:  http://localhost:9990/vnc.html"
+echo "  🖥️  Bytebot VNC: http://localhost:9990/vnc.html"
+echo "  🖥️  Debian VNC:  http://localhost:9995/vnc.html"
 echo "  🔪 Kali VNC:     http://localhost:9993/vnc.html"
 echo "  🌐 BrowserOS:    http://localhost:9994/vnc.html"
 echo "  🤖 Agent API:    http://localhost:9991"
+if [ $START_OS_AI -eq 1 ]; then
+    echo "  🧠 OS AI WS:     ws://127.0.0.1:8765/ws?token=secret"
+fi
 echo ""
 echo "Useful Commands:"
 echo "  View logs:       $COMPOSE_CMD -f $COMPOSE_FILE logs -f"

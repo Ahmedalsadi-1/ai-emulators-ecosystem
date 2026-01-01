@@ -22,6 +22,28 @@ services:
       retries: 5
       start_period: 10s
 
+  bytebot-desktop:
+    image: ghcr.io/bytebot-ai/bytebot-desktop:edge
+    pull_policy: always
+    container_name: bytebot-desktop
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: computer-bytebot
+    privileged: true
+    ports:
+      - "9990:9990"  # bytebotd + websockify for Bytebot
+    environment:
+      - DISPLAY=:0
+      - NODE_ENV=development
+    networks:
+      - bytebot-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9990/health > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   bytebot-desktop-debian:
     image: ghcr.io/bytebot-ai/bytebot-desktop:edge
     pull_policy: always
@@ -31,14 +53,14 @@ services:
     hostname: computer-debian
     privileged: true
     ports:
-      - "9990:6080"  # websockify (noVNC) for Debian
+      - "9995:9990"  # bytebotd + websockify for Debian
     environment:
       - DISPLAY=:0
       - NODE_ENV=development
     networks:
       - bytebot-network
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 6080 || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9990/health > /dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -53,14 +75,14 @@ services:
     hostname: computer-kali
     privileged: true
     ports:
-      - "9993:6080"  # websockify (noVNC) for Kali
+      - "9993:9990"  # bytebotd + websockify for Kali
     environment:
       - DISPLAY=:0
       - NODE_ENV=development
     networks:
       - bytebot-network
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 6080 || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:9990/health > /dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -98,7 +120,7 @@ services:
       - "9991:9991"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bytebotdb
-      - BYTEBOT_DESKTOP_BASE_URL=http://bytebot-desktop-debian:9990
+      - BYTEBOT_DESKTOP_BASE_URL=http://bytebot-desktop:9990
       - NODE_ENV=development
       - BYTEBOT_AUTH_BYPASS=true
       # API Keys from .env file
@@ -110,7 +132,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      bytebot-desktop-debian:
+      bytebot-desktop:
         condition: service_healthy
     networks:
       - bytebot-network
@@ -132,9 +154,9 @@ services:
       - "9992:9992"
     environment:
       - BYTEBOT_AGENT_BASE_URL=http://bytebot-agent:9991
-      - BYTEBOT_DESKTOP_VNC_URL=ws://bytebot-desktop-debian:6080/websockify
-      - DEBIAN_DESKTOP_VNC_URL=ws://bytebot-desktop-debian:6080/websockify
-      - BYTEBOT_DESKTOP_KALI_VNC_URL=ws://bytebot-desktop-kali:6080/websockify
+      - BYTEBOT_DESKTOP_VNC_URL=ws://bytebot-desktop:9990/websockify
+      - DEBIAN_DESKTOP_VNC_URL=ws://bytebot-desktop-debian:9990/websockify
+      - BYTEBOT_DESKTOP_KALI_VNC_URL=ws://bytebot-desktop-kali:9990/websockify
       - BROWSEROS_DESKTOP_VNC_URL=ws://browseros-desktop:6080/websockify
       - NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT=ws://browseros-desktop:6080/websockify
       - NEXT_PUBLIC_BROWSEROS_WEBSOCKIFY_PATH=/api/proxy/browseros-websockify
@@ -142,6 +164,8 @@ services:
       - NODE_ENV=development
     depends_on:
       bytebot-agent:
+        condition: service_healthy
+      bytebot-desktop:
         condition: service_healthy
       bytebot-desktop-debian:
         condition: service_healthy

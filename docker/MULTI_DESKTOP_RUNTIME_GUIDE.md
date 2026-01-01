@@ -8,8 +8,9 @@ This document describes the correct runtime configuration for Kali and Debian VN
 ### Port Allocation
 | Service | Port | Protocol | Description |
 |---------|------|----------|-------------|
-| **bytebot-desktop-debian** | 9990 | WebSocket | noVNC/websockify for Debian desktop |
-| **bytebot-desktop-kali** | 9993 | WebSocket | noVNC/websockify for Kali desktop |
+| **bytebot-desktop** | 9990 | WebSocket | bytebotd/websockify for Bytebot desktop |
+| **bytebot-desktop-debian** | 9995 | WebSocket | bytebotd/websockify for Debian desktop |
+| **bytebot-desktop-kali** | 9993 | WebSocket | bytebotd/websockify for Kali desktop |
 | **browseros-desktop** | 9994 | WebSocket | noVNC/websockify for BrowserOS desktop |
 | **bytebot-agent** | 9991 | HTTP | AI agent API |
 | **bytebot-ui** | 9992 | HTTP | Next.js UI |
@@ -18,16 +19,18 @@ This document describes the correct runtime configuration for Kali and Debian VN
 ### Proxy Routes
 The UI server (`bytebot-ui/server.ts`) handles VNC proxying:
 
-- **`/api/proxy/websockify`** → `ws://host.docker.internal:9990/websockify` (Debian)
-- **`/api/proxy/debian-websockify`** → `ws://host.docker.internal:9990/websockify` (Explicit Debian)
+- **`/api/proxy/websockify`** → `ws://host.docker.internal:9990/websockify` (Bytebot)
+- **`/api/proxy/debian-websockify`** → `ws://host.docker.internal:9995/websockify` (Debian)
 - **`/api/proxy/kali-websockify`** → `ws://host.docker.internal:9993/websockify` (Kali)
 - **`/api/proxy/browseros-websockify`** → `ws://host.docker.internal:9994/websockify` (BrowserOS)
 
 ### Environment Variables
 ```bash
-# Debian Desktop
+# Bytebot Desktop
 BYTEBOT_DESKTOP_VNC_URL=ws://host.docker.internal:9990/websockify
-DEBIAN_DESKTOP_VNC_URL=ws://host.docker.internal:9990/websockify
+
+# Debian Desktop
+DEBIAN_DESKTOP_VNC_URL=ws://host.docker.internal:9995/websockify
 
 # Kali Desktop  
 BYTEBOT_DESKTOP_KALI_VNC_URL=ws://host.docker.internal:9993/websockify
@@ -103,7 +106,7 @@ cd bytebot/docker
 
 ### 3. Startup Order (Automatic with Health Checks)
 1. **PostgreSQL** (independent, ~5s startup)
-2. **Desktop Containers** (Debian + Kali, ~30s startup each)
+2. **Desktop Containers** (Bytebot + Debian + Kali + BrowserOS, ~30s startup each)
 3. **Bytebot Agent** (~10s startup)
 4. **Bytebot UI** (~5s startup, optional when using local UI)
 
@@ -113,7 +116,8 @@ cd bytebot/docker
 docker-compose -f docker-compose.full.yml ps
 
 # Test endpoints
-curl http://localhost:9990  # Debian VNC
+curl http://localhost:9990  # Bytebot VNC
+curl http://localhost:9995  # Debian VNC
 curl http://localhost:9993  # Kali VNC
 curl http://localhost:9994  # BrowserOS VNC
 curl http://localhost:9992  # UI
@@ -255,7 +259,8 @@ After successful startup:
 | Service | URL | Description |
 |---------|-----|-------------|
 | **UI** | http://localhost:9992 | Next.js dashboard |
-| **Debian VNC** | http://localhost:9990/vnc.html | noVNC interface for Debian |
+| **Bytebot VNC** | http://localhost:9990/vnc.html | noVNC interface for Bytebot |
+| **Debian VNC** | http://localhost:9995/vnc.html | noVNC interface for Debian |
 | **Kali VNC** | http://localhost:9993/vnc.html | noVNC interface for Kali |
 | **BrowserOS VNC** | http://localhost:9994/vnc.html | noVNC interface for BrowserOS |
 | **Agent API** | http://localhost:9991 | REST API |

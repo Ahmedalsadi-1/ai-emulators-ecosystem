@@ -19,7 +19,7 @@ const BYTEBOT_DESKTOP_BASE_URL = process.env.BYTEBOT_DESKTOP_BASE_URL;
 const DEBIAN_DESKTOP_VNC_URL =
   process.env.DEBIAN_DESKTOP_VNC_URL ||
   process.env.NEXT_PUBLIC_DEBIAN_DESKTOP_VNC_URL ||
-  BYTEBOT_DESKTOP_VNC_URL;
+  "ws://localhost:9995/websockify";
 const KALI_DESKTOP_VNC_URL =
   process.env.BYTEBOT_DESKTOP_KALI_VNC_URL ||
   process.env.KALI_DESKTOP_VNC_URL ||

@@ -102,7 +102,7 @@ function VncEnvWarning() {
               BYTEBOT_DESKTOP_VNC_URL=ws://localhost:9990/websockify
             </code>
             <code className="block rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-200">
-              DEBIAN_DESKTOP_VNC_URL=ws://localhost:9990/websockify
+              DEBIAN_DESKTOP_VNC_URL=ws://localhost:9995/websockify
             </code>
             <code className="block rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-200">
               BYTEBOT_DESKTOP_KALI_VNC_URL=ws://localhost:9993/websockify
