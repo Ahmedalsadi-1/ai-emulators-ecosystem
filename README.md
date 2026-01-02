@@ -362,34 +362,68 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🎬 Demo Videos
+## 🎬 See KRONOS-OS in Action
 
-Watch KRONOS-OS in action! These recordings showcase the platform's capabilities:
+<div align="center">
 
-### 📹 Featured Demos
+![KRONOS-OS Logo](IMG_5467.PNG)
 
-| Video | Description | Duration |
-|-------|-------------|----------|
-| [System Overview](Screen%20Recording%202025-12-21%20at%209.52.50%E2%80%AFPM.mov) | Complete walkthrough of KRONOS-OS features and UI | ~2 min |
-| [UI Preview](Screen%20Recording%202026-01-01%20at%203.25.32%E2%80%AFAM.mov) | Detailed look at the new dashboard and service health monitoring | ~1 min |
+**The Ultimate AI-Powered Desktop Automation Platform**
 
-### 🎥 What's Covered
+</div>
 
-- ✅ **System Overview** - Complete platform tour showing multi-desktop setup, AI agent orchestration, and real-time monitoring
-- ✅ **Dashboard Demo** - New KRONOS-OS UI with service health indicators, task tracking, and model performance metrics
-- ✅ **Task Execution** - Watch AI agents execute tasks across multiple virtual desktops
-- ✅ **BrowserOS Integration** - Web automation capabilities in action
+---
 
-### 🚀 Quick Preview
+### 🚀 Live Demo GIFs
 
-https://github.com/user-attachments/assets/video-placeholder
+Watch KRONOS-OS automate tasks in real-time! These GIFs showcase the platform's capabilities:
 
-> **Note:** Click the links above to view the demo recordings from the repository.
+#### 1️⃣ System Overview Demo
+![System Demo](demo-system.gif)
+*Complete platform walkthrough - Multi-desktop setup, AI agents, and real-time monitoring*
 
-### 📂 Video Location
-All demo videos are stored in the repository root:
-- `Screen Recording 2025-12-21 at 9.52.50 PM.mov` - Main system demo
-- `Screen Recording 2026-01-01 at 3.25.32 AM.mov` - UI showcase
+#### 2️⃣ UI Dashboard Demo  
+![UI Demo](demo-ui.gif)
+*New KRONOS-OS UI with service health monitoring, task tracking, and model performance*
+
+---
+
+### 🎯 What You'll See
+
+| Feature | Demo | Description |
+|---------|------|-------------|
+| 🤖 **6-Agent Swarms** | System Demo | Coordinated AI agents working together |
+| 🖥️ **Multi-Desktop** | System Demo | 4 isolated virtual desktops running simultaneously |
+| 📊 **Service Health** | UI Demo | Real-time monitoring of bytebotd, agent, UI, and nginx |
+| ✅ **Task Tracking** | UI Demo | Live task status updates (pending → running → completed) |
+| 🔄 **Model Fallback** | System Demo | Automatic failover between Routeway → Groq → OpenAI |
+| 🌐 **BrowserOS** | System Demo | Web automation directly from your desktop |
+
+---
+
+### 📂 Demo Files
+
+**Source Videos (also available in repo):**
+- `Screen Recording 2025-12-21 at 9.52.50 PM.mov` - Full system demo (30 sec clip)
+- `Screen Recording 2026-01-01 at 3.25.32 AM.mov` - UI preview (20 sec clip)
+
+**Optimized GIFs (created for README):**
+- `demo-system.gif` - 8MB, 800px wide, 10fps
+- `demo-ui.gif` - 6MB, 800px wide, 10fps
+
+---
+
+### 💡 Try It Yourself!
+
+```bash
+# Start KRONOS-OS
+docker-compose -f docker-compose.ecosystem.yml up -d
+
+# Access the UI
+open http://localhost:9992
+
+# Watch the magic happen! ✨
+```
 
 ---
 
