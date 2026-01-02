@@ -35,6 +35,7 @@ import {
   BytebotAgentModel,
   BytebotAgentService,
   BytebotAgentResponse,
+  BytebotAgentInterrupt,
 } from './agent.types';
 import {
   AGENT_SYSTEM_PROMPT,
@@ -44,6 +45,7 @@ import { SummariesService } from '../summaries/summaries.service';
 import { handleComputerToolUse } from './agent.computer-use';
 import { ProxyService } from '../proxy/proxy.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
+import { DesktopSessionsService } from '../desktop-sessions/desktop-sessions.service';
 
 @Injectable()
 export class AgentProcessor {
@@ -67,6 +69,7 @@ export class AgentProcessor {
     private readonly routewayService: RoutewayService,
     private readonly inputCaptureService: InputCaptureService,
     private readonly performanceMonitor: PerformanceMonitorService,
+    private readonly desktopSessionsService: DesktopSessionsService,
   ) {
     console.log('🚀 AgentProcessor constructor called!');
     console.log('🔧 Services injected:', {
@@ -120,6 +123,118 @@ export class AgentProcessor {
    */
   getCurrentTaskId(): string | null {
     return this.currentTaskId;
+  }
+
+  private getFallbackModels(model: BytebotAgentModel): BytebotAgentModel[] {
+    const envFallbacks = this.parseFallbackEnv();
+    const defaults = envFallbacks.length > 0 ? [] : this.getDefaultFallbacks(model);
+    return this.dedupeModels([model, ...envFallbacks, ...defaults]);
+  }
+
+  private parseFallbackEnv(): BytebotAgentModel[] {
+    const raw = process.env.BYTEBOT_FALLBACK_MODELS;
+    if (!raw) return [];
+    return raw
+      .split(',')
+      .map((entry) => this.parseFallbackEntry(entry))
+      .filter((entry): entry is BytebotAgentModel => !!entry);
+  }
+
+  private async resolveDesktopBaseUrl(sessionId?: string): Promise<string | null> {
+    if (!sessionId) return null;
+    const normalized = sessionId.trim().toLowerCase();
+    const base = process.env.BYTEBOT_DESKTOP_BASE_URL || 'http://localhost:9990';
+    const debian = process.env.BYTEBOT_DESKTOP_DEBIAN_BASE_URL;
+    const kali = process.env.BYTEBOT_DESKTOP_KALI_BASE_URL;
+    const browseros = process.env.BYTEBOT_DESKTOP_BROWSEROS_BASE_URL;
+    const map: Record<string, string | undefined> = {
+      bytebot: base,
+      desktop1: base,
+      'desktop-1': base,
+      'desktop-01': base,
+      debian,
+      desktop2: debian,
+      'desktop-2': debian,
+      'desktop-02': debian,
+      kali,
+      desktop3: kali,
+      'desktop-3': kali,
+      'desktop-03': kali,
+      browseros,
+      'web': browseros,
+    };
+
+    if (map[normalized]) {
+      return map[normalized] as string;
+    }
+
+    const sessions = await this.desktopSessionsService.listSessions();
+    const match = sessions.find(
+      (session) => session.id === sessionId || session.name === sessionId,
+    );
+    if (match?.port) {
+      return `http://localhost:${match.port}`;
+    }
+    return null;
+  }
+
+  private parseFallbackEntry(entry: string): BytebotAgentModel | null {
+    const parts = entry.split(':').map((part) => part.trim());
+    if (parts.length < 2) return null;
+    const provider = parts.shift();
+    const name = parts.join(':');
+    if (!provider || !name || !this.services[provider]) return null;
+    return {
+      provider: provider as BytebotAgentModel['provider'],
+      name,
+      title: `${provider}:${name}`,
+      capabilities: { toolCalling: true },
+    };
+  }
+
+  private getDefaultFallbacks(model: BytebotAgentModel): BytebotAgentModel[] {
+    const fallbacks: BytebotAgentModel[] = [];
+    if (model.provider !== 'routeway' && process.env.ROUTEWAY_API_KEY) {
+      fallbacks.push({
+        provider: 'routeway',
+        name: 'deepseek-v3.2',
+        title: 'Routeway DeepSeek V3.2',
+        capabilities: { toolCalling: true },
+      });
+    }
+    if (model.provider !== 'groq' && process.env.GROQ_API_KEY) {
+      fallbacks.push({
+        provider: 'groq',
+        name: 'llama-3.3-70b-versatile',
+        title: 'Groq Llama 3.3 70B',
+        capabilities: { toolCalling: true },
+      });
+    }
+    if (model.provider !== 'openai' && process.env.OPENAI_API_KEY) {
+      fallbacks.push({
+        provider: 'openai',
+        name: 'o3-2025-04-16',
+        title: 'OpenAI o3',
+        capabilities: { toolCalling: true },
+      });
+    }
+    return fallbacks;
+  }
+
+  private getSystemPrompt(): string {
+    const basePrompt = process.env.BYTEBOT_BASE_PROMPT;
+    if (!basePrompt) return AGENT_SYSTEM_PROMPT;
+    return `${AGENT_SYSTEM_PROMPT}\n\n[Base Prompt]\n${basePrompt}`;
+  }
+
+  private dedupeModels(models: BytebotAgentModel[]): BytebotAgentModel[] {
+    const seen = new Set<string>();
+    return models.filter((entry) => {
+      const key = `${entry.provider}:${entry.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   @OnEvent('task.takeover')
@@ -226,12 +341,14 @@ export class AgentProcessor {
       );
 
       currentModel = task.model as unknown as BytebotAgentModel;
-      const model = currentModel;
+      const requestedModel = currentModel;
+      let activeModel = currentModel;
+      let activeService: BytebotAgentService | undefined;
       let agentResponse: BytebotAgentResponse | undefined;
 
       // DEBUG: Check services map
       const availableServices = Object.keys(this.services);
-      const requestedProvider = model.provider;
+      const requestedProvider = requestedModel.provider;
 
       if (!this.services[requestedProvider]) {
         this.logger.error(`Service not found. Available: ${availableServices.join(', ')}, Requested: ${requestedProvider}`);
@@ -243,60 +360,86 @@ export class AgentProcessor {
       }
 
       console.log('=== SERVICE LOOKUP DEBUG ===');
-      console.log('Requested provider:', model.provider);
+      console.log('Requested provider:', requestedModel.provider);
       console.log('Available services:', Object.keys(this.services));
-      console.log('Service found:', !!this.services[model.provider]);
+      console.log('Service found:', !!this.services[requestedModel.provider]);
 
-      const service = this.services[model.provider];
-      if (!service) {
-        console.log('SERVICE NOT FOUND - Failing task');
-        this.logger.error(
-          `No service found for model provider: ${model.provider}. Available services: ${Object.keys(this.services).join(', ')}`,
-        );
-        await this.tasksService.update(taskId, {
-          status: TaskStatus.FAILED,
-        });
-        this.isProcessing = false;
-        this.currentTaskId = null;
-        return;
+      const candidateModels = this.getFallbackModels(requestedModel);
+      let lastError: any;
+
+      for (const candidate of candidateModels) {
+        const candidateService = this.services[candidate.provider];
+        if (!candidateService) {
+          this.logger.warn(`Skipping model ${candidate.provider}/${candidate.name} (service unavailable)`);
+          continue;
+        }
+
+        console.log('Using service for provider:', candidate.provider);
+
+        const supportsToolCalling = candidate.capabilities?.toolCalling ?? true;
+        if (!supportsToolCalling) {
+          this.logger.warn(`Model ${candidate.name} does not support tool calling, disabling tools`);
+        }
+
+        const startTime = Date.now();
+        try {
+          agentResponse = await candidateService.generateMessage(
+            this.getSystemPrompt(),
+            messages,
+            candidate.name,
+            supportsToolCalling,
+            this.abortController.signal,
+          );
+          const responseTime = Date.now() - startTime;
+          this.performanceMonitor.recordMetrics({
+            provider: candidate.provider,
+            model: candidate.name,
+            responseTime,
+            inputTokens: agentResponse?.tokenUsage?.inputTokens || 0,
+            outputTokens: agentResponse?.tokenUsage?.outputTokens || 0,
+            totalTokens: agentResponse?.tokenUsage?.totalTokens || 0,
+            success: true,
+          });
+          activeModel = candidate;
+          activeService = candidateService;
+          break;
+        } catch (error) {
+          const responseTime = Date.now() - startTime;
+          this.performanceMonitor.recordMetrics({
+            provider: candidate.provider,
+            model: candidate.name,
+            responseTime,
+            inputTokens: 0,
+            outputTokens: 0,
+            totalTokens: 0,
+            success: false,
+          });
+          if (error instanceof BytebotAgentInterrupt) {
+            throw error;
+          }
+          lastError = error;
+          this.logger.warn(
+            `Model attempt failed for ${candidate.provider}/${candidate.name}: ${error?.message || error}`,
+          );
+        }
       }
 
-       console.log('Using service for provider:', model.provider);
+      if (!agentResponse || !activeService) {
+        throw lastError || new Error('All model candidates failed');
+      }
 
-       // Check if model supports tool calling
-       const supportsToolCalling = model.capabilities?.toolCalling ?? true; // Default to true for backward compatibility
-       if (!supportsToolCalling) {
-         this.logger.warn(`Model ${model.name} does not support tool calling, disabling tools`);
-       }
+      if (
+        activeModel.provider !== requestedModel.provider ||
+        activeModel.name !== requestedModel.name
+      ) {
+        this.logger.warn(
+          `Falling back to ${activeModel.provider}/${activeModel.name} for task ${taskId}`,
+        );
+      }
 
-       // Performance monitoring
-       const startTime = Date.now();
-       let success = false;
-
-       try {
-         agentResponse = await service.generateMessage(
-           AGENT_SYSTEM_PROMPT,
-           messages,
-           model.name,
-           supportsToolCalling,
-           this.abortController.signal,
-         );
-         success = true;
-       } catch (error) {
-         success = false;
-         throw error;
-       } finally {
-         const responseTime = Date.now() - startTime;
-         this.performanceMonitor.recordMetrics({
-           provider: model.provider,
-           model: model.name,
-           responseTime,
-           inputTokens: agentResponse?.tokenUsage?.inputTokens || 0,
-           outputTokens: agentResponse?.tokenUsage?.outputTokens || 0,
-           totalTokens: agentResponse?.tokenUsage?.totalTokens || 0,
-           success,
-         });
-       }
+      currentModel = activeModel;
+      const model = activeModel;
+      const service = activeService;
 
       const messageContentBlocks = agentResponse.contentBlocks;
 
@@ -400,7 +543,11 @@ export class AgentProcessor {
 
       for (const block of messageContentBlocks) {
         if (isComputerToolUseContentBlock(block)) {
-          const result = await handleComputerToolUse(block, this.logger);
+          const result = await handleComputerToolUse(
+            block,
+            this.logger,
+            (sessionId) => this.resolveDesktopBaseUrl(sessionId),
+          );
           generatedToolResults.push(result);
         }
 

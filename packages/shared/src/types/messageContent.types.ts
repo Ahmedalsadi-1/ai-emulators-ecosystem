@@ -61,11 +61,15 @@ export type ToolUseContentBlock = {
   input: Record<string, any>;
 } & MessageContentBlockBase;
 
+type SessionInput = {
+  session_id?: string;
+};
+
 export type MoveMouseToolUseBlock = ToolUseContentBlock & {
   name: "computer_move_mouse";
   input: {
     coordinates: Coordinates;
-  };
+  } & SessionInput;
 };
 
 export type TraceMouseToolUseBlock = ToolUseContentBlock & {
@@ -73,7 +77,7 @@ export type TraceMouseToolUseBlock = ToolUseContentBlock & {
   input: {
     path: Coordinates[];
     holdKeys?: string[];
-  };
+  } & SessionInput;
 };
 
 export type ClickMouseToolUseBlock = ToolUseContentBlock & {
@@ -83,7 +87,7 @@ export type ClickMouseToolUseBlock = ToolUseContentBlock & {
     button: Button;
     holdKeys?: string[];
     clickCount: number;
-  };
+  } & SessionInput;
 };
 
 export type PressMouseToolUseBlock = ToolUseContentBlock & {
@@ -92,7 +96,7 @@ export type PressMouseToolUseBlock = ToolUseContentBlock & {
     coordinates?: Coordinates;
     button: Button;
     press: Press;
-  };
+  } & SessionInput;
 };
 
 export type DragMouseToolUseBlock = ToolUseContentBlock & {
@@ -101,7 +105,7 @@ export type DragMouseToolUseBlock = ToolUseContentBlock & {
     path: Coordinates[];
     button: Button;
     holdKeys?: string[];
-  };
+  } & SessionInput;
 };
 
 export type ScrollToolUseBlock = ToolUseContentBlock & {
@@ -111,7 +115,7 @@ export type ScrollToolUseBlock = ToolUseContentBlock & {
     direction: "up" | "down" | "left" | "right";
     scrollCount: number;
     holdKeys?: string[];
-  };
+  } & SessionInput;
 };
 
 export type TypeKeysToolUseBlock = ToolUseContentBlock & {
@@ -119,7 +123,7 @@ export type TypeKeysToolUseBlock = ToolUseContentBlock & {
   input: {
     keys: string[];
     delay?: number;
-  };
+  } & SessionInput;
 };
 
 export type PressKeysToolUseBlock = ToolUseContentBlock & {
@@ -127,7 +131,7 @@ export type PressKeysToolUseBlock = ToolUseContentBlock & {
   input: {
     keys: string[];
     press: Press;
-  };
+  } & SessionInput;
 };
 
 export type TypeTextToolUseBlock = ToolUseContentBlock & {
@@ -136,7 +140,7 @@ export type TypeTextToolUseBlock = ToolUseContentBlock & {
     text: string;
     isSensitive?: boolean;
     delay?: number;
-  };
+  } & SessionInput;
 };
 
 export type PasteTextToolUseBlock = ToolUseContentBlock & {
@@ -144,29 +148,31 @@ export type PasteTextToolUseBlock = ToolUseContentBlock & {
   input: {
     text: string;
     isSensitive?: boolean;
-  };
+  } & SessionInput;
 };
 
 export type WaitToolUseBlock = ToolUseContentBlock & {
   name: "computer_wait";
   input: {
     duration: number;
-  };
+  } & SessionInput;
 };
 
 export type ScreenshotToolUseBlock = ToolUseContentBlock & {
   name: "computer_screenshot";
+  input: SessionInput;
 };
 
 export type CursorPositionToolUseBlock = ToolUseContentBlock & {
   name: "computer_cursor_position";
+  input: SessionInput;
 };
 
 export type ApplicationToolUseBlock = ToolUseContentBlock & {
   name: "computer_application";
   input: {
     application: string;
-  };
+  } & SessionInput;
 };
 
 export type WriteFileToolUseBlock = ToolUseContentBlock & {
@@ -174,14 +180,14 @@ export type WriteFileToolUseBlock = ToolUseContentBlock & {
   input: {
     path: string;
     data: string;
-  };
+  } & SessionInput;
 };
 
 export type ReadFileToolUseBlock = ToolUseContentBlock & {
   name: "computer_read_file";
   input: {
     path: string;
-  };
+  } & SessionInput;
 };
 
 export type ComputerToolUseContentBlock =

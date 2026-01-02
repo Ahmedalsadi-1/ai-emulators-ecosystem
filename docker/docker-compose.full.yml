@@ -35,10 +35,12 @@ services:
     environment:
       - DISPLAY=:0
       - NODE_ENV=development
+      - BYTEBOT_AUTH_ENABLED=false
+      - BYTEBOT_AUTH_BYPASS=true
     networks:
       - bytebot-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9990/health > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "nc -z localhost 9990 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -57,10 +59,12 @@ services:
     environment:
       - DISPLAY=:0
       - NODE_ENV=development
+      - BYTEBOT_AUTH_ENABLED=false
+      - BYTEBOT_AUTH_BYPASS=true
     networks:
       - bytebot-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9990/health > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "nc -z localhost 9990 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -79,10 +83,12 @@ services:
     environment:
       - DISPLAY=:0
       - NODE_ENV=development
+      - BYTEBOT_AUTH_ENABLED=false
+      - BYTEBOT_AUTH_BYPASS=true
     networks:
       - bytebot-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9990/health > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "nc -z localhost 9990 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

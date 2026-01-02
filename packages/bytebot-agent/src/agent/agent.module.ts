@@ -16,6 +16,7 @@ import { SummariesModule } from 'src/summaries/summaries.modue';
 import { AgentAnalyticsService } from './agent.analytics';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { ProxyModule } from 'src/proxy/proxy.module';
+import { DesktopSessionsModule } from '../desktop-sessions/desktop-sessions.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ProxyModule } from 'src/proxy/proxy.module';
     OpenCodeModule,
     RoutewayModule,
     ProxyModule,
+    DesktopSessionsModule,
   ],
   providers: [
     AgentProcessor,

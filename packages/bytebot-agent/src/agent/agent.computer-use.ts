@@ -23,21 +23,56 @@ import {
 } from '@bytebot/shared';
 import { Logger } from '@nestjs/common';
 
-const BYTEBOT_DESKTOP_BASE_URL = process.env.BYTEBOT_DESKTOP_BASE_URL as string;
+const DEFAULT_DESKTOP_BASE_URL =
+  process.env.BYTEBOT_DESKTOP_BASE_URL || 'http://localhost:9990';
+const REQUIRE_SESSION_ID = process.env.BYTEBOT_REQUIRE_SESSION_ID === 'true';
 
 export async function handleComputerToolUse(
   block: ComputerToolUseContentBlock,
   logger: Logger,
+  resolveBaseUrl?: (sessionId?: string) => Promise<string | null>,
 ): Promise<ToolResultContentBlock> {
   logger.debug(
     `Handling computer tool use: ${block.name}, tool_use_id: ${block.id}`,
   );
 
+  const sessionId = (block.input as { session_id?: string } | undefined)?.session_id;
+  const resolvedUrl = resolveBaseUrl ? await resolveBaseUrl(sessionId) : null;
+  const baseUrl = resolvedUrl || DEFAULT_DESKTOP_BASE_URL;
+
+  if (REQUIRE_SESSION_ID && !sessionId) {
+    return {
+      type: MessageContentType.ToolResult,
+      tool_use_id: block.id,
+      content: [
+        {
+          type: MessageContentType.Text,
+          text: 'ERROR: session_id is required for computer tool calls.',
+        },
+      ],
+      is_error: true,
+    };
+  }
+
+  if (REQUIRE_SESSION_ID && sessionId && resolveBaseUrl && !resolvedUrl) {
+    return {
+      type: MessageContentType.ToolResult,
+      tool_use_id: block.id,
+      content: [
+        {
+          type: MessageContentType.Text,
+          text: `ERROR: Unknown session_id ${sessionId || '(missing)'}.`,
+        },
+      ],
+      is_error: true,
+    };
+  }
+
   if (isScreenshotToolUseBlock(block)) {
     logger.debug('Processing screenshot request');
     try {
       logger.debug('Taking screenshot');
-      const image = await screenshot();
+      const image = await screenshot(baseUrl);
       logger.debug('Screenshot captured successfully');
 
       return {
@@ -74,7 +109,7 @@ export async function handleComputerToolUse(
     logger.debug('Processing cursor position request');
     try {
       logger.debug('Getting cursor position');
-      const position = await cursorPosition();
+      const position = await cursorPosition(baseUrl);
       logger.debug(`Cursor position obtained: ${position.x}, ${position.y}`);
 
       return {
@@ -108,44 +143,44 @@ export async function handleComputerToolUse(
 
   try {
     if (isMoveMouseToolUseBlock(block)) {
-      await moveMouse(block.input);
+      await moveMouse(baseUrl, block.input);
     }
     if (isTraceMouseToolUseBlock(block)) {
-      await traceMouse(block.input);
+      await traceMouse(baseUrl, block.input);
     }
     if (isClickMouseToolUseBlock(block)) {
-      await clickMouse(block.input);
+      await clickMouse(baseUrl, block.input);
     }
     if (isPressMouseToolUseBlock(block)) {
-      await pressMouse(block.input);
+      await pressMouse(baseUrl, block.input);
     }
     if (isDragMouseToolUseBlock(block)) {
-      await dragMouse(block.input);
+      await dragMouse(baseUrl, block.input);
     }
     if (isScrollToolUseBlock(block)) {
-      await scroll(block.input);
+      await scroll(baseUrl, block.input);
     }
     if (isTypeKeysToolUseBlock(block)) {
-      await typeKeys(block.input);
+      await typeKeys(baseUrl, block.input);
     }
     if (isPressKeysToolUseBlock(block)) {
-      await pressKeys(block.input);
+      await pressKeys(baseUrl, block.input);
     }
     if (isTypeTextToolUseBlock(block)) {
-      await typeText(block.input);
+      await typeText(baseUrl, block.input);
     }
     if (isPasteTextToolUseBlock(block)) {
-      await pasteText(block.input);
+      await pasteText(baseUrl, block.input);
     }
     if (isWaitToolUseBlock(block)) {
-      await wait(block.input);
+      await wait(baseUrl, block.input);
     }
     if (isApplicationToolUseBlock(block)) {
-      await application(block.input);
+      await application(baseUrl, block.input);
     }
     if (isReadFileToolUseBlock(block)) {
       logger.debug(`Reading file: ${block.input.path}`);
-      const result = await readFile(block.input);
+      const result = await readFile(baseUrl, block.input);
 
       if (result.success && result.data) {
         // Return document content block
@@ -189,7 +224,7 @@ export async function handleComputerToolUse(
       await new Promise((resolve) => setTimeout(resolve, delayMs));
 
       logger.debug('Taking screenshot');
-      image = await screenshot();
+      image = await screenshot(baseUrl);
       logger.debug('Screenshot captured successfully');
     } catch (error) {
       logger.error('Failed to take screenshot', error);
@@ -238,14 +273,17 @@ export async function handleComputerToolUse(
   }
 }
 
-async function moveMouse(input: { coordinates: Coordinates }): Promise<void> {
+async function moveMouse(
+  baseUrl: string,
+  input: { coordinates: Coordinates },
+): Promise<void> {
   const { coordinates } = input;
   console.log(
     `Moving mouse to coordinates: [${coordinates.x}, ${coordinates.y}]`,
   );
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -259,17 +297,20 @@ async function moveMouse(input: { coordinates: Coordinates }): Promise<void> {
   }
 }
 
-async function traceMouse(input: {
-  path: Coordinates[];
-  holdKeys?: string[];
-}): Promise<void> {
+async function traceMouse(
+  baseUrl: string,
+  input: {
+    path: Coordinates[];
+    holdKeys?: string[];
+  },
+): Promise<void> {
   const { path, holdKeys } = input;
   console.log(
     `Tracing mouse to path: ${path} ${holdKeys ? `with holdKeys: ${holdKeys}` : ''}`,
   );
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -284,19 +325,22 @@ async function traceMouse(input: {
   }
 }
 
-async function clickMouse(input: {
-  coordinates?: Coordinates;
-  button: Button;
-  holdKeys?: string[];
-  clickCount: number;
-}): Promise<void> {
+async function clickMouse(
+  baseUrl: string,
+  input: {
+    coordinates?: Coordinates;
+    button: Button;
+    holdKeys?: string[];
+    clickCount: number;
+  },
+): Promise<void> {
   const { coordinates, button, holdKeys, clickCount } = input;
   console.log(
     `Clicking mouse ${button} ${clickCount} times ${coordinates ? `at coordinates: [${coordinates.x}, ${coordinates.y}] ` : ''} ${holdKeys ? `with holdKeys: ${holdKeys}` : ''}`,
   );
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -313,18 +357,21 @@ async function clickMouse(input: {
   }
 }
 
-async function pressMouse(input: {
-  coordinates?: Coordinates;
-  button: Button;
-  press: Press;
-}): Promise<void> {
+async function pressMouse(
+  baseUrl: string,
+  input: {
+    coordinates?: Coordinates;
+    button: Button;
+    press: Press;
+  },
+): Promise<void> {
   const { coordinates, button, press } = input;
   console.log(
     `Pressing mouse ${button} ${press} ${coordinates ? `at coordinates: [${coordinates.x}, ${coordinates.y}]` : ''}`,
   );
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -340,18 +387,21 @@ async function pressMouse(input: {
   }
 }
 
-async function dragMouse(input: {
-  path: Coordinates[];
-  button: Button;
-  holdKeys?: string[];
-}): Promise<void> {
+async function dragMouse(
+  baseUrl: string,
+  input: {
+    path: Coordinates[];
+    button: Button;
+    holdKeys?: string[];
+  },
+): Promise<void> {
   const { path, button, holdKeys } = input;
   console.log(
     `Dragging mouse to path: ${path} ${holdKeys ? `with holdKeys: ${holdKeys}` : ''}`,
   );
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -367,19 +417,22 @@ async function dragMouse(input: {
   }
 }
 
-async function scroll(input: {
-  coordinates?: Coordinates;
-  direction: 'up' | 'down' | 'left' | 'right';
-  scrollCount: number;
-  holdKeys?: string[];
-}): Promise<void> {
+async function scroll(
+  baseUrl: string,
+  input: {
+    coordinates?: Coordinates;
+    direction: 'up' | 'down' | 'left' | 'right';
+    scrollCount: number;
+    holdKeys?: string[];
+  },
+): Promise<void> {
   const { coordinates, direction, scrollCount, holdKeys } = input;
   console.log(
     `Scrolling ${direction} ${scrollCount} times ${coordinates ? `at coordinates: [${coordinates.x}, ${coordinates.y}]` : ''}`,
   );
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -396,15 +449,18 @@ async function scroll(input: {
   }
 }
 
-async function typeKeys(input: {
-  keys: string[];
-  delay?: number;
-}): Promise<void> {
+async function typeKeys(
+  baseUrl: string,
+  input: {
+    keys: string[];
+    delay?: number;
+  },
+): Promise<void> {
   const { keys, delay } = input;
   console.log(`Typing keys: ${keys}`);
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -419,15 +475,18 @@ async function typeKeys(input: {
   }
 }
 
-async function pressKeys(input: {
-  keys: string[];
-  press: Press;
-}): Promise<void> {
+async function pressKeys(
+  baseUrl: string,
+  input: {
+    keys: string[];
+    press: Press;
+  },
+): Promise<void> {
   const { keys, press } = input;
   console.log(`Pressing keys: ${keys}`);
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -442,15 +501,18 @@ async function pressKeys(input: {
   }
 }
 
-async function typeText(input: {
-  text: string;
-  delay?: number;
-}): Promise<void> {
+async function typeText(
+  baseUrl: string,
+  input: {
+    text: string;
+    delay?: number;
+  },
+): Promise<void> {
   const { text, delay } = input;
   console.log(`Typing text: ${text}`);
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -465,12 +527,15 @@ async function typeText(input: {
   }
 }
 
-async function pasteText(input: { text: string }): Promise<void> {
+async function pasteText(
+  baseUrl: string,
+  input: { text: string },
+): Promise<void> {
   const { text } = input;
   console.log(`Pasting text: ${text}`);
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -484,12 +549,15 @@ async function pasteText(input: { text: string }): Promise<void> {
   }
 }
 
-async function wait(input: { duration: number }): Promise<void> {
+async function wait(
+  baseUrl: string,
+  input: { duration: number },
+): Promise<void> {
   const { duration } = input;
   console.log(`Waiting for ${duration}ms`);
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -503,11 +571,11 @@ async function wait(input: { duration: number }): Promise<void> {
   }
 }
 
-async function cursorPosition(): Promise<Coordinates> {
+async function cursorPosition(baseUrl: string): Promise<Coordinates> {
   console.log('Getting cursor position');
 
   try {
-    const response = await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    const response = await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -523,7 +591,7 @@ async function cursorPosition(): Promise<Coordinates> {
   }
 }
 
-async function screenshot(): Promise<string> {
+async function screenshot(baseUrl: string): Promise<string> {
   console.log('Taking screenshot');
 
   try {
@@ -531,7 +599,7 @@ async function screenshot(): Promise<string> {
       action: 'screenshot',
     };
 
-    const response = await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    const response = await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
@@ -554,12 +622,15 @@ async function screenshot(): Promise<string> {
   }
 }
 
-async function application(input: { application: string }): Promise<void> {
+async function application(
+  baseUrl: string,
+  input: { application: string },
+): Promise<void> {
   const { application } = input;
   console.log(`Opening application: ${application}`);
 
   try {
-    await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -573,7 +644,10 @@ async function application(input: { application: string }): Promise<void> {
   }
 }
 
-async function readFile(input: { path: string }): Promise<{
+async function readFile(
+  baseUrl: string,
+  input: { path: string },
+): Promise<{
   success: boolean;
   data?: string;
   name?: string;
@@ -585,7 +659,7 @@ async function readFile(input: { path: string }): Promise<{
   console.log(`Reading file: ${path}`);
 
   try {
-    const response = await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    const response = await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -609,10 +683,13 @@ async function readFile(input: { path: string }): Promise<{
   }
 }
 
-export async function writeFile(input: {
-  path: string;
-  content: string;
-}): Promise<{ success: boolean; message?: string }> {
+export async function writeFile(
+  input: {
+    path: string;
+    content: string;
+  },
+  baseUrl: string = DEFAULT_DESKTOP_BASE_URL,
+): Promise<{ success: boolean; message?: string }> {
   const { path, content } = input;
   console.log(`Writing file: ${path}`);
 
@@ -620,7 +697,7 @@ export async function writeFile(input: {
     // Content is always base64 encoded
     const base64Data = content;
 
-    const response = await fetch(`${BYTEBOT_DESKTOP_BASE_URL}/computer-use`, {
+    const response = await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

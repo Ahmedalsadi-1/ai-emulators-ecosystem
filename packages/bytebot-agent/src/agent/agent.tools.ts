@@ -16,6 +16,12 @@ const coordinateSchema = {
   required: ['x', 'y'],
 };
 
+const sessionIdSchema = {
+  type: 'string' as const,
+  description:
+    'Target desktop session identifier (bytebot, debian, kali, browseros, or a created session id/name).',
+};
+
 const holdKeysSchema = {
   type: 'array' as const,
   items: { type: 'string' as const },
@@ -38,12 +44,13 @@ export const _moveMouseTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       coordinates: {
         ...coordinateSchema,
         description: 'Target coordinates for mouse movement',
       },
     },
-    required: ['coordinates'],
+    required: ['session_id', 'coordinates'],
   },
 };
 
@@ -53,6 +60,7 @@ export const _traceMouseTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       path: {
         type: 'array' as const,
         items: coordinateSchema,
@@ -60,7 +68,7 @@ export const _traceMouseTool = {
       },
       holdKeys: holdKeysSchema,
     },
-    required: ['path'],
+    required: ['session_id', 'path'],
   },
 };
 
@@ -71,6 +79,7 @@ export const _clickMouseTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       coordinates: {
         ...coordinateSchema,
         description:
@@ -85,7 +94,7 @@ export const _clickMouseTool = {
         default: 1,
       },
     },
-    required: ['button', 'clickCount'],
+    required: ['session_id', 'button', 'clickCount'],
   },
 };
 
@@ -95,6 +104,7 @@ export const _pressMouseTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       coordinates: {
         ...coordinateSchema,
         description: 'Optional coordinates (defaults to current position)',
@@ -107,7 +117,7 @@ export const _pressMouseTool = {
         description: 'Whether to press down or release up',
       },
     },
-    required: ['button', 'press'],
+    required: ['session_id', 'button', 'press'],
   },
 };
 
@@ -117,6 +127,7 @@ export const _dragMouseTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       path: {
         type: 'array' as const,
         items: coordinateSchema,
@@ -125,7 +136,7 @@ export const _dragMouseTool = {
       button: buttonSchema,
       holdKeys: holdKeysSchema,
     },
-    required: ['path', 'button'],
+    required: ['session_id', 'path', 'button'],
   },
 };
 
@@ -135,6 +146,7 @@ export const _scrollTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       coordinates: {
         ...coordinateSchema,
         description: 'Coordinates where the scroll should occur',
@@ -150,7 +162,7 @@ export const _scrollTool = {
       },
       holdKeys: holdKeysSchema,
     },
-    required: ['coordinates', 'direction', 'scrollCount'],
+    required: ['session_id', 'coordinates', 'direction', 'scrollCount'],
   },
 };
 
@@ -163,6 +175,7 @@ export const _typeKeysTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       keys: {
         type: 'array' as const,
         items: { type: 'string' as const },
@@ -174,7 +187,7 @@ export const _typeKeysTool = {
         nullable: true,
       },
     },
-    required: ['keys'],
+    required: ['session_id', 'keys'],
   },
 };
 
@@ -185,6 +198,7 @@ export const _pressKeysTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       keys: {
         type: 'array' as const,
         items: { type: 'string' as const },
@@ -196,7 +210,7 @@ export const _pressKeysTool = {
         description: 'Whether to press down or release up',
       },
     },
-    required: ['keys', 'press'],
+    required: ['session_id', 'keys', 'press'],
   },
 };
 
@@ -207,6 +221,7 @@ export const _typeTextTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       text: {
         type: 'string' as const,
         description: 'The text string to type',
@@ -222,7 +237,7 @@ export const _typeTextTool = {
         nullable: true,
       },
     },
-    required: ['text'],
+    required: ['session_id', 'text'],
   },
 };
 
@@ -233,6 +248,7 @@ export const _pasteTextTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       text: {
         type: 'string' as const,
         description: 'The text string to type',
@@ -243,7 +259,7 @@ export const _pasteTextTool = {
         nullable: true,
       },
     },
-    required: ['text'],
+    required: ['session_id', 'text'],
   },
 };
 
@@ -256,13 +272,14 @@ export const _waitTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       duration: {
         type: 'integer' as const,
         enum: [500],
         description: 'The duration to wait in milliseconds',
       },
     },
-    required: ['duration'],
+    required: ['session_id', 'duration'],
   },
 };
 
@@ -271,7 +288,10 @@ export const _screenshotTool = {
   description: 'Captures a screenshot of the current screen',
   input_schema: {
     type: 'object' as const,
-    properties: {},
+    properties: {
+      session_id: sessionIdSchema,
+    },
+    required: ['session_id'],
   },
 };
 
@@ -280,7 +300,10 @@ export const _cursorPositionTool = {
   description: 'Gets the current (x, y) coordinates of the mouse cursor',
   input_schema: {
     type: 'object' as const,
-    properties: {},
+    properties: {
+      session_id: sessionIdSchema,
+    },
+    required: ['session_id'],
   },
 };
 
@@ -290,6 +313,7 @@ export const _applicationTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       application: {
         type: 'string' as const,
         enum: [
@@ -308,7 +332,7 @@ export const _applicationTool = {
         description: 'The application to open or focus',
       },
     },
-    required: ['application'],
+    required: ['session_id', 'application'],
   },
 };
 
@@ -376,12 +400,13 @@ export const _readFileTool = {
   input_schema: {
     type: 'object' as const,
     properties: {
+      session_id: sessionIdSchema,
       path: {
         type: 'string' as const,
         description: 'The file path to read from',
       },
     },
-    required: ['path'],
+    required: ['session_id', 'path'],
   },
 };
 

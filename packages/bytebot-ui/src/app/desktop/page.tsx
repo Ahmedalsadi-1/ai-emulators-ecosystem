@@ -378,6 +378,7 @@ export default function DesktopPage() {
     messages,
     isLoading,
     taskStatus,
+    currentTaskId,
     sendMessage,
     clearMessages,
     addLog,
@@ -430,7 +431,14 @@ export default function DesktopPage() {
     if (!command.trim() || !selectedModel) return;
     const nextMessage = command.trim();
     setCommand("");
-    await sendMessage(nextMessage, selectedModel);
+    const activeSession =
+      workspaces.find((workspace) => workspace.id === activeWorkspace) || workspaces[0];
+    const sessionId = activeSession?.sessionId || activeSession?.screen;
+    const sessionPrefix = sessionId
+      ? `Use session_id="${sessionId}" for all computer tools in this task.\n`
+      : "";
+    const messageToSend = currentTaskId ? nextMessage : `${sessionPrefix}${nextMessage}`;
+    await sendMessage(messageToSend, selectedModel);
   };
 
   const handleToggleTerminal = () => {
