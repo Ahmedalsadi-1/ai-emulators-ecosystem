@@ -1,0 +1,95 @@
+---
+name: Security Advisory
+about: Report security vulnerabilities in the Unified AI Ecosystem
+title: '[SECURITY] '
+labels: ['security', 'vulnerability', 'urgent']
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔒 Security Advisory
+        **This form is for reporting security vulnerabilities only.**
+
+        If you believe you've found a security vulnerability in the Unified AI Ecosystem,
+        please report it responsibly. We will investigate and respond promptly.
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity Level
+      description: CVSS severity rating
+      options:
+        - Critical (9.0-10.0)
+        - High (7.0-8.9)
+        - Medium (4.0-6.9)
+        - Low (0.1-3.9)
+        - Info (0.0)
+    validations:
+      required: true
+
+  - type: input
+    id: affected
+    attributes:
+      label: Affected Component
+      description: Which part of the system is affected?
+      placeholder: e.g., Agent Manager API, MCP Registry, ByteBot Agent
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Vulnerability Description
+      description: Clear description of the vulnerability
+      placeholder: What is the vulnerability? How can it be exploited?
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential Impact
+      description: What could an attacker achieve?
+      placeholder: |
+        - Data exposure
+        - System compromise
+        - Service disruption
+        - Privilege escalation
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this vulnerability?
+      placeholder: |
+        1. Set up the vulnerable component
+        2. Send malicious request to...
+        3. Observe the security breach
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested Mitigation
+      description: How should this be fixed?
+      placeholder: |
+        - Input validation
+        - Authentication checks
+        - Rate limiting
+        - Access controls
+
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure Preferences
+      description: How would you like to handle disclosure?
+      options:
+        - label: I would like credit for this discovery
+        - label: I prefer to remain anonymous
+        - label: I have already reported this to other parties
+        - label: I have a proposed timeline for disclosure

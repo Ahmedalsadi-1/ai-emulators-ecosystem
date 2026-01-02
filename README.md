@@ -1,524 +1,444 @@
-# AI Emulators Ecosystem
+# 🚀 KRONOS-OS
+
+**The Ultimate AI-Powered Desktop Automation Platform**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg)](https://docker.com)
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://python.org)
 [![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org)
-[![Go](https://img.shields.io/badge/go-1.19+-blue.svg)](https://golang.org)
+[![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)](https://typescriptlang.org)
 
-The AI Emulators Ecosystem is a comprehensive orchestration platform that integrates 10 specialized AI services with Model Context Protocol (MCP) support, providing unified access to diverse AI capabilities through a microservices architecture.
+---
 
-## 🚀 Quick Start
+## 🎯 What is KRONOS-OS?
 
-### One-Command Ecosystem Launch
+**KRONOS-OS** is our revolutionary AI-powered desktop automation platform that combines intelligent multi-agent orchestration with powerful virtual desktop infrastructure. Built with ❤️ by our team, KRONOS-OS enables you to create, manage, and control multiple AI-powered desktop environments through a unified, modern interface.
 
-```bash
-# Clone the repository
-git clone https://github.com/ai-ecosystem/future-app.git
-cd future-app
+### ✨ Key Features
 
-# Copy environment template
-cp .env.example .env
+- 🖥️ **Multi-Desktop Virtualization** - Run 4 isolated virtual desktops simultaneously
+- 🤖 **AI Agent Integration** - Powerful agents with tool-calling capabilities
+- 🌐 **BrowserOS Integration** - Web automation directly from your desktop
+- 🔄 **Smart Fallback Routing** - Routeway → Groq → OpenAI automatic failover
+- 🔧 **Tool-Use Enforcement** - Enterprise-grade tool call validation
+- 📊 **Real-time Monitoring** - Live task tracking and OS-AI panel
+- 🐳 **Docker-Native** - All services containerized for easy deployment
+- 🔐 **Enterprise Security** - JWT auth, RBAC, and audit logging
 
-# Edit environment variables (add your API keys)
-nano .env
-
-# Launch the complete ecosystem
-docker-compose -f docker-compose.ecosystem.yml up -d
-
-# Access services
-open http://localhost:3000  # Grafana Dashboard
-open http://localhost:8000  # AIOS API
-```
-
-### Individual Service Quick Starts
-
-#### Kali Desktop MCP Server
-```bash
-# Start security testing environment
-docker run -d --name kali-desktop \
-  -p 5901:5901 -p 6080:6080 \
-  --privileged \
-  kalilinux/kali-rolling bash -c "
-    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      kali-desktop-xfce tightvncserver novnc websockify \
-      firefox-esr nmap sqlmap wireshark metasploit-framework \
-      python3-opencv python3-pip && \
-    pip3 install vncdotool pynput && \
-    mkdir -p /root/.vnc && \
-    echo 'kali' | vncpasswd -f > /root/.vnc/passwd && \
-    chmod 600 /root/.vnc/passwd && \
-    vncserver :1 -geometry 1920x1080 -depth 24 && \
-    /usr/share/novnc/utils/launch.sh --vnc localhost:5901 --listen 6080 &
-    tail -f /dev/null"
-
-# Access at http://localhost:6080 (password: kali)
-```
-
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Services](#-services)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [API Documentation](#-api-documentation)
-- [Development](#-development)
-- [Contributing](#-contributing)
-- [License](#-license)
-
-## ✨ Features
-
-### 🤖 AI/LLM Operating Systems
-- **AIOS**: Complete AI Agent Operating System with LLM routing, memory management, and tool integration
-- **gbox**: Environment provider for AI agents with sandboxing and resource management
-
-### 🖥️ Computer Control & Automation
-- **bytebot**: AI desktop agent with virtual environment and VNC integration
-- **Open-Interface**: Cross-platform computer control with API-first design
-- **macOS-use**: macOS automation with Apple ecosystem integration
-- **factif-ai**: AI-powered test automation with visual testing capabilities
-
-### 🎨 Specialized Applications
-- **postiz-app**: Social media scheduling and content management platform
-- **onlysnarf**: OnlyFans automation and content distribution platform
-- **reels-clips-automator**: Instagram Reels and video clip automation
-- **Wan2GP**: Video generation platform with AI-powered content creation
-
-### 🛠️ Infrastructure & Tooling
-- **MCP Registry**: Service discovery and tool registration for MCP clients
-- **Comprehensive Monitoring**: Prometheus, Grafana, and alerting
-- **Centralized Logging**: Elasticsearch, Logstash, Kibana stack
-- **Health Checks**: Automated service health monitoring
-- **Security**: JWT authentication, rate limiting, encryption
+---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      AI Emulators Ecosystem                         │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────────┐ │
-│  │                    User Interface Layer                        │ │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │ │
-│  │  │   Web UI    │  │   API       │  │   CLI       │             │ │
-│  │  │ (Grafana)   │  │ Gateway     │  │ Tools       │             │ │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘             │ │
-│  └─────────────────────────────────────────────────────────────────┘ │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────────┐ │
-│  │                 Orchestration & Control Layer                  │ │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │ │
-│  │  │   AIOS      │  │ MCP Registry│  │   Agent     │             │ │
-│  │  │ (Agent OS)  │  │   Service   │  │   System    │             │ │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘             │ │
-│  └─────────────────────────────────────────────────────────────────┘ │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────────┐ │
-│  │                   Specialized Services Layer                    │ │
-│  │  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐         │ │
-│  │  │GBox │  │Byte│  │Open │  │macOS│  │Factif│  │Postiz│        │ │
-│  │  │Env  │  │bot │  │Intf │  │-use │  │-AI  │  │-app │         │ │
-│  │  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘         │ │
-│  │  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐         │ │
-│  │  │Only │  │Reels│  │Wan2 │  │Kali │  │     │  │     │         │ │
-│  │  │Snarf│  │Auto │  │GP   │  │Desk │  │     │  │     │         │ │
-│  │  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘         │ │
-│  └─────────────────────────────────────────────────────────────────┘ │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────────┐ │
-│  │                 Infrastructure & Data Layer                     │ │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │ │
-│  │  │ PostgreSQL  │  │    Redis    │  │ Prometheus  │             │ │
-│  │  │   Database  │  │    Cache    │  │ Monitoring  │             │ │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘             │ │
-│  └─────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    KRONOS-OS Platform                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              KRONOS-OS UI (Next.js)                 │   │
+│  │              localhost:9992                          │   │
+│  └──────────────────────┬──────────────────────────────┘   │
+│                         │                                  │
+│                         ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │           KRONOS-OS Agent (NestJS)                 │   │
+│  │           localhost:9991                            │   │
+│  │  ┌─────────────────────────────────────────────┐   │   │
+│  │  │  Task Orchestration & Model Routing        │   │   │
+│  │  │  • Routeway → Groq → OpenAI Fallback      │   │   │
+│  │  │  • Tool-Use Enforcement                   │   │   │
+│  │  │  • Multi-Provider Support                │   │   │
+│  │  └─────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                         │                                  │
+│                         ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Virtual Desktop Containers            │   │
+│  │                                                     │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │   │
+│  │  │ Desktop │ │ Desktop │ │ Desktop │ │BrowserOS│  │   │
+│  │  │    1    │ │    2    │ │    3    │ │         │  │   │
+│  │  │  :9990  │ │  :9995  │ │  :9993  │ │  :9994  │  │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Infrastructure Services               │   │
+│  │  • OS-AI Backend (:8765) - Local screen capture   │   │
+│  │  • PostgreSQL (:5432) - Task persistence          │   │
+│  │  • Redis (:6379) - Caching & real-time            │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-For detailed architecture information, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+---
 
-## 📦 Services
+## 🎮 Quick Start
+
+### Prerequisites
+
+- **Node.js 18+** with npm or pnpm
+- **Docker & Docker Compose**
+- **4GB RAM** minimum (8GB recommended)
+- **10GB** free disk space
+
+### Installation
+
+```bash
+# Clone our repository
+git clone https://github.com/your-org/kronos-os.git
+cd kronos-os
+
+# Start the platform
+docker-compose -f docker-compose.ecosystem.yml up -d
+
+# Start development services
+cd bytebot/packages/bytebot-agent && npm run start:dev &
+cd ../bytebot-ui && npm run dev &
+```
+
+### Access KRONOS-OS
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **KRONOS-OS UI** | http://localhost:9992 | Main interface |
+| **Agent API** | http://localhost:9991/api/tasks | Task management |
+| **Desktop 1** | VNC on :9990 | Primary workspace |
+| **Desktop 2** | VNC on :9995 | Secondary workspace |
+| **Desktop 3** | VNC on :9993 | Kali Linux desktop |
+| **BrowserOS** | http://localhost:9992/web | Web automation |
+| **OS-AI Panel** | Built into /desktop | Local screen capture |
+
+---
+
+## 🛠️ Services
 
 ### Core Services
 
-| Service | Description | Port | Status |
-|---------|-------------|------|--------|
-| **AIOS** | AI Agent Operating System | 8000 | 🟢 Active |
-| **gbox** | AI Environment Provider | 3000 | 🟢 Active |
-| **MCP Registry** | Tool Discovery Service | 8002 | 🟢 Active |
+| Service | Port | Status | Description |
+|---------|------|--------|-------------|
+| **bytebot-ui** | 9992 | ✅ Active | KRONOS-OS main interface |
+| **bytebot-agent** | 9991 | ✅ Active | AI orchestration engine |
+| **bytebot-desktop** | 9990 | ✅ Active | Primary virtual desktop |
+| **debian-desktop** | 9995 | ✅ Active | Debian workspace |
+| **kali-desktop** | 9993 | ✅ Active | Security testing desktop |
+| **browseros-desktop** | 9994 | ✅ Active | Web automation desktop |
+| **os-ai-backend** | 8765 | ✅ Active | Screen capture & control |
+| **postgres** | 5432 | ✅ Active | Task persistence |
 
-### Computer Control Services
+### Model Providers
 
-| Service | Description | Port | Status |
-|---------|-------------|------|--------|
-| **bytebot** | AI Desktop Agent | 4000 | 🟢 Active |
-| **Open-Interface** | Cross-platform Control | 5000 | 🟢 Active |
-| **macOS-use** | macOS Automation | 6000 | 🟢 Active |
-| **factif-ai** | AI Test Automation | 7000 | 🟢 Active |
-| **Kali Desktop** | Security Testing | 6080 | 🟢 Active |
+| Provider | Status | Tool-Capable | Notes |
+|----------|--------|--------------|-------|
+| **Routeway** | ✅ Active | ✅ Yes | Primary provider |
+| **Groq** | ✅ Active | ✅ Yes | Fast inference |
+| **OpenAI** | ⚠️ Configurable | ✅ Yes | GPT-4o, o3 |
+| **Google** | ✅ Active | ✅ Yes | Gemini 2.5 |
+| **LM Studio** | ⚠️ Optional | ⚠️ Configurable | Local models |
 
-### Content & Social Services
+---
 
-| Service | Description | Port | Status |
-|---------|-------------|------|--------|
-| **postiz-app** | Social Media Scheduler | 9000 | 🟢 Active |
-| **onlysnarf** | Content Distribution | 10000 | 🟢 Active |
-| **reels-clips-automator** | Video Automation | 11000 | 🟢 Active |
-| **Wan2GP** | Video Generation | 12000/7860 | 🟢 Active |
+## 🤖 AI Agents & Tool Use
 
-### Infrastructure Services
+### Supported Tools
 
-| Service | Description | Port | Status |
-|---------|-------------|------|--------|
-| **PostgreSQL** | Primary Database | 5432 | 🟢 Active |
-| **Redis** | Cache & Message Queue | 6379 | 🟢 Active |
-| **Prometheus** | Metrics Collection | 9090 | 🟢 Active |
-| **Grafana** | Monitoring Dashboard | 3000 | 🟢 Active |
-| **Nginx** | Reverse Proxy | 80/443 | 🟢 Active |
+KRONOS-OS agents can use the following tool categories:
 
-## 🛠️ Installation
+- **Computer Control** - Screenshot, click, type, scroll
+- **File Operations** - Read, write, navigate files
+- **Terminal Execution** - Run shell commands
+- **Web Automation** - BrowserOS integration
+- **Task Management** - Create, update, complete tasks
 
-### System Requirements
+### Tool Call Enforcement
 
-- **OS**: Linux/macOS/Windows with Docker support
-- **CPU**: 4+ cores (8+ recommended)
-- **RAM**: 16GB minimum (32GB+ recommended)
-- **Storage**: 50GB free space
-- **GPU**: NVIDIA GPU (optional, for AI/ML services)
+All tool calls **must** include a `session_id` parameter:
 
-### Docker Installation
+```json
+{
+  "tool": "computer_screenshot",
+  "parameters": {
+    "session_id": "desktop-1"
+  }
+}
+```
+
+**Invalid** tool calls (missing `session_id`) will be rejected with an error.
+
+### Desktop Sessions
+
+| Session ID | Port | Environment |
+|------------|------|-------------|
+| `desktop-1` | 9990 | Primary workspace |
+| `desktop-2` | 9995 | Debian workspace |
+| `desktop-3` | 9993 | Kali Linux |
+| `browseros` | 9994 | Web automation only |
+
+---
+
+## 🔄 Model Fallback Chain
+
+KRONOS-OS implements intelligent fallback routing:
+
+```
+Requested Model
+     │
+     ├── ✅ Success → Use response
+     │
+     └── ❌ Error (422/429/5xx/timeout)
+              │
+              ▼
+     Routeway (deepseek-v3.2)
+              │
+              ├── ✅ Success → Use response
+              │
+              └── ❌ Error
+                       │
+                       ▼
+              Groq (llama-3.3-70b-versatile)
+                       │
+              ├── ✅ Success → Use response
+              │
+              └── ❌ Error
+                       │
+                       ▼
+              OpenAI (GPT-4o)
+                       │
+              [Continue to next provider...]
+```
+
+### Configuration
 
 ```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+# In bytebot/packages/bytebot-agent/.env
 
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+# Primary provider
+ROUTEWAY_API_KEY=your-routeway-key
+ROUTEWAY_BASE_URL=https://api.routeway.ai/v1
 
-# For GPU support (optional)
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-sudo apt-get update && sudo apt-get install -y nvidia-docker2
-sudo systemctl restart docker
+# Fallback providers
+GROQ_API_KEY=your-groq-key
+OPENAI_API_KEY=your-openai-key
+
+# Optional: LM Studio local proxy
+BYTEBOT_LLM_PROXY_URL=http://192.168.1.118:1234/v1
+BYTEBOT_PROXY_MODELS=ui-tars-7b-dpo@tool,microsoft_fara-7b
 ```
 
-### Environment Setup
+---
+
+## 🌐 BrowserOS Integration
+
+### Accessing BrowserOS
+
+1. Navigate to **http://localhost:9992/web**
+2. BrowserOS loads in the VNC viewer
+3. Use password: `browseros`
+
+### Features
+
+- Full browser automation through VNC
+- noVNC fallback for restricted environments
+- Secure WebSocket connection to :9994
+- Compatible with all KRONOS-OS agents
+
+---
+
+## 📁 Project Structure
+
+```
+kronos-os/
+├── bytebot/                      # Core platform
+│   ├── packages/
+│   │   ├── bytebot-agent/       # NestJS API server (:9991)
+│   │   ├── bytebot-ui/          # Next.js UI (:9992)
+│   │   ├── bytebotd/            # Desktop service (:9990)
+│   │   └── shared/              # Shared types & utilities
+│   └── docs/                    # Documentation
+├── docker/                      # Docker configurations
+│   ├── kali-desktop/            # Kali Linux container
+│   └── ...
+├── docker-compose.ecosystem.yml  # Full platform deployment
+├── nginx/                       # Reverse proxy configuration
+└── README.md                    # This file
+```
+
+---
+
+## 🏃 Development
+
+### Running Locally
 
 ```bash
-# Clone repository
-git clone https://github.com/ai-ecosystem/future-app.git
-cd future-app
+# Start database
+docker-compose -f docker-compose.databases.yml up -d
 
-# Copy environment template
-cp .env.example .env
+# Start agent (port 9991)
+cd bytebot/packages/bytebot-agent
+npm run start:dev
 
-# Edit environment variables
-nano .env
-```
-
-Required environment variables:
-```bash
-# Database
-POSTGRES_PASSWORD=your_secure_password
-GRAFANA_PASSWORD=your_grafana_password
-
-# AI Services
-OPENAI_API_KEY=sk-your-openai-key
-HUGGINGFACE_TOKEN=hf_your-huggingface-token
-
-# Authentication
-JWT_SECRET=your-256-bit-jwt-secret
-
-# VNC/Desktop
-VNC_PASSWORD=your-vnc-password
-```
-
-## ⚙️ Configuration
-
-### Development Configuration
-
-```bash
-# Start development environment
-docker-compose -f docker-compose.dev.yml up -d
-
-# View service logs
-docker-compose -f docker-compose.dev.yml logs -f [service-name]
-
-# Run tests
-npm run test
-python -m pytest tests/
-```
-
-### Production Configuration
-
-```bash
-# Start production environment
-docker-compose -f docker-compose.prod.yml up -d
-
-# Scale services
-docker-compose -f docker-compose.prod.yml up -d --scale aios=3
-
-# Update services
-docker-compose -f docker-compose.prod.yml up -d --no-deps [service-name]
-```
-
-For detailed configuration options, see [CONFIGURATION.md](./docs/CONFIGURATION.md)
-
-## 🎯 Usage
-
-### Basic Usage Examples
-
-#### AI Text Generation
-```python
-from ai_ecosystem_sdk import AIEcosystemClient
-
-client = AIEcosystemClient(api_key="your-api-key")
-
-response = client.ai.generate_completion(
-    prompt="Explain quantum computing",
-    model="gpt-4-turbo-preview",
-    max_tokens=500
-)
-
-print(response.choices[0].text)
-```
-
-#### Computer Automation
-```python
-# Take screenshot
-screenshot = client.computer.capture_screenshot()
-print(f"Screenshot captured: {screenshot.id}")
-
-# Simulate user input
-client.computer.click_at(x=500, y=300)
-client.computer.type_text("Hello World!")
-```
-
-#### Social Media Management
-```python
-# Schedule a post
-post = client.social.schedule_post(
-    content="Exciting AI developments! #AI #Tech",
-    platforms=["twitter", "linkedin"],
-    scheduled_time="2024-01-02T10:00:00Z"
-)
-
-print(f"Post scheduled: {post.id}")
-```
-
-#### MCP Tool Usage
-```javascript
-const { MCPClient } = require('@ai-ecosystem/mcp-client');
-
-const client = new MCPClient({
-    registryURL: 'http://localhost:8002'
-});
-
-// Discover tools
-const tools = await client.discoverTools();
-console.log('Available tools:', tools.map(t => t.name));
-
-// Use Kali desktop tools
-const screenshot = await client.callTool('kali_screenshot', {
-    analyze: true
-});
-```
-
-### Advanced Usage
-
-#### Workflow Orchestration
-```python
-from ai_ecosystem_sdk import Workflow
-
-# Create a content creation workflow
-workflow = Workflow(client)
-
-@workflow.step
-async def generate_content():
-    return await client.ai.generate_completion(
-        prompt="Write an engaging social media post about AI",
-        model="gpt-4-turbo-preview"
-    )
-
-@workflow.step(depends_on=generate_content)
-async def create_visual(content):
-    return await client.video.generate_video(
-        prompt=f"Create visuals for: {content}",
-        duration=15
-    )
-
-@workflow.step(depends_on=[generate_content, create_visual])
-async def schedule_post(content, video):
-    return await client.social.schedule_post(
-        content=content,
-        media_urls=[video.download_url],
-        platforms=["twitter", "instagram"]
-    )
-
-# Execute workflow
-result = await workflow.execute()
-print("Content workflow completed:", result)
-```
-
-#### Real-time Monitoring
-```javascript
-const monitor = client.monitor.createDashboard({
-    services: ['aios', 'kali-desktop', 'wan2gp'],
-    metrics: ['cpu_usage', 'memory_usage', 'request_rate'],
-    alerts: {
-        high_cpu: { threshold: 90, duration: '5m' },
-        high_memory: { threshold: 85, duration: '3m' }
-    }
-});
-
-monitor.on('alert', (alert) => {
-    console.log('Alert triggered:', alert);
-});
-
-monitor.on('metric_update', (service, metrics) => {
-    console.log(`${service} metrics:`, metrics);
-});
-```
-
-## 📚 API Documentation
-
-### REST API Endpoints
-
-#### AI Operations
-- `POST /api/v1/ai/generate` - Generate AI completions
-- `POST /api/v1/ai/chat` - Multi-turn conversations
-- `GET /api/v1/ai/models` - List available models
-
-#### Computer Control
-- `POST /api/v1/computer/screenshot` - Capture screenshots
-- `POST /api/v1/computer/click` - Simulate mouse clicks
-- `POST /api/v1/computer/type` - Send keyboard input
-- `GET /api/v1/computer/windows` - List open windows
-
-#### Social Media
-- `GET /api/v1/social/posts` - List scheduled posts
-- `POST /api/v1/social/posts` - Schedule new posts
-- `DELETE /api/v1/social/posts/{id}` - Delete scheduled posts
-
-#### Video Generation
-- `POST /api/v1/video/generate` - Generate videos
-- `GET /api/v1/video/generation/{id}/progress` - Check progress
-- `GET /api/v1/video/generation/{id}/result` - Get results
-
-### MCP Tool Specifications
-
-All services expose MCP tools for AI agent integration:
-
-```typescript
-// Available tool categories
-const toolCategories = {
-    ai: ['generate_completion', 'chat_completion', 'analyze_text'],
-    computer: ['screenshot', 'click', 'type_text', 'get_windows'],
-    social: ['schedule_post', 'get_posts', 'analyze_engagement'],
-    video: ['generate_video', 'edit_video', 'add_subtitles'],
-    security: ['scan_network', 'analyze_vulnerability', 'penetration_test']
-};
-```
-
-For complete API documentation, see [API.md](./docs/API.md)
-
-## 💻 Development
-
-### Development Setup
-
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
-npm install
-
-# Set up pre-commit hooks
-pre-commit install
-
-# Run development server
-docker-compose -f docker-compose.dev.yml up -d
+# Start UI (port 9992) - in new terminal
+cd bytebot/packages/bytebot-ui
 npm run dev
+```
+
+### Building
+
+```bash
+# Build shared types
+cd bytebot/packages/shared
+npm run build
+
+# Build agent
+cd ../bytebot-agent
+npm run build
+
+# Build UI
+cd ../bytebot-ui
+npm run build
 ```
 
 ### Testing
 
 ```bash
-# Run all tests
-npm run test:all
+# Agent tests
+cd bytebot/packages/bytebot-agent
+npm run test
 
-# Run specific test suites
-npm run test:unit
-npm run test:integration
+# UI tests
+cd ../bytebot-ui
 npm run test:e2e
-
-# Run with coverage
-npm run test:coverage
-
-# Run performance tests
-npm run test:performance
 ```
-
-### Code Quality
-
-```bash
-# Lint code
-npm run lint
-python -m flake8 .
-
-# Format code
-npm run format
-python -m black .
-
-# Type checking
-npm run type-check
-python -m mypy .
-```
-
-For detailed development information, see [DEVELOPMENT.md](./docs/DEVELOPMENT.md)
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](./docs/DEVELOPMENT.md#contributing-guidelines) for details.
-
-### Quick Contribution Steps
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes following our code standards
-4. Add tests for your changes
-5. Ensure all tests pass
-6. Submit a pull request
-
-### Development Workflow
-
-- Use [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/) branching strategy
-- Follow conventional commit messages
-- Write comprehensive tests
-- Update documentation
-- Ensure CI/CD passes
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- OpenAI for GPT models and API
-- Hugging Face for model hosting
-- Docker for containerization
-- The open-source community for amazing tools
-
-## 📞 Support
-
-- **Documentation**: [docs/](./docs/)
-- **Issues**: [GitHub Issues](https://github.com/ai-ecosystem/future-app/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/ai-ecosystem/future-app/discussions)
-- **Email**: support@ai-ecosystem.com
 
 ---
 
-**AI Emulators Ecosystem** - Empowering AI-driven automation through unified service orchestration.
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bytebotdb
+
+# API Keys (at least one required)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GROQ_API_KEY=...
+ROUTEWAY_API_KEY=...
+
+# Desktop
+BYTEBOT_DESKTOP_BASE_URL=http://localhost:9990
+
+# Auth (optional)
+BYTEBOT_AUTH_ENABLED=false
+BYTEBOT_AUTH_SECRET=your-secret
+```
+
+---
+
+## 📚 Documentation
+
+- [AGENTS.md](AGENTS.md) - Development guidelines
+- [COMPREHENSIVE_IMPLEMENTATION_REPORT.md](COMPREHENSIVE_IMPLEMENTATION_REPORT.md) - Architecture details
+- [KRONOS_READINESS_REPORT.md](KRONOS_READINESS_REPORT.md) - System health
+- [LOCAL_DEV_STARTUP_SEQUENCE.md](LOCAL_DEV_STARTUP_SEQUENCE.md) - Dev setup guide
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [AGENTS.md](AGENTS.md) for:
+
+1. **Code Standards** - TypeScript, naming, formatting
+2. **Commit Conventions** - Conventional commits with agent attribution
+3. **Testing Requirements** - 80%+ coverage, property-based tests
+4. **Pull Request Process** - Review, approval, merge
+
+---
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+---
+
+## 🎬 See KRONOS-OS in Action
+
+<div align="center">
+
+![KRONOS-OS Logo](IMG_5467.PNG)
+
+**The Ultimate AI-Powered Desktop Automation Platform**
+
+</div>
+
+---
+
+### 🚀 Live Demo GIFs
+
+Watch KRONOS-OS automate tasks in real-time! These GIFs showcase the platform's capabilities:
+
+#### 1️⃣ System Overview Demo
+![System Demo](demo-system.gif)
+*Complete platform walkthrough - Multi-desktop setup, AI agents, and real-time monitoring*
+
+#### 2️⃣ UI Dashboard Demo  
+![UI Demo](demo-ui.gif)
+*New KRONOS-OS UI with service health monitoring, task tracking, and model performance*
+
+---
+
+### 🎯 What You'll See
+
+| Feature | Demo | Description |
+|---------|------|-------------|
+| 🤖 **6-Agent Swarms** | System Demo | Coordinated AI agents working together |
+| 🖥️ **Multi-Desktop** | System Demo | 4 isolated virtual desktops running simultaneously |
+| 📊 **Service Health** | UI Demo | Real-time monitoring of bytebotd, agent, UI, and nginx |
+| ✅ **Task Tracking** | UI Demo | Live task status updates (pending → running → completed) |
+| 🔄 **Model Fallback** | System Demo | Automatic failover between Routeway → Groq → OpenAI |
+| 🌐 **BrowserOS** | System Demo | Web automation directly from your desktop |
+
+---
+
+### 📂 Demo Files
+
+**Source Videos (also available in repo):**
+- `Screen Recording 2025-12-21 at 9.52.50 PM.mov` - Full system demo (30 sec clip)
+- `Screen Recording 2026-01-01 at 3.25.32 AM.mov` - UI preview (20 sec clip)
+
+**Optimized GIFs (created for README):**
+- `demo-system.gif` - 8MB, 800px wide, 10fps
+- `demo-ui.gif` - 6MB, 800px wide, 10fps
+
+---
+
+### 💡 Try It Yourself!
+
+```bash
+# Start KRONOS-OS
+docker-compose -f docker-compose.ecosystem.yml up -d
+
+# Access the UI
+open http://localhost:9992
+
+# Watch the magic happen! ✨
+```
+
+---
+
+## 🙏 Acknowledgments
+
+Built with ❤️ by our development team using:
+
+- [NestJS](https://nestjs.com/) - Backend framework
+- [Next.js](https://nextjs.org/) - Frontend framework
+- [Prisma](https://www.prisma.io/) - Database ORM
+- [Docker](https://www.docker.com/) - Containerization
+- [VNC/noVNC](https://novnc.com/) - Remote desktop
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+
+---
+
+**KRONOS-OS** - *Empowering AI-Driven Desktop Automation* 🌍
+

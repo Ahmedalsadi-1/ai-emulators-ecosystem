@@ -2,7 +2,12 @@
 const OpenCodeProvider = require('./opencode-provider.js');
 
 async function testOpenCodeAPI() {
-    const provider = new OpenCodeProvider('sk-XWhyzRPzVwIj6ajyEvrO27gSOa5tG7vySIXbEDr8WxtQqqkv7UOK4d5MikTLKhkZ');
+    const apiKey = process.env.OPENCODE_API_KEY || '<set-opencode-api-key>';
+    if (!apiKey || apiKey === '<set-opencode-api-key>') {
+        throw new Error('Set OPENCODE_API_KEY in your environment before running this test');
+    }
+
+    const provider = new OpenCodeProvider(apiKey);
 
     console.log('Testing OpenCode.ai API...');
 

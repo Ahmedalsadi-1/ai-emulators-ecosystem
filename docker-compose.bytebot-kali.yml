@@ -1,0 +1,190 @@
+version: '3.8'
+
+# ByteBot + Kali Desktop Integration
+# Use this file to run the latest ByteBot microservices architecture with Kali Linux support.
+# Command: docker-compose -f docker-compose.bytebot-kali.yml up --build
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  openai_api_key:
+    file: ./secrets/openai_api_key.txt
+  anthropic_api_key:
+    file: ./secrets/anthropic_api_key.txt
+  google_api_key:
+    file: ./secrets/google_api_key.txt
+  gemini_api_key:
+    file: ./secrets/gemini_api_key.txt # Assuming this exists or falls back
+  vnc_password:
+    file: ./secrets/vnc_password.txt
+
+services:
+  # ==========================================
+  # Kali Linux Desktop (Added Service)
+  # ==========================================
+  kali-desktop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kali-desktop
+    ports:
+      - "6084:6080"  # Web VNC (Access at http://localhost:6084)
+      - "5901:5901"  # VNC Direct
+    environment:
+      - VNC_PASSWORD=password
+      - USER=root
+    networks:
+      - automation_network
+      - mcp_network
+    restart: unless-stopped
+
+  # ==========================================
+  # Bytebot Microservices
+  # ==========================================
+
+  # Bytebot Desktop - Virtual desktop environment (Debian based)
+  bytebot-desktop:
+    build:
+      context: ./bytebot/packages
+      dockerfile: bytebotd/Dockerfile
+    container_name: bytebot-desktop
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: computer
+    privileged: true
+    ports:
+      - "9990:9990"  # bytebotd service & noVNC (Access at http://localhost:9990)
+    environment:
+      - DISPLAY=:0
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+    networks:
+      - automation_network
+      - mcp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9990/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # Bytebot Agent - Computer control agent
+  bytebot-agent:
+    build:
+      context: ./bytebot/packages
+      dockerfile: bytebot-agent-cc/Dockerfile
+    container_name: bytebot-agent
+    restart: unless-stopped
+    ports:
+      - "9991:9991"  # Agent API port
+      - "9998:9998"  # MCP server port
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://bytebot:password@postgres:5432/bytebot
+      - BYTEBOT_DESKTOP_BASE_URL=http://bytebot-desktop:9990
+      - BYTEBOT_LLM_PROXY_URL=http://bytebot-llm-proxy:4000
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bytebot-desktop:
+        condition: service_healthy
+      bytebot-llm-proxy:
+        condition: service_started
+    networks:
+      - automation_network
+      - mcp_network
+      - database_network
+
+  # Bytebot LLM Proxy
+  bytebot-llm-proxy:
+    build:
+      context: ./bytebot/packages
+      dockerfile: bytebot-llm-proxy/Dockerfile
+    container_name: bytebot-llm-proxy
+    restart: unless-stopped
+    ports:
+      - "4000:4000"  # LLM proxy port
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    networks:
+      - automation_network
+      - mcp_network
+
+  # Bytebot UI - Next.js Frontend
+  # Note: Build from source. Use --no-cache flag in dev to ensure fresh builds:
+  # docker-compose -f docker-compose.bytebot-kali.yml up --build --no-cache
+  bytebot-ui:
+    build:
+      context: ./bytebot/packages
+      dockerfile: bytebot-ui/Dockerfile
+    container_name: bytebot-ui
+    ports:
+      - "9992:3000" # UI Port (Access at http://localhost:9992)
+    environment:
+      - NODE_ENV=production
+      # Connecting to the ByteBot Agent API
+      - BYTEBOT_AGENT_BASE_URL=http://bytebot-agent:9991/api
+      # Connecting to ByteBot Desktop VNC
+      - BYTEBOT_DESKTOP_VNC_URL=ws://localhost:9990/websockify 
+      # Connecting to Kali Desktop VNC (Client-side, so needs localhost mapping if running locally, or relative if behind proxy)
+      # Since this is client-side, we point to the exposed host port if possible, or use a relative path if proxied.
+      # Assuming direct access for now:
+      - BYTEBOT_DESKTOP_KALI_VNC_URL=ws://localhost:6084/websockify
+    depends_on:
+      - bytebot-agent
+      - kali-desktop
+    networks:
+      - automation_network
+
+  # ==========================================
+  # Infrastructure
+  # ==========================================
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=bytebot
+      - POSTGRES_USER=bytebot
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bytebot -d bytebot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  automation_network:
+    driver: bridge
+  mcp_network:
+    driver: bridge
+  database_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

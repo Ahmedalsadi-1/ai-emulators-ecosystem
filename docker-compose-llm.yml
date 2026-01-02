@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  bytebot-llm-proxy:
+    image: bytebot-llm-proxy:v2
+    # build:
+    #   context: ./bytebot/packages/bytebot-llm-proxy
+    #   dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - OPENCODE_API_KEY=${OPENCODE_API_KEY:?Set OPENCODE_API_KEY in your environment}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
+      - LITE_LLM_CUSTOM_PROVIDER_PATH=/app/custom_provider.py

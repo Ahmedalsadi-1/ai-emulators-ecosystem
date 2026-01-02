@@ -1,45 +1,64 @@
 {
-  "name": "kali-desktop-mcp",
-  "version": "2.0.0",
-  "description": "AI-powered Kali Linux desktop control with OmniParser integration, Hawkeye pinpointing, and advanced security testing capabilities",
-  "main": "kali-mcp-server.js",
-  "bin": {
-    "kali-desktop-mcp": "./kali-mcp-server.js"
-  },
+  "name": "bytebot-electron",
+  "version": "1.0.0",
+  "description": "Bytebot - Compact AI Automation Desktop App",
+  "main": "electron-main.js",
   "scripts": {
-    "start": "node kali-mcp-server.js",
-    "dev": "node --watch kali-mcp-server.js",
-    "test": "echo \"No tests specified\" && exit 0",
-    "docker:build": "docker build -t kali-desktop-mcp .",
-    "docker:run": "docker run -d --name kali-desktop -p 5901:5901 -p 6080:6080 kali-desktop-mcp",
-    "setup": "npm install && chmod +x kali-mcp-server.js"
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "npm run build:backend && npm run build:frontend && electron-builder",
+    "build:all": "cd bytebot/packages/shared && npm run build && cd ../bytebotd && npm run build && cd ../bytebot-agent && npm run build && cd ../bytebot-ui && npm run build",
+    "build:backend": "cd bytebot/packages/bytebot-agent && npm run build",
+    "build:frontend": "cd bytebot/packages/bytebot-ui && npm run export",
+    "verify-build": "npm run build && node -e \"const fs = require('fs'); const paths = [['bytebot/packages/bytebot-agent/dist', 'bytebot-agent'], ['bytebot/packages/bytebot-ui/out', 'bytebot-ui'], ['bytebot/packages/bytebotd/dist', 'bytebotd']]; paths.forEach(([p, n]) => { if (!fs.existsSync(p)) { console.error('ERROR: Missing ' + n + ' at ' + p); process.exit(1); } console.log('✓ ' + n + ' build verified'); }); console.log('All build artifacts verified!');\"",
+    "electron:prod": "npm run build:all && node scripts/verify-build.js && electron .",
+    "dist": "npm run build && electron-builder --publish=never",
+    "dist:win": "npm run build && electron-builder --win --publish=never",
+    "dist:mac": "npm run build && electron-builder --mac --publish=never",
+    "dist:linux": "npm run build && electron-builder --linux --publish=never"
   },
   "keywords": [
-    "mcp",
-    "kali-linux",
-    "desktop-automation",
-    "ai-interaction",
-    "security-testing",
-    "penetration-testing",
-    "omniparser",
-    "hawkeye"
+    "ai",
+    "automation",
+    "desktop",
+    "electron"
   ],
-  "author": "AI Security Specialist",
+  "author": "Bytebot",
   "license": "MIT",
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.bytebot.app",
+    "productName": "Bytebot",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "bytebot/packages/bytebot-ui/out/**/*",
+      "bytebot/packages/bytebot-agent/dist/**/*",
+      "!bytebot/**/*.map",
+      "!bytebot/**/node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.1",
-    "@opencode-ai/plugin": "1.0.171",
-    "express": "^4.18.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/kali-desktop-mcp.git"
-  },
-  "bugs": {
-    "url": "https://github.com/yourusername/kali-desktop-mcp/issues"
-  },
-  "homepage": "https://github.com/yourusername/kali-desktop-mcp#readme"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "electron": "^22.0.0"
+  }
 }

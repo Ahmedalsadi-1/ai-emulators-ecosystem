@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>TuriX</string>
+	<key>CFBundleGetInfoString</key>
+	<string>This is a comment</string>
+	<key>CFBundleIconFile</key>
+	<string>icons</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.ljai.TuriX</string>
+	<key>CFBundleName</key>
+	<string>TuriX</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>v2.1.1</string>
+	<key>CFBundleVersion</key>
+	<string>v2.1.1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0.0</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>47.77.197.150</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSHighResolutionCapable</key>
+	<string>true</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2025, 灵金科技</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The app requires microphone access for speech recognition.</string>
+</dict>
+</plist>

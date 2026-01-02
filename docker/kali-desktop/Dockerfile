@@ -79,7 +79,7 @@ user=root\n\
 autorestart=true\n\
 \n\
 [program:novnc]\n\
-command=/usr/share/novnc/utils/launch.sh --vnc localhost:5901 --listen 6080\n\
+command=websockify --web /usr/share/novnc/ 6080 localhost:5901\n\
 user=root\n\
 autorestart=true\n\
 ' > /etc/supervisor/conf.d/supervisord.conf

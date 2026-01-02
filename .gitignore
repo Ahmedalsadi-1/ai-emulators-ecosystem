@@ -92,6 +92,9 @@ temp/
 logs
 *.log
 
+# Local secrets (keep out of git, keep on disk)
+secrets/
+
 # Runtime data
 pids
 *.pid

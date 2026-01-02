@@ -23,8 +23,8 @@ RUN apt-get update && apt-get install -y \
 # Install Node.js dependencies
 RUN npm install -g @modelcontextprotocol/sdk
 
-# Install Python dependencies for AI analysis
-RUN pip3 install opencv-python numpy --break-system-packages
+# Install Python dependencies for AI analysis (skip if already installed via apt)
+RUN pip3 install opencv-python --break-system-packages 2>/dev/null || true
 
 # Create application directory
 WORKDIR /app
@@ -34,6 +34,7 @@ COPY kali-mcp-server.js package.json ./
 
 # Install application dependencies
 RUN npm install
+RUN npm install @modelcontextprotocol/sdk
 
 # Create VNC directory and set up VNC
 RUN mkdir -p /root/.vnc

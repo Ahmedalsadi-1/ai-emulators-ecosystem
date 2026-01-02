@@ -1,0 +1,6 @@
+common:
+  log:
+    level: 0
+    maxAgeDay: 7
+    maxSizeMegabytes: 100
+    backupCount: 7

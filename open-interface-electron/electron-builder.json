@@ -1,0 +1,64 @@
+{
+  "appId": "com.openinterface.electron",
+  "productName": "Open-Interface",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "build/**/*",
+    "main.js",
+    "preload.js",
+    "node_modules/**/*",
+    "!node_modules/.bin",
+    "!**/*.map"
+  ],
+  "extraResources": [
+    {
+      "from": "../Open-Interface",
+      "to": "Open-Interface",
+      "filter": [
+        "**/*",
+        "!__pycache__",
+        "!*.pyc",
+        "!**/.git",
+        "!**/*.log",
+        "!**/node_modules",
+        "!**/*.md",
+        "!**/.github",
+        "!**/tests",
+        "!**/assets",
+        "!**/*.gif",
+        "!**/*.png",
+        "!**/*.jpg"
+      ]
+    }
+  ],
+  "mac": {
+    "category": "public.app-category.developer-tools",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "entitlements": "build/entitlements.mac.plist"
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "../Open-Interface/app/resources/icon.ico"
+  },
+  "linux": {
+    "target": "AppImage",
+    "icon": "../Open-Interface/app/resources/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "../Open-Interface/app/resources/icon.ico",
+    "uninstallerIcon": "../Open-Interface/app/resources/icon.ico",
+    "installerHeaderIcon": "../Open-Interface/app/resources/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  }
+}
