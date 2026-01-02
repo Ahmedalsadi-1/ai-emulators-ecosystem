@@ -119,7 +119,7 @@ export default function TaskPage() {
   const backgroundStyle = useMemo(
     () => ({
       backgroundImage:
-        "linear-gradient(180deg, rgba(16,49,69,0.6) 0%, rgba(8,25,38,0.65) 100%), url('/home-bg.jpg')",
+        "linear-gradient(180deg, rgba(16,49,69,0.6) 0%, rgba(8,25,38,0.65) 100%)",
       backgroundSize: "cover",
       backgroundPosition: "center",
     }),

@@ -8,6 +8,7 @@ interface VncViewerProps {
   viewOnly?: boolean;
   controllerType?: ControllerType;
   proxyPath?: string;
+  directUrl?: string;
   onStatusChange?: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
 }
 
@@ -83,6 +84,7 @@ export function VncViewer({
   viewOnly = true,
   controllerType,
   proxyPath = getProxyPathForController(controllerType),
+  directUrl,
   onStatusChange
 }: VncViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +102,7 @@ export function VncViewer({
 
   // Set wsUrl and notify connecting
   const resolveWsUrl = (): string | null => {
+    if (directUrl) return normalizeWsUrl(directUrl);
     const directUrl = getDirectVncUrlForController(controllerType);
     if (directUrl) return normalizeWsUrl(directUrl);
     if (typeof window === "undefined" || !proxyPath) return null;
@@ -112,7 +115,7 @@ export function VncViewer({
     if (!url) return;
     setWsUrl(url);
     onStatusChange?.('connecting');
-  }, [controllerType, proxyPath, onStatusChange]);
+  }, [controllerType, proxyPath, directUrl, onStatusChange]);
 
   const retryConnection = () => {
     setVncError(null);

@@ -262,7 +262,7 @@ export async function fetchTaskCounts(): Promise<Record<string, number>> {
 export async function fetchModels(): Promise<Model[]> {
   console.log("Fetching models from /api/tasks/models");
   try {
-    const response = await fetch(`${API_CONFIG.baseUrl}/models`, {
+    const response = await fetch(`${API_CONFIG.baseUrl}/tasks/models?toolCalling=true`, {
       method: "GET",
       headers: API_CONFIG.headers,
       // Remove credentials for Electron compatibility

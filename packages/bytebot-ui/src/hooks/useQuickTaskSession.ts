@@ -192,6 +192,13 @@ export function useQuickTaskSession({
   }, [currentTaskId, joinTask, leaveTask]);
 
   useEffect(() => {
+    setCurrentTaskId(null);
+    setTaskStatus(null);
+    setMessages([]);
+    setLogs([]);
+    processedMessageIds.current.clear();
+    lastStatus.current = null;
+
     const storedTask = window.localStorage.getItem(storageKey);
     if (!storedTask) return;
 

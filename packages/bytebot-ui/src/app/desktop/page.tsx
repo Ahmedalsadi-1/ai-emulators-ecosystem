@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { FloatingNav } from "@/components/layout/FloatingNav";
@@ -31,11 +31,28 @@ import {
 } from "lucide-react";
 import { KronosLogo } from "@/components/branding/KronosLogo";
 
+type DesktopSessionType = 'bytebot' | 'debian' | 'kali';
+
+type DesktopSession = {
+  id: string;
+  name: string;
+  type: DesktopSessionType;
+  port: number | null;
+  status: 'running' | 'exited' | 'unknown';
+  wsUrl?: string;
+};
+
 type WorkspaceOption = {
   id: string;
   label: string;
-  screen: 'bytebot' | 'debian' | 'kali';
+  screen: 'bytebot' | 'debian' | 'kali' | 'custom';
+  directUrl?: string;
+  sessionId?: string;
+  sessionPort?: number | null;
 };
+
+const WORKSPACE_STORAGE_VERSION = "2";
+const WORKSPACE_STORAGE_VERSION_KEY = "bytebot:desktop:workspaceVersion";
 
 const pickRoutewayDefault = (candidates: Model[]): Model | null =>
   candidates.find((model) => model.provider === "routeway" && model.capabilities?.toolCalling) ||
@@ -232,19 +249,41 @@ export default function DesktopPage() {
   const [activeWorkspace, setActiveWorkspace] = useState<string>(
     defaultWorkspaces[0].id,
   );
+  const [sessions, setSessions] = useState<DesktopSession[]>([]);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [newSessionType, setNewSessionType] = useState<DesktopSessionType>('bytebot');
   const [controllerStatuses] = useState<Record<string, ControllerStatus>>({});
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [keyboardNavigationActive, setKeyboardNavigationActive] = useState(false);
   const [unavailableControllers, setUnavailableControllers] = useState<Record<string, { transient: boolean; message: string }>>({});
+  const taskStorageKey = `bytebot:desktopTask:${activeWorkspace}`;
+  const modelStorageKey = `bytebot:desktopModel:${activeWorkspace}`;
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_BYTEBOT_AGENT_BASE_URL ||
+    'http://localhost:9991';
 
   // Derive current screen from active workspace
   const currentWorkspace = workspaces.find(w => w.id === activeWorkspace);
   const currentScreen = currentWorkspace?.screen || 'debian';
+  const currentDirectUrl = currentWorkspace?.directUrl;
+  const vncControllerType = currentScreen === 'custom' ? undefined : currentScreen;
 
   // Load workspaces and active workspace from localStorage
   useEffect(() => {
     const savedWorkspaces = localStorage.getItem('bytebot:desktop:workspaces');
     const savedActiveWorkspace = localStorage.getItem('bytebot:desktop:activeWorkspace');
+    const storedVersion = localStorage.getItem(WORKSPACE_STORAGE_VERSION_KEY);
+
+    if (storedVersion !== WORKSPACE_STORAGE_VERSION) {
+      localStorage.removeItem('bytebot:desktop:workspaces');
+      localStorage.removeItem('bytebot:desktop:activeWorkspace');
+      localStorage.setItem(WORKSPACE_STORAGE_VERSION_KEY, WORKSPACE_STORAGE_VERSION);
+      setWorkspaces(defaultWorkspaces);
+      setActiveWorkspace(defaultWorkspaces[0].id);
+      return;
+    }
 
     if (savedWorkspaces) {
       try {
@@ -267,6 +306,74 @@ export default function DesktopPage() {
     localStorage.setItem('bytebot:desktop:activeWorkspace', activeWorkspace);
   }, [workspaces, activeWorkspace]);
 
+  const addWorkspaceFromSession = useCallback((session: DesktopSession) => {
+    if (!session.wsUrl) return;
+    const workspaceId = `session-${session.id}`;
+    setWorkspaces((prev) => {
+      const exists = prev.find((w) => w.id === workspaceId);
+      if (exists) return prev.map((w) => (w.id === workspaceId ? {
+        ...w,
+        label: session.name || `Session ${session.port ?? ''}`.trim(),
+        screen: 'custom',
+        directUrl: session.wsUrl,
+        sessionId: session.id,
+        sessionPort: session.port,
+      } : w));
+      return [
+        ...prev,
+        {
+          id: workspaceId,
+          label: session.name || `Session ${session.port ?? ''}`.trim(),
+          screen: 'custom',
+          directUrl: session.wsUrl,
+          sessionId: session.id,
+          sessionPort: session.port,
+        },
+      ];
+    });
+  }, []);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      setSessionError(null);
+      const response = await fetch(`${apiBase}/desktop-sessions`);
+      if (!response.ok) {
+        throw new Error(`Failed to load sessions (${response.status})`);
+      }
+      const data = await response.json();
+      setSessions(data);
+      data.forEach((session: DesktopSession) => addWorkspaceFromSession(session));
+    } catch (error: any) {
+      setSessionError(error?.message || 'Failed to load sessions');
+    }
+  }, [apiBase, addWorkspaceFromSession]);
+
+  const handleCreateSession = useCallback(async () => {
+    try {
+      setCreatingSession(true);
+      setSessionError(null);
+      const response = await fetch(`${apiBase}/desktop-sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: newSessionType }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create session (${response.status})`);
+      }
+      const session = await response.json();
+      setSessions((prev) => [...prev, session]);
+      addWorkspaceFromSession(session);
+    } catch (error: any) {
+      setSessionError(error?.message || 'Failed to create session');
+    } finally {
+      setCreatingSession(false);
+    }
+  }, [apiBase, newSessionType, addWorkspaceFromSession]);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
+
   const {
     messages,
     isLoading,
@@ -275,7 +382,7 @@ export default function DesktopPage() {
     clearMessages,
     addLog,
     resetSession,
-  } = useQuickTaskSession({ storageKey: "bytebot:desktopTask" });
+  } = useQuickTaskSession({ storageKey: taskStorageKey });
 
   // Multi-controller state management
   const {
@@ -495,26 +602,14 @@ export default function DesktopPage() {
         const result = await fetchModels();
         if (!isMounted) return;
 
-        const filteredModels = result.filter((model) => model.provider !== "anthropic");
+        const allowedProviders = new Set(["routeway", "groq", "openai", "proxy", "google"]);
+        const filteredModels = result.filter(
+          (model) =>
+            model.capabilities?.toolCalling &&
+            allowedProviders.has(model.provider),
+        );
         setModels(filteredModels);
         setModelFetchError(null);
-
-        // Set default selected model
-        const storedModel = window.localStorage.getItem("bytebot:model");
-        const stored =
-          storedModel &&
-          filteredModels.find(
-            (model) =>
-              getModelKey(model) === storedModel ||
-              model.name === storedModel ||
-              model.title === storedModel,
-          );
-        setSelectedModel(
-          stored ||
-            pickRoutewayDefault(filteredModels) ||
-            pickRoutewayDefault(result) ||
-            null,
-        );
       } catch (error) {
         if (!isMounted) return;
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -533,14 +628,28 @@ export default function DesktopPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (models.length === 0) return;
+    const storedModel = window.localStorage.getItem(modelStorageKey);
+    const stored =
+      storedModel &&
+      models.find(
+        (model) =>
+          getModelKey(model) === storedModel ||
+          model.name === storedModel ||
+          model.title === storedModel,
+      );
+    setSelectedModel(stored || pickRoutewayDefault(models) || null);
+  }, [models, modelStorageKey]);
+
   // Save selected model to localStorage
   useEffect(() => {
     if (!selectedModel) return;
     window.localStorage.setItem(
-      "bytebot:model",
+      modelStorageKey,
       getModelKey(selectedModel),
     );
-  }, [selectedModel?.name, selectedModel?.provider]);
+  }, [modelStorageKey, selectedModel?.name, selectedModel?.provider]);
 
   useEffect(() => {
     if (keyboardNavigationActive) {
@@ -774,6 +883,44 @@ export default function DesktopPage() {
                     </span>
                   </div>
 
+                  <div className="flex flex-wrap items-center gap-2 border-b border-[#3a3a3a] bg-[#1a1a1a] px-2 py-1.5 text-[8px]">
+                    <span className="text-[7px] uppercase tracking-[0.1em] text-[#666666]">
+                      Sessions
+                    </span>
+                    <select
+                      value={newSessionType}
+                      onChange={(event) =>
+                        setNewSessionType(event.target.value as DesktopSessionType)
+                      }
+                      className="rounded-sm border border-[#3a3a3a] bg-[#111111] px-2 py-1 text-[8px] text-[#c0c0c0]"
+                    >
+                      <option value="bytebot">Bytebot</option>
+                      <option value="debian">Debian</option>
+                      <option value="kali">Kali</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleCreateSession}
+                      disabled={creatingSession}
+                      className="rounded-sm border border-[#3a3a3a] bg-[#111111] px-2.5 py-1 text-[8px] uppercase tracking-[0.08em] text-[#c0c0c0] transition-all hover:bg-[#1d1d1d] disabled:opacity-50"
+                    >
+                      {creatingSession ? 'Creating…' : 'Create Desktop'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={loadSessions}
+                      className="rounded-sm border border-[#3a3a3a] bg-[#111111] px-2.5 py-1 text-[8px] uppercase tracking-[0.08em] text-[#c0c0c0] transition-all hover:bg-[#1d1d1d]"
+                    >
+                      Refresh
+                    </button>
+                    {sessionError && (
+                      <span className="text-[8px] text-[#ef4444]">{sessionError}</span>
+                    )}
+                    <span className="ml-auto text-[7px] uppercase tracking-[0.1em] text-[#666666]">
+                      {sessions.length} active
+                    </span>
+                  </div>
+
                   {/* Viewer Container */}
                   <div className="bg-[#0f0f0f]">
                     <div className="aspect-[4/3] w-full">
@@ -782,7 +929,8 @@ export default function DesktopPage() {
                       ) : (
                         <VncViewer
                           viewOnly={false}
-                          controllerType={currentScreen}
+                          controllerType={vncControllerType}
+                          directUrl={currentDirectUrl}
                         />
                       )}
                     </div>

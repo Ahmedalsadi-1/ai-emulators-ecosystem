@@ -13,17 +13,17 @@ ENV BYTEBOT_DESKTOP_VNC_URL=${BYTEBOT_DESKTOP_VNC_URL}
 WORKDIR /app
 
 # Copy app source
-COPY ./shared ./shared
-COPY ./bytebot-ui/ ./bytebot-ui
+COPY ./packages/shared ./packages/shared
+COPY ./packages/bytebot-ui/ ./packages/bytebot-ui
 
-WORKDIR /app/bytebot-ui
+WORKDIR /app/packages/bytebot-ui
 
 # Install dependencies
 RUN npm install
 
 RUN npm run build
 
-# Run the application
-CMD ["npm", "run", "start"] 
+# Run the application (production mode with compiled output)
+CMD ["npm", "run", "start:prod"] 
 
 

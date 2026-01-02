@@ -65,8 +65,12 @@ const BROWSEROS_CONTROL_ENDPOINT =
 const BROWSEROS_WEBSOCKIFY_PATH =
   process.env.NEXT_PUBLIC_BROWSEROS_WEBSOCKIFY_PATH ||
   "/api/proxy/browseros-websockify";
+const BROWSEROS_NOVNC_URL =
+  process.env.NEXT_PUBLIC_BROWSEROS_NOVNC_URL ||
+  "http://localhost:9994/vnc.html";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
+type BrowserDisplayMode = "vnc" | "novnc";
 
 // VNC Environment Warning Component
 function VncEnvWarning() {
@@ -134,18 +138,36 @@ export default function WebPage() {
     "connecting"
   );
   const [retryKey, setRetryKey] = useState(0);
+  const [useNoVncFallback, setUseNoVncFallback] = useState(false);
+  const [displayMode, setDisplayMode] = useState<BrowserDisplayMode>("vnc");
 
   const handleRefresh = useCallback(() => {
     setConnectionStatus("connecting");
+    setUseNoVncFallback(false);
+    setDisplayMode("vnc");
     setRetryKey((prev) => prev + 1);
   }, []);
 
   const handleConnectionStatus = useCallback(
     (status: "connecting" | "connected" | "disconnected" | "error") => {
       setConnectionStatus(status);
+      if (status === "error") {
+        setUseNoVncFallback(true);
+        setDisplayMode("novnc");
+      }
     },
     []
   );
+
+  useEffect(() => {
+    if (displayMode !== "vnc") return;
+    if (connectionStatus === "connected") return;
+    const timeout = window.setTimeout(() => {
+      setUseNoVncFallback(true);
+      setDisplayMode("novnc");
+    }, 8000);
+    return () => window.clearTimeout(timeout);
+  }, [connectionStatus, displayMode]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -156,6 +178,18 @@ export default function WebPage() {
       setIsFullscreen(false);
     }
   }, []);
+
+  const toggleDisplayMode = useCallback(() => {
+    setDisplayMode((prev) => {
+      const next = prev === "vnc" ? "novnc" : "vnc";
+      if (next === "vnc") {
+        setUseNoVncFallback(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const shouldUseNoVnc = displayMode === "novnc" || useNoVncFallback;
 
   return (
     <div
@@ -220,6 +254,14 @@ export default function WebPage() {
             </button>
             <button
               type="button"
+              onClick={toggleDisplayMode}
+              className="flex items-center gap-1.5 rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#bdbdbd] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all hover:bg-[#222327] hover:text-[#e6e6e6]"
+              title={displayMode === "vnc" ? "Switch to noVNC" : "Switch to VNC"}
+            >
+              {displayMode === "vnc" ? "Use noVNC" : "Use VNC"}
+            </button>
+            <button
+              type="button"
               onClick={toggleFullscreen}
               className="flex items-center gap-1.5 rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#bdbdbd] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all hover:bg-[#222327] hover:text-[#e6e6e6]"
               title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
@@ -242,13 +284,22 @@ export default function WebPage() {
           className="flex-1 overflow-hidden rounded-xl border border-white/10 bg-[#141417]/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),_0_40px_90px_rgba(0,0,0,0.65)]"
         >
           <div className="h-full w-full">
-            <VncViewer
-              key={retryKey}
-              viewOnly={false}
-              controllerType="browseros"
-              proxyPath={BROWSEROS_WEBSOCKIFY_PATH}
-              onStatusChange={handleConnectionStatus}
-            />
+            {shouldUseNoVnc ? (
+              <iframe
+                key={`novnc-${retryKey}`}
+                src={BROWSEROS_NOVNC_URL}
+                className="h-full w-full"
+                title="BrowserOS noVNC"
+              />
+            ) : (
+              <VncViewer
+                key={`${retryKey}-${displayMode}`}
+                viewOnly={false}
+                controllerType="browseros"
+                proxyPath={BROWSEROS_WEBSOCKIFY_PATH}
+                onStatusChange={handleConnectionStatus}
+              />
+            )}
           </div>
         </motion.div>
 
@@ -262,7 +313,7 @@ export default function WebPage() {
           <div className="flex items-center gap-2 text-[9px] text-[#666]">
             <span className="font-mono">{BROWSEROS_CONTROL_ENDPOINT}</span>
             <span className="text-white/20">|</span>
-            <span>VNC Interactive Mode</span>
+            <span>{shouldUseNoVnc ? "noVNC fallback" : "VNC Interactive Mode"}</span>
           </div>
           <div className="text-[9px] text-[#555]">
             BrowserOS Control Surface

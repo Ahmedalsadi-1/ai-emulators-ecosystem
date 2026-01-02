@@ -29,6 +29,7 @@ const applicationMap: Record<Application, string> = {
   browseros: "BrowserOS",
   turix: "Turix",
   aios: "AIOS",
+  "factif-ai": "Factif-AI",
   "open-interface": "Open Interface",
 };
 

@@ -5,8 +5,9 @@ dotenv.config();
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@bytebot/shared"],
-  // Only use static export for production builds, not for development/Electron
-  ...(process.env.NODE_ENV === 'production' ? {
+  // Note: 'output: export' removed - incompatible with dynamic routes and server mode
+  // For static exports, set OUTPUT_EXPORT=true environment variable
+  ...(process.env.OUTPUT_EXPORT === 'true' ? {
     output: 'export',
     trailingSlash: true,
   } : {}),

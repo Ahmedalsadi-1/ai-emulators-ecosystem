@@ -22,10 +22,17 @@ export interface GroupedMessages {
   take_over?: boolean;
 }
 
+export interface ModelCapabilities {
+  toolCalling?: boolean;
+  vision?: boolean;
+  streaming?: boolean;
+}
+
 export interface Model {
   provider: string;
   name: string;
   title: string;
+  capabilities?: ModelCapabilities;
 }
 
 // Task related enums and types

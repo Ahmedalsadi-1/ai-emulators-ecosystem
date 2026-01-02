@@ -2,13 +2,18 @@
   "name": "bytebot-ui",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "npm run build --prefix ../shared && tsx server.ts",
-    "build": "npm run build --prefix ../shared && next build --no-lint",
+    "build": "npm run build --prefix ../shared && tsc server.ts --outDir . --module commonjs --esModuleInterop && tsc electron/main.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck && tsc electron/preload.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck",
     "export": "npm run build --prefix ../shared && next build --no-lint --experimental-app-only && next export",
     "start": "npm run build --prefix ../shared && tsx server.ts",
+    "start:prod": "NODE_ENV=production node server.js",
+    "verify:build": "node ../../scripts/verify-build.js",
     "lint": "next lint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "electron:dev": "NODE_ENV=development npx tsc electron/main.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck && npx tsc electron/preload.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck && NODE_ENV=development electron electron/main.js",
+    "electron:prod": "npm run build && npm run export && NODE_ENV=production npx tsc electron/main.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck && npx tsc electron/preload.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck && NODE_ENV=production electron electron/main.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -49,12 +54,13 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
+    "@electron/notarize": "^2.4.0",
     "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4.1.3",
     "@types/node": "^20.17.27",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^28.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.2.3",
     "prettier": "^3.5.3",
