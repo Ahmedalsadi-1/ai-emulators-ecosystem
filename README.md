@@ -362,6 +362,37 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
+## 🎬 Demo Videos
+
+Watch KRONOS-OS in action! These recordings showcase the platform's capabilities:
+
+### 📹 Featured Demos
+
+| Video | Description | Duration |
+|-------|-------------|----------|
+| [System Overview](Screen%20Recording%202025-12-21%20at%209.52.50%E2%80%AFPM.mov) | Complete walkthrough of KRONOS-OS features and UI | ~2 min |
+| [UI Preview](Screen%20Recording%202026-01-01%20at%203.25.32%E2%80%AFAM.mov) | Detailed look at the new dashboard and service health monitoring | ~1 min |
+
+### 🎥 What's Covered
+
+- ✅ **System Overview** - Complete platform tour showing multi-desktop setup, AI agent orchestration, and real-time monitoring
+- ✅ **Dashboard Demo** - New KRONOS-OS UI with service health indicators, task tracking, and model performance metrics
+- ✅ **Task Execution** - Watch AI agents execute tasks across multiple virtual desktops
+- ✅ **BrowserOS Integration** - Web automation capabilities in action
+
+### 🚀 Quick Preview
+
+https://github.com/user-attachments/assets/video-placeholder
+
+> **Note:** Click the links above to view the demo recordings from the repository.
+
+### 📂 Video Location
+All demo videos are stored in the repository root:
+- `Screen Recording 2025-12-21 at 9.52.50 PM.mov` - Main system demo
+- `Screen Recording 2026-01-01 at 3.25.32 AM.mov` - UI showcase
+
+---
+
 ## 🙏 Acknowledgments
 
 Built with ❤️ by our development team using:
