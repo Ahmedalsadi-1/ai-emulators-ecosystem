@@ -13,18 +13,30 @@ type ScreenshotEvent = {
 };
 
 const DEFAULT_WS_URL = process.env.NEXT_PUBLIC_OS_AI_WS_URL || "";
+const FALLBACK_WS_URLS = [
+  DEFAULT_WS_URL,
+  "ws://localhost:8765/ws?token=secret",
+  "ws://127.0.0.1:8765/ws?token=secret",
+];
 
 export function LocalScreenViewer() {
   const [status, setStatus] = useState<ViewerStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastScreenshot, setLastScreenshot] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [activeUrlIndex, setActiveUrlIndex] = useState(0);
   const reconnectAttempts = useRef(0);
   const reconnectTimerRef = useRef<number | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
-  const wsUrl = useMemo(() => DEFAULT_WS_URL, []);
-  const hasWsUrl = Boolean(wsUrl);
+  const wsUrls = useMemo(() => {
+    const unique = new Set(
+      FALLBACK_WS_URLS.filter((url) => url && url.trim().length > 0),
+    );
+    return Array.from(unique);
+  }, []);
+  const wsUrl = wsUrls[activeUrlIndex];
+  const hasWsUrl = wsUrls.length > 0;
 
   useEffect(() => {
     if (!hasWsUrl) {
@@ -50,6 +62,12 @@ export function LocalScreenViewer() {
       setStatus("connecting");
       setErrorMessage(null);
 
+      if (!wsUrl) {
+        setStatus("error");
+        setErrorMessage("OS AI WebSocket URL is not configured.");
+        return;
+      }
+
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
@@ -59,11 +77,19 @@ export function LocalScreenViewer() {
       };
 
       socket.onerror = () => {
+        if (activeUrlIndex < wsUrls.length - 1) {
+          setActiveUrlIndex((prev) => prev + 1);
+          return;
+        }
         setStatus("error");
         setErrorMessage("WebSocket error. Check OS AI backend.");
       };
 
       socket.onclose = () => {
+        if (activeUrlIndex < wsUrls.length - 1) {
+          setActiveUrlIndex((prev) => prev + 1);
+          return;
+        }
         setStatus("error");
         setErrorMessage("Disconnected from OS AI backend.");
         scheduleReconnect();
@@ -103,7 +129,7 @@ export function LocalScreenViewer() {
       }
       socketRef.current?.close();
     };
-  }, [hasWsUrl, wsUrl]);
+  }, [activeUrlIndex, hasWsUrl, wsUrl, wsUrls.length]);
 
   if (!hasWsUrl) {
     return (
@@ -119,6 +145,11 @@ export function LocalScreenViewer() {
     <div className="flex h-full w-full flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9a9a9a]">
         <span>{status === "connected" ? "Connected" : "Offline"}</span>
+        {wsUrl && (
+          <span className="rounded-md border border-white/10 bg-[#1a1b1d] px-2 py-1 text-[#bdbdbd]">
+            {wsUrl}
+          </span>
+        )}
         {lastUpdated && (
           <span className="rounded-md border border-white/10 bg-[#1a1b1d] px-2 py-1 text-[#bdbdbd]">
             Last frame {lastUpdated}
