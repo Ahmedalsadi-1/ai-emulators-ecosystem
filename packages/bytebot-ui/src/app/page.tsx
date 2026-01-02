@@ -84,7 +84,15 @@ export default function Home() {
         if (!isMounted) return;
         console.log("Loaded models:", result.length);
         const toolModels = result.filter((m) => m.capabilities?.toolCalling);
-        const allowedProviders = new Set(["routeway", "groq", "openai", "proxy", "google"]);
+        const allowedProviders = new Set([
+          "routeway",
+          "groq",
+          "openai",
+          "proxy",
+          "google",
+          "ollama-local",
+          "opencode-local",
+        ]);
         const filteredModels = toolModels.filter((model) => allowedProviders.has(model.provider));
         console.log("Tool-capable models:", toolModels.length);
         setModels(filteredModels);

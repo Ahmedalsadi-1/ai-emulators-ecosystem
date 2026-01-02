@@ -47,6 +47,10 @@ RUN mkdir -p /opt/browseros
 RUN curl -L -o /opt/browseros/BrowserOS.AppImage https://files.browseros.com/download/BrowserOS.AppImage \
     && chmod +x /opt/browseros/BrowserOS.AppImage
 
+# BrowserOS launcher script
+COPY start-browseros.sh /opt/browseros/start-browseros.sh
+RUN chmod +x /opt/browseros/start-browseros.sh
+
 # Autostart BrowserOS in the XFCE session
 RUN mkdir -p /root/.config/autostart
 COPY browseros.desktop /root/.config/autostart/browseros.desktop

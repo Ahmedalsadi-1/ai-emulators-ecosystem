@@ -67,7 +67,7 @@ const BROWSEROS_WEBSOCKIFY_PATH =
   "/api/proxy/browseros-websockify";
 const BROWSEROS_NOVNC_URL =
   process.env.NEXT_PUBLIC_BROWSEROS_NOVNC_URL ||
-  "http://localhost:9994/vnc.html";
+  "http://localhost:9994/vnc.html?autoconnect=1&resize=scale&reconnect=1";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 type BrowserDisplayMode = "vnc" | "novnc";
