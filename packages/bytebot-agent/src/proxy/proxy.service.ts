@@ -68,7 +68,6 @@ export class ProxyService implements BytebotAgentService {
         messages: chatMessages,
         max_tokens: 8192,
         ...(useTools && { tools: proxyTools }),
-        reasoning_effort: 'high',
       };
 
       // Make the API call

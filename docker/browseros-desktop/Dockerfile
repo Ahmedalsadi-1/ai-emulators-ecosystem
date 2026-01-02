@@ -1,8 +1,9 @@
-FROM ubuntu:22.04
+FROM debian:bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
+    chromium \
     xfce4 \
     xfce4-goodies \
     tightvncserver \
@@ -27,7 +28,6 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libxi6 \
     libxtst6 \
-    libfuse2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,10 +42,8 @@ RUN chmod +x /root/.vnc/xstartup
 # noVNC entrypoint
 RUN ln -s /usr/share/novnc/vnc.html /usr/share/novnc/index.html
 
-# Download BrowserOS AppImage
+# Chromium launcher
 RUN mkdir -p /opt/browseros
-RUN curl -L -o /opt/browseros/BrowserOS.AppImage https://files.browseros.com/download/BrowserOS.AppImage \
-    && chmod +x /opt/browseros/BrowserOS.AppImage
 
 # BrowserOS launcher script
 COPY start-browseros.sh /opt/browseros/start-browseros.sh

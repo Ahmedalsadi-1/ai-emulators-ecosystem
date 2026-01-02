@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=BrowserOS
+Name=BrowserOS (Chromium)
 Exec=/opt/browseros/start-browseros.sh
 Terminal=false
 X-GNOME-Autostart-enabled=true
