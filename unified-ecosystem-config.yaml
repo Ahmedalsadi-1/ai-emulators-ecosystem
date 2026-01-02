@@ -1,0 +1,87 @@
+# Unified Ecosystem Configuration
+# Defines communication protocols and API interfaces between services
+
+services:
+  bytebot-llm-proxy:
+    name: "ByteBot LLM Proxy"
+    url: "http://localhost:4000"
+    endpoints:
+      chat: "/chat/completions"
+      models: "/v1/models"
+      health: "/health"
+    models:
+      - grok-code
+      - gpt-5-nano
+      - big-pickle
+      - gpt-4o
+      - claude-opus-4
+    status: "operational"
+
+  open-interface:
+    name: "Open-Interface AI Automation"
+    url: "http://localhost:8080"
+    endpoints:
+      ui: "/"
+      api: "/api"
+    dependencies:
+      - bytebot-llm-proxy
+    status: "operational"
+
+communication:
+  protocols:
+    - name: "REST API"
+      type: "http"
+      description: "Standard HTTP REST API communication"
+    - name: "WebSocket"
+      type: "ws"
+      description: "Real-time WebSocket communication for status updates"
+
+  api_interfaces:
+    llm_proxy:
+      base_url: "${BYTEBOT_PROXY_URL:http://localhost:4000}"
+      timeout: 30
+      retry_attempts: 3
+      headers:
+        Content-Type: "application/json"
+      endpoints:
+        completions: "/chat/completions"
+        models: "/v1/models"
+        health: "/health"
+
+    open_interface:
+      base_url: "${OPEN_INTERFACE_URL:http://localhost:8080}"
+      timeout: 10
+      endpoints:
+        status: "/status"
+        config: "/config"
+
+health_monitoring:
+  check_interval: 30  # seconds
+  services:
+    bytebot-llm-proxy:
+      endpoint: "/health"
+      expected_status: 200
+      timeout: 5
+    open-interface:
+      endpoint: "/status"
+      expected_status: 200
+      timeout: 5
+
+unified_config:
+  # Shared configuration for all services
+  opencode_api_key: "${OPENCODE_API_KEY}"
+  anthropic_api_key: "${ANTHROPIC_API_KEY}"
+  openai_api_key: "${OPENAI_API_KEY}"
+  gemini_api_key: "${GEMINI_API_KEY}"
+
+  # Default model priorities
+  model_priority:
+    - grok-code
+    - gpt-4o
+    - claude-opus-4
+    - gpt-5-nano
+
+  # Communication settings
+  enable_websocket: true
+  enable_rest_api: true
+  enable_health_checks: true

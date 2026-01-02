@@ -131,9 +131,9 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --chown=bytebot:bytebot packages/shared/ /app/shared/
 COPY --chown=bytebot:bytebot packages/bytebotd/ /app/bytebotd/
 
-# Install bytebotd dependencies
+# Install bytebotd dependencies (omit=dev instead of --production to allow sharp native build)
 WORKDIR /app/bytebotd
-RUN npm install --production && \
+RUN npm install && \
     npm run build
 
 # Set ownership

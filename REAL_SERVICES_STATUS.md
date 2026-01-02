@@ -1,55 +1,67 @@
 # Real Services Status
 
-## Currently Running Services
+## Current System Status (as of Tue Dec 30 20:29 CST 2025)
 
-### ✅ Factif-AI (REAL)
-- **Frontend**: http://localhost:5173 (Vite dev server)
-- **Backend**: Running on default port (check logs)
-- **Status**: OPERATIONAL
-- **Type**: Real Factif-AI application (not mock)
+### ✅ Local Development Services (ALL HEALTHY)
 
-### ⚠️ ByteBot UI (NEEDS FIX)
-- **Status**: Installation issues with Prisma
-- **Location**: `bytebot/packages/bytebot-ui`
-- **Issue**: npm install failing on Prisma preinstall script
-- **Next Step**: Need to resolve dependency conflicts
+| Service | Port | Status | Health Check |
+|---------|------|--------|--------------|
+| **bytebotd** | 9990 | RUNNING | `GET /health` → `{"status":"ok"}` |
+| **bytebot-agent** | 9991 | RUNNING | `GET /` → HTTP 200, 75 models |
+| **bytebot-ui** | 9992 | RUNNING | `GET /` → HTTP 200 |
+| **bytebot-desktop** (Docker) | 6080 | NOT RUNNING | Container not started |
+| **kali-desktop** (Docker) | 6084 | CHECK TIMEOUT | Docker may need restart |
 
-### ⚠️ AIOS (NEEDS FIX)
-- **Status**: Python dependency installation failing
-- **Location**: `AIOS/`
-- **Issue**: setuptools.build_meta import error with Python 3.14
-- **Next Step**: Need to use Python 3.11 or fix setuptools
+### Verified Endpoints
 
-## What's NOT Running (Removed Mocks)
-- ❌ mock-aios-server.py (DELETED)
-- ❌ simple-ui-server.js (DELETED)
-- ❌ factif-ai-mock-server.js (DELETED)
-- ❌ docker-compose.simple.yml (DELETED)
+**bytebotd (Port 9990)**
+- `GET /health` → `{"status":"ok","service":"bytebotd","timestamp":"..."}`
+- `GET /` → HTTP 404 (expected, no root route)
+- `/websockify` → WebSocket proxy for VNC (requires Docker)
 
-## Next Steps to Complete Real Integration
+**bytebot-agent (Port 9991)**
+- `GET /` → HTTP 200 (connectivity OK)
+- `GET /tasks/models` → 75 models from 6 providers:
+  - Anthropic (2), Google (2), Groq (23), Routeway (26), Ollama Local (22), OpenCode Local (1)
 
-1. **Fix ByteBot UI Installation**:
-   - Clear node_modules and package-lock.json
-   - Try installing with --force flag
-   - Or manually fix Prisma dependency version
+**bytebot-ui (Port 9992)**
+- `GET /` → HTTP 200 (Next.js serving)
 
-2. **Fix AIOS Installation**:
-   - Use Python 3.11 instead of 3.14
-   - Or update setuptools in requirements.txt
+### Docker Containers
+```bash
+# To start VNC services:
+docker-compose -f docker-compose.bytebot-kali.yml up -d kali-desktop
+docker-compose -f docker-compose.bytebot-kali.yml up -d bytebot-desktop
+```
 
-3. **Start ByteBot Agent**:
-   - Fix NestJS dependency conflicts
-   - Start the real ByteBot agent service
+## Files Created/Updated
 
-4. **Update UI to Match Concept**:
-   - Implement dark theme (#1a1a1a background)
-   - Create three-panel layout
-   - Add workflow cards with teal accents
-   - Integrate real-time WebSocket connections
+| File | Purpose |
+|------|---------|
+| `LOCAL_DEV_STARTUP_SEQUENCE.md` | Complete startup sequence, health checks, diagnosis tree |
+| `health-check-local.sh` | Quick health verification script (executable) |
 
-## Access Real Services
+## Quick Commands
 
-- **Factif-AI Frontend**: http://localhost:5173
-- **Factif-AI Backend**: Check process logs for port
-- **ByteBot UI**: Will be on port 9992 once fixed
-- **AIOS**: Will be on port 8000 once fixed
+```bash
+# Health check
+./health-check-local.sh
+
+# Kill all local services
+kill -9 $(lsof -ti :9990) $(lsof -ti :9991) $(lsof -ti :9992)
+
+# Rebuild shared package (required before others)
+cd bytebot/packages/shared && npm run build
+
+# Start services (order matters)
+cd ../bytebotd && npm run start:dev     # Port 9990
+cd ../bytebot-agent && npm run start:dev # Port 9991
+cd ../bytebot-ui && npm run dev          # Port 9992
+```
+
+## Notes
+
+- Models API endpoint is `/tasks/models` (NOT `/api/tasks/models`)
+- bytebotd has dedicated `/health` endpoint
+- VNC access via WebSocket at `ws://localhost:9990/websockify`
+- Docker containers (6080, 6084) are optional for VNC features

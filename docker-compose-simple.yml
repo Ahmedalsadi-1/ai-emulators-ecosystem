@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: bytebot-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=bytebotdb
+    networks:
+      - bytebot-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  bytebot-llm-proxy:
+    image: bytebot-llm-proxy:v2
+    container_name: bytebot-llm-proxy
+    ports:
+      - "4000:4000"
+    environment:
+      - OPENCODE_API_KEY=dummy
+      - ANTHROPIC_API_KEY=dummy
+      - OPENAI_API_KEY=dummy
+      - GEMINI_API_KEY=dummy
+    networks:
+      - bytebot-network
+
+  bytebot-desktop:
+    image: ghcr.io/bytebot-ai/bytebot-desktop:edge
+    container_name: bytebot-desktop
+    shm_size: "2g"
+    restart: unless-stopped
+    hostname: computer
+    privileged: true
+    ports:
+      - "9990:9990"
+    environment:
+      - DISPLAY=:0
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+    networks:
+      - bytebot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9990/"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  bytebot-agent:
+    image: ghcr.io/bytebot-ai/bytebot-agent:edge
+    container_name: bytebot-agent
+    restart: unless-stopped
+    ports:
+      - "9991:9991"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bytebotdb
+      - BYTEBOT_DESKTOP_BASE_URL=http://bytebot-desktop:9990
+      - BYTEBOT_LLM_PROXY_URL=http://bytebot-llm-proxy:4000
+      - ANTHROPIC_API_KEY=dummy
+      - OPENAI_API_KEY=dummy
+      - GEMINI_API_KEY=dummy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bytebot-desktop:
+        condition: service_healthy
+      bytebot-llm-proxy:
+        condition: service_started
+    networks:
+      - bytebot-network
+
+  bytebot-ui:
+    image: ghcr.io/bytebot-ai/bytebot-ui:edge
+    container_name: bytebot-ui
+    restart: unless-stopped
+    ports:
+      - "9992:9992"
+    environment:
+      - NODE_ENV=production
+      - BYTEBOT_AGENT_BASE_URL=http://bytebot-agent:9991
+      - BYTEBOT_DESKTOP_VNC_URL=http://bytebot-desktop:9990/websockify
+    depends_on:
+      - bytebot-agent
+    networks:
+      - bytebot-network
+
+networks:
+  bytebot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

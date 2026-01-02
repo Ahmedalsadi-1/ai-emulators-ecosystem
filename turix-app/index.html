@@ -507,8 +507,12 @@
         // Initialize OpenCode.ai provider
         async function initOpenCode() {
             try {
+                const openCodeApiKey = window.OPENCODE_API_KEY || localStorage.getItem('OPENCODE_API_KEY') || '<set-opencode-api-key>';
+                if (!openCodeApiKey || openCodeApiKey === '<set-opencode-api-key>') {
+                    throw new Error('OPENCODE_API_KEY not provided. Set window.OPENCODE_API_KEY or localStorage OPENCODE_API_KEY.');
+                }
                 // Initialize OpenCode provider with the provided API key
-                openCodeProvider = new OpenCodeProvider('sk-XWhyzRPzVwIj6ajyEvrO27gSOa5tG7vySIXbEDr8WxtQqqkv7UOK4d5MikTLKhkZ');
+                openCodeProvider = new OpenCodeProvider(openCodeApiKey);
 
                 // Test the connection
                 const connectionTest = await openCodeProvider.testConnection();

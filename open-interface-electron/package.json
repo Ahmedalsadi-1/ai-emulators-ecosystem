@@ -1,0 +1,93 @@
+{
+  "name": "open-interface-electron",
+  "version": "1.0.0",
+  "description": "Electron wrapper for Open-Interface screen automation",
+  "main": "main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run react-dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "react-dev": "BROWSER=none react-scripts start",
+    "react-build": "CI=false react-scripts build",
+    "build": "npm run react-build && electron-builder",
+    "dist": "npm run build",
+    "dist:win": "npm run build -- --win",
+    "dist:mac": "npm run build -- --mac",
+    "dist:linux": "npm run build -- --linux",
+    "lint": "eslint src --ext .ts,.tsx",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "author": "Open-Interface Team",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "concurrently": "^7.6.0",
+    "electron": "^25.0.0",
+    "electron-builder": "^24.0.0",
+    "typescript": "^4.9.0",
+    "wait-on": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.openinterface.electron",
+    "productName": "Open-Interface",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js",
+      "node_modules/**/*",
+      "!node_modules/.bin",
+      "!**/*.map"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "extraResources": [
+      {
+        "from": "../Open-Interface",
+        "to": "Open-Interface",
+        "filter": [
+          "**/*",
+          "!__pycache__",
+          "!*.pyc",
+          "!node_modules",
+          "!**/.git"
+        ]
+      }
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

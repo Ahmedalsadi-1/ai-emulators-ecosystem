@@ -1,0 +1,236 @@
+// Prisma schema for authentication and user management
+// This schema supports JWT authentication, session management, and API key functionality
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url = "file:./dev.db"
+}
+
+// User model with comprehensive authentication fields
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  email       String   @unique
+  passwordHash String
+
+  // Profile information
+  firstName   String?
+  lastName    String?
+  avatar      String?
+
+  // Authentication status
+  isActive    Boolean  @default(true)
+  isEmailVerified Boolean @default(false)
+
+  // Security fields
+  failedLoginAttempts Int @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  passwordChangedAt   DateTime @default(now())
+
+  // Role-based access control (stored as JSON strings)
+  roles       String   // JSON array of roles
+  permissions String   // JSON array of permissions
+
+  // Account settings
+  preferences String?  // User preferences as JSON string
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  sessions                Session[]
+  apiKeys                 ApiKey[]
+  auditLogs               AuditLog[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  twoFactorAuth           TwoFactorAuth?
+
+  @@map("users")
+}
+
+// Session model for managing user sessions
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+
+  // Session metadata
+  userAgent   String?
+  ipAddress   String?
+  deviceId    String?
+
+  // Session status
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime
+  lastActivity DateTime @default(now())
+
+  // JWT token information
+  accessTokenHash String? // Hash of access token for revocation
+  refreshTokenHash String @unique // Hash of refresh token
+
+  // SSO information
+  ssoContextId String?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ssoContext  SSOContext? @relation(fields: [ssoContextId], references: [id])
+
+  @@map("sessions")
+}
+
+// SSO Context for cross-application authentication
+model SSOContext {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+
+  // SSO metadata
+  userId    String
+  apps      Json     // Array of app tokens and permissions
+  expiresAt DateTime
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Relations
+  sessions  Session[]
+
+  @@map("sso_contexts")
+}
+
+// API Key model for external integrations
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+
+  // Key information
+  name        String   // Human-readable name
+  keyHash     String   @unique // Hashed version of the actual key
+  prefix      String   // First few characters for identification
+
+  // Permissions and restrictions (stored as JSON strings)
+  permissions String   // JSON array of permissions
+  scopes      String   // JSON array of scopes
+  rateLimit   Int?     // Requests per hour
+
+  // Status and validity
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+
+  // Metadata
+  description String?
+  createdByIp String?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+// Audit log for security events
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+
+  // Event information
+  event     String   // Event type (login, logout, password_change, etc.)
+  action    String   // Specific action performed
+  resource  String?  // Resource that was accessed/modified
+
+  // Context
+  ipAddress String?
+  userAgent String?
+  sessionId String?
+
+  // Event details
+  details   Json?    // Additional event-specific data
+  success   Boolean  @default(true)
+
+  // Metadata
+  severity  String   @default("info") // info, warning, error, critical
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// Refresh token blacklist for token revocation
+model RefreshTokenBlacklist {
+  id             String   @id @default(cuid())
+  tokenHash      String   @unique
+  expiresAt      DateTime
+  revokedAt      DateTime @default(now())
+  reason         String?  // Reason for revocation
+
+  @@map("refresh_token_blacklist")
+}
+
+// Password reset tokens
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// Email verification tokens
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
+}
+
+// Two-factor authentication settings
+model TwoFactorAuth {
+  id          String @id @default(cuid())
+  userId      String @unique
+
+  // 2FA settings
+  isEnabled   Boolean @default(false)
+  secret      String? // TOTP secret
+  backupCodes String  // JSON array of backup codes
+
+  // Recovery
+  lastUsedAt  DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("two_factor_auth")
+}
+

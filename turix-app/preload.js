@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   registerService: (service) => ipcRenderer.invoke('register-service', service),
   invokeTool: (serviceName, toolName, params) => ipcRenderer.invoke('invoke-tool', serviceName, toolName, params),
   processCommand: (command) => ipcRenderer.invoke('process-command', command),
+  launchService: (serviceName) => ipcRenderer.invoke('launchService', serviceName),
   onServiceUpdate: (callback) => ipcRenderer.on('service-update', callback),
   removeAllListeners: (event) => ipcRenderer.removeAllListeners(event)
 });

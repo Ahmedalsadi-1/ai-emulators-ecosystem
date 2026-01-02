@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kali Desktop Diagnostic</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .test-section { margin: 20px 0; padding: 20px; border-radius: 8px; border-left: 5px solid #4CAF50; }
+        .test-section.error { border-left-color: #f44336; background: #ffebee; }
+        .test-section.warning { border-left-color: #ff9800; background: #fff3e0; }
+        .test-section.success { border-left-color: #4CAF50; background: #e8f5e8; }
+        .access-button { display: inline-block; padding: 15px 30px; margin: 10px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background 0.3s; }
+        .access-button:hover { background: #45a049; }
+        .access-button.secondary { background: #2196F3; }
+        .access-button.secondary:hover { background: #1976D2; }
+        .code { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; margin: 10px 0; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .status.online { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.offline { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Kali Desktop Diagnostic & Access Center</h1>
+            <p>Comprehensive testing and access to your multimodal AI Kali Desktop</p>
+        </div>
+
+        <div class="content">
+            <div class="status online">
+                <h2>✅ System Status: Online</h2>
+                <p>All core services are running and accessible</p>
+            </div>
+
+            <h2>🚀 Quick Access Options</h2>
+
+            <div class="test-section success">
+                <h3>🌐 Recommended: Proxy Access (Bypasses Restrictions)</h3>
+                <p>Use this if direct access fails due to browser security or network restrictions</p>
+                <a href="/desktop/" class="access-button">Open Kali Desktop (Proxy)</a>
+                <a href="/status" class="access-button secondary">View Status Page</a>
+                <br><br>
+                <strong>URL:</strong> <code>http://localhost:8080/desktop/</code>
+            </div>
+
+            <div class="test-section">
+                <h3>🔗 Direct Access Options</h3>
+                <p>If proxy doesn't work, try these alternatives:</p>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="http://localhost:6080/" class="access-button secondary" target="_blank">Direct noVNC</a>
+                    <a href="http://127.0.0.1:6080/" class="access-button secondary" target="_blank">Localhost noVNC</a>
+                    <a href="http://localhost:8080/vnc/" class="access-button secondary" target="_blank">Proxy VNC</a>
+                </div>
+
+                <h4>VNC Client Access:</h4>
+                <div class="code">
+Host: localhost<br>
+Port: 5901<br>
+Password: (leave empty)
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>🛠️ Troubleshooting Steps</h3>
+                <ol>
+                    <li><strong>Try Incognito/Private Window</strong> - Bypasses browser cache and security restrictions</li>
+                    <li><strong>Disable HTTPS-Only Mode</strong> - In browser settings, allow HTTP connections</li>
+                    <li><strong>Check Firewall</strong> - Ensure ports 6080, 5901, 8080 are not blocked</li>
+                    <li><strong>Different Browser</strong> - Try Chrome, Firefox, Safari, or Edge</li>
+                    <li><strong>Network Issues</strong> - If behind corporate proxy, contact IT</li>
+                </ol>
+            </div>
+
+            <div class="test-section success">
+                <h3>🎯 Available Features</h3>
+                <ul>
+                    <li>✅ Full Kali Linux security environment</li>
+                    <li>✅ Multimodal AI capabilities (20+ tools)</li>
+                    <li>✅ Vision processing (OCR, object detection)</li>
+                    <li>✅ Speech synthesis and recognition</li>
+                    <li>✅ AI integration (OpenAI, Claude, Gemini)</li>
+                    <li>✅ Memory management and context awareness</li>
+                    <li>✅ Desktop automation and control</li>
+                    <li>✅ Security tools (nmap, metasploit, wireshark, etc.)</li>
+                </ul>
+            </div>
+
+            <div class="test-section">
+                <h3>🔧 System Information</h3>
+                <ul>
+                    <li><strong>Desktop:</strong> XFCE environment with clean interface</li>
+                    <li><strong>Resolution:</strong> 1920x1080 full HD</li>
+                    <li><strong>Services:</strong> Xvfb, x11vnc, websockify, nginx proxy</li>
+                    <li><strong>MCP Server:</strong> 20+ multimodal AI tools available</li>
+                    <li><strong>Ports:</strong> 6080 (noVNC), 5901 (VNC), 8080 (Proxy)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -7,6 +7,7 @@ import BytebotService from './services/BytebotService';
 import AIOSService from './services/AIOSService';
 import FactifAIService from './services/FactifAIService';
 import PostizService from './services/PostizService';
+import OpenInterfaceService from './services/OpenInterfaceService';
 import './App.css';
 
 declare global {
@@ -31,6 +32,7 @@ function App() {
     AIOSService.init();
     FactifAIService.init();
     PostizService.init();
+    OpenInterfaceService.init();
 
     // Load available services
     const loadServices = async () => {
@@ -120,23 +122,39 @@ function App() {
                 </div>
               )}
 
-              <div className="global-actions">
-                <button className="action-button" onClick={() => handleCommand('select screen')}>
-                  Select Screen
-                </button>
-                <button className="action-button" onClick={() => handleCommand('open web')}>
-                  Open Web
-                </button>
-                <button className="action-button" onClick={() => handleCommand('settings')}>
-                  Settings
-                </button>
-                <button
-                  className="action-button hide-button"
-                  onClick={() => window.electronAPI.toggleVisibility()}
-                >
-                  Hide TuriX
-                </button>
-              </div>
+               <div className="global-actions">
+                 <button className="action-button" onClick={() => handleCommand('select screen')}>
+                   Select Screen
+                 </button>
+                 <button className="action-button" onClick={() => handleCommand('open web')}>
+                   Open Web
+                 </button>
+                 <button className="action-button" onClick={async () => {
+                   try {
+                     await window.electronAPI.launchService('open-interface');
+                     setCommandStatus('success');
+                     setCurrentCommand('Launching Open-Interface...');
+                     setTimeout(() => {
+                       setCommandStatus('idle');
+                       setCurrentCommand(null);
+                     }, 3000);
+                   } catch (error) {
+                     setCommandStatus('error');
+                     console.error('Failed to launch Open-Interface:', error);
+                   }
+                 }}>
+                   Open-Interface
+                 </button>
+                 <button className="action-button" onClick={() => handleCommand('settings')}>
+                   Settings
+                 </button>
+                 <button
+                   className="action-button hide-button"
+                   onClick={() => window.electronAPI.toggleVisibility()}
+                 >
+                   Hide TuriX
+                 </button>
+               </div>
             </div>
           </div>
         </motion.div>
