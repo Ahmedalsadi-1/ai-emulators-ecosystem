@@ -3,6 +3,9 @@ export const DEFAULT_DISPLAY_SIZE = {
   height: 960,
 };
 
+const SMOLAGENTS_SINGLE_ACTION =
+  process.env.BYTEBOT_SMOLAGENTS_SINGLE_ACTION === 'true';
+
 export const SUMMARIZATION_SYSTEM_PROMPT = `You are a helpful assistant that summarizes conversations for long-running tasks.
 Your job is to create concise summaries that preserve all important information, tool usage, and key decisions.
 Focus on:
@@ -174,4 +177,17 @@ Remember: **accuracy over speed, clarity and consistency over cleverness**.
 Think before each move, keep the desktop clean when you're done, and **always** finish with \`set_task_status\`. Don't ask follow-up questions after completing the task.
 
 **For repetitive tasks**: Persistence is key. Continue until ALL items are processed, not just the first few.
+`;
+
+export const SMOLAGENTS_SYSTEM_PROMPT = `
+SMOLAGENTS MODE (CUA2 COMPAT)
+- Mouse coordinates are normalized to 0..1000 for both axes. Use normalized coordinates for all mouse actions.
+- The runtime maps normalized coordinates to pixel space for the active display.
+- Always include session_id in every computer tool call.
+- ${
+  SMOLAGENTS_SINGLE_ACTION
+    ? 'Single-action mode is enabled: emit at most ONE tool call per assistant message.'
+    : 'Multiple tool calls are allowed when needed, but keep them minimal and ordered.'
+}
+- Prefer atomic UI steps and re-check the screen between actions.
 `;

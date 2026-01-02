@@ -12,6 +12,7 @@ import {
 import { AnthropicService } from '../anthropic/anthropic.service';
 import {
   isComputerToolUseContentBlock,
+  isToolUseContentBlock,
   isSetTaskStatusToolUseBlock,
   isCreateTaskToolUseBlock,
   SetTaskStatusToolUseBlock,
@@ -39,6 +40,7 @@ import {
 } from './agent.types';
 import {
   AGENT_SYSTEM_PROMPT,
+  SMOLAGENTS_SYSTEM_PROMPT,
   SUMMARIZATION_SYSTEM_PROMPT,
 } from './agent.constants';
 import { SummariesService } from '../summaries/summaries.service';
@@ -223,8 +225,44 @@ export class AgentProcessor {
 
   private getSystemPrompt(): string {
     const basePrompt = process.env.BYTEBOT_BASE_PROMPT;
-    if (!basePrompt) return AGENT_SYSTEM_PROMPT;
-    return `${AGENT_SYSTEM_PROMPT}\n\n[Base Prompt]\n${basePrompt}`;
+    const smolagentsMode = process.env.BYTEBOT_SMOLAGENTS_MODE === 'true';
+    const sections: string[] = [AGENT_SYSTEM_PROMPT];
+
+    if (smolagentsMode) {
+      sections.push(`[Smolagents Mode]\n${SMOLAGENTS_SYSTEM_PROMPT}`);
+    }
+
+    if (basePrompt) {
+      sections.push(`[Base Prompt]\n${basePrompt}`);
+    }
+
+    return sections.join('\n\n');
+  }
+
+  private getExecutionBlocks(
+    blocks: MessageContentBlock[],
+  ): MessageContentBlock[] {
+    const singleAction =
+      process.env.BYTEBOT_SMOLAGENTS_SINGLE_ACTION === 'true';
+    if (!singleAction) return blocks;
+
+    const firstTool = blocks.find(isToolUseContentBlock);
+    if (!firstTool) return blocks;
+
+    const allowedId = firstTool.id;
+    const filtered = blocks.filter(
+      (block) => !isToolUseContentBlock(block) || block.id === allowedId,
+    );
+
+    if (filtered.length !== blocks.length) {
+      this.logger.warn(
+        `Smolagents single-action mode: ignored ${
+          blocks.length - filtered.length
+        } extra tool calls`,
+      );
+    }
+
+    return filtered;
   }
 
   private dedupeModels(models: BytebotAgentModel[]): BytebotAgentModel[] {
@@ -541,7 +579,9 @@ export class AgentProcessor {
 
       let setTaskStatusToolUseBlock: SetTaskStatusToolUseBlock | null = null;
 
-      for (const block of messageContentBlocks) {
+      const executionBlocks = this.getExecutionBlocks(messageContentBlocks);
+
+      for (const block of executionBlocks) {
         if (isComputerToolUseContentBlock(block)) {
           const result = await handleComputerToolUse(
             block,

@@ -5,12 +5,14 @@ import {
   isImageContentBlock,
   isTextContentBlock,
   isToolResultContentBlock,
+  isToolUseContentBlock,
   MessageContentBlock,
 } from "@bytebot/shared";
 import {
   addMessage,
   fetchTaskById,
   fetchTaskMessages,
+  fetchTaskRawMessages,
   startTask,
 } from "@/utils/taskUtils";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -29,6 +31,21 @@ export type QuickTaskLog = {
   message: string;
 };
 
+export type QuickTaskTraceEntry = {
+  id: string;
+  time: string;
+  timestamp: number;
+  role: "USER" | "ASSISTANT";
+  kind: "tool_use" | "tool_result";
+  label: string;
+  details?: string;
+  toolUseId?: string;
+  toolName?: string;
+  sessionId?: string;
+  image?: string;
+  isError?: boolean;
+};
+
 interface UseQuickTaskSessionOptions {
   storageKey: string;
 }
@@ -36,12 +53,14 @@ interface UseQuickTaskSessionOptions {
 interface UseQuickTaskSessionResult {
   messages: QuickTaskMessage[];
   logs: QuickTaskLog[];
+  traceEntries: QuickTaskTraceEntry[];
   isLoading: boolean;
   currentTaskId: string | null;
   taskStatus: TaskStatus | null;
   sendMessage: (message: string, model: Model) => Promise<void>;
   clearMessages: () => void;
   clearLogs: () => void;
+  clearTrace: () => void;
   addLog: (message: string) => void;
   resetSession: () => void;
 }
@@ -85,6 +104,93 @@ const flattenBlocks = (blocks: MessageContentBlock[]): string[] => {
   return lines;
 };
 
+const summarizeToolInput = (
+  input?: Record<string, unknown>,
+): { summary: string; sessionId?: string } => {
+  if (!input) return { summary: "" };
+  const sessionId =
+    typeof input.session_id === "string" ? input.session_id : undefined;
+  const payload = { ...input };
+  if ("session_id" in payload) {
+    delete payload.session_id;
+  }
+  const serialized = JSON.stringify(payload);
+  const summary =
+    serialized.length > 140 ? `${serialized.slice(0, 140)}...` : serialized;
+  return { summary, sessionId };
+};
+
+const extractImageData = (
+  blocks?: MessageContentBlock[],
+): string | undefined => {
+  if (!blocks) return undefined;
+  for (const block of blocks) {
+    if (isImageContentBlock(block)) {
+      return block.source.data;
+    }
+    if (block.content) {
+      const nested = extractImageData(block.content);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+};
+
+const extractTextPreview = (blocks?: MessageContentBlock[]): string => {
+  if (!blocks) return "";
+  const lines = flattenBlocks(blocks).filter((line) => line !== "[Image]");
+  const text = lines.join(" ").trim();
+  if (text.length > 160) {
+    return `${text.slice(0, 160)}...`;
+  }
+  return text;
+};
+
+const extractTraceEntriesFromMessage = (
+  message: Message,
+): QuickTaskTraceEntry[] => {
+  const { label, value } = formatTimestamp(message.createdAt);
+  const entries: QuickTaskTraceEntry[] = [];
+
+  message.content.forEach((block, index) => {
+    if (isToolUseContentBlock(block)) {
+      const { summary, sessionId } = summarizeToolInput(block.input);
+      entries.push({
+        id: `${message.id}:tool_use:${index}`,
+        time: label,
+        timestamp: value,
+        role: message.role,
+        kind: "tool_use",
+        label: block.name,
+        details: summary,
+        toolUseId: block.id,
+        toolName: block.name,
+        sessionId,
+      });
+    }
+
+    if (isToolResultContentBlock(block)) {
+      entries.push({
+        id: `${message.id}:tool_result:${index}`,
+        time: label,
+        timestamp: value,
+        role: message.role,
+        kind: "tool_result",
+        label: `result:${block.tool_use_id}`,
+        details: extractTextPreview(block.content),
+        toolUseId: block.tool_use_id,
+        image: extractImageData(block.content),
+        isError: block.is_error,
+      });
+    }
+  });
+
+  return entries;
+};
+
+const sortTraceEntries = (items: QuickTaskTraceEntry[]): QuickTaskTraceEntry[] =>
+  [...items].sort((a, b) => b.timestamp - a.timestamp);
+
 const formatMessage = (message: Message): QuickTaskMessage | null => {
   const text = flattenBlocks(message.content).join("\n").trim();
   if (!text) return null;
@@ -108,10 +214,12 @@ export function useQuickTaskSession({
 }: UseQuickTaskSessionOptions): UseQuickTaskSessionResult {
   const [messages, setMessages] = useState<QuickTaskMessage[]>([]);
   const [logs, setLogs] = useState<QuickTaskLog[]>([]);
+  const [traceEntries, setTraceEntries] = useState<QuickTaskTraceEntry[]>([]);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<TaskStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const processedMessageIds = useRef<Set<string>>(new Set());
+  const processedTraceIds = useRef<Set<string>>(new Set());
   const lastStatus = useRef<TaskStatus | null>(null);
 
   const addLog = useCallback((message: string) => {
@@ -130,6 +238,10 @@ export function useQuickTaskSession({
     processedMessageIds.current = new Set(items.map((item) => item.id));
   }, []);
 
+  const resetTraceCache = useCallback((items: QuickTaskTraceEntry[]) => {
+    processedTraceIds.current = new Set(items.map((item) => item.id));
+  }, []);
+
   const setFormattedMessages = useCallback(
     (raw: Message[]) => {
       const formatted = raw
@@ -142,12 +254,29 @@ export function useQuickTaskSession({
     [resetMessageCache],
   );
 
+  const setFormattedTrace = useCallback(
+    (raw: Message[]) => {
+      const entries = raw.reduce<QuickTaskTraceEntry[]>((acc, message) => {
+        acc.push(...extractTraceEntriesFromMessage(message));
+        return acc;
+      }, []);
+      const sorted = sortTraceEntries(entries);
+      resetTraceCache(sorted);
+      setTraceEntries(sorted);
+    },
+    [resetTraceCache],
+  );
+
   const syncMessages = useCallback(
     async (taskId: string) => {
-      const result = await fetchTaskMessages(taskId, { limit: 50, page: 1 });
-      setFormattedMessages(result);
+      const [formatted, raw] = await Promise.all([
+        fetchTaskMessages(taskId, { limit: 50, page: 1 }),
+        fetchTaskRawMessages(taskId, { limit: 50, page: 1 }),
+      ]);
+      setFormattedMessages(formatted);
+      setFormattedTrace(raw);
     },
-    [setFormattedMessages],
+    [setFormattedMessages, setFormattedTrace],
   );
 
   const handleNewMessage = useCallback(
@@ -160,6 +289,14 @@ export function useQuickTaskSession({
 
       processedMessageIds.current.add(message.id);
       setMessages((prev) => sortMessages([formatted, ...prev]));
+
+      const newEntries = extractTraceEntriesFromMessage(message).filter(
+        (entry) => !processedTraceIds.current.has(entry.id),
+      );
+      if (newEntries.length > 0) {
+        newEntries.forEach((entry) => processedTraceIds.current.add(entry.id));
+        setTraceEntries((prev) => sortTraceEntries([...newEntries, ...prev]));
+      }
     },
     [currentTaskId],
   );
@@ -196,7 +333,9 @@ export function useQuickTaskSession({
     setTaskStatus(null);
     setMessages([]);
     setLogs([]);
+    setTraceEntries([]);
     processedMessageIds.current.clear();
+    processedTraceIds.current.clear();
     lastStatus.current = null;
 
     const storedTask = window.localStorage.getItem(storageKey);
@@ -262,6 +401,11 @@ export function useQuickTaskSession({
     setLogs([]);
   }, []);
 
+  const clearTrace = useCallback(() => {
+    setTraceEntries([]);
+    processedTraceIds.current.clear();
+  }, []);
+
   const resetSession = useCallback(() => {
     if (currentTaskId) {
       window.localStorage.removeItem(storageKey);
@@ -272,17 +416,21 @@ export function useQuickTaskSession({
     setTaskStatus(null);
     setMessages([]);
     setLogs([]);
+    setTraceEntries([]);
+    processedTraceIds.current.clear();
   }, [currentTaskId, storageKey]);
 
   return {
     messages,
     logs,
+    traceEntries,
     isLoading,
     currentTaskId,
     taskStatus,
     sendMessage,
     clearMessages,
     clearLogs,
+    clearTrace,
     addLog,
     resetSession,
   };

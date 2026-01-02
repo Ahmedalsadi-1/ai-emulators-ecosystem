@@ -22,10 +22,41 @@ import {
   isReadFileToolUseBlock,
 } from '@bytebot/shared';
 import { Logger } from '@nestjs/common';
+import { DEFAULT_DISPLAY_SIZE } from './agent.constants';
 
 const DEFAULT_DESKTOP_BASE_URL =
   process.env.BYTEBOT_DESKTOP_BASE_URL || 'http://localhost:9990';
 const REQUIRE_SESSION_ID = process.env.BYTEBOT_REQUIRE_SESSION_ID === 'true';
+const NORMALIZE_COORDS =
+  process.env.BYTEBOT_NORMALIZE_COORDS === 'true' ||
+  process.env.BYTEBOT_SMOLAGENTS_MODE === 'true';
+const COORDS_MAX = Number(process.env.BYTEBOT_COORDS_MAX) || 1000;
+const DISPLAY_WIDTH =
+  Number(process.env.BYTEBOT_DESKTOP_WIDTH) || DEFAULT_DISPLAY_SIZE.width;
+const DISPLAY_HEIGHT =
+  Number(process.env.BYTEBOT_DESKTOP_HEIGHT) || DEFAULT_DISPLAY_SIZE.height;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+const normalizeCoordinates = (
+  coordinates?: Coordinates,
+): Coordinates | undefined => {
+  if (!coordinates || !NORMALIZE_COORDS) return coordinates;
+  return {
+    x: Math.round(
+      (clamp(coordinates.x, 0, COORDS_MAX) / COORDS_MAX) * DISPLAY_WIDTH,
+    ),
+    y: Math.round(
+      (clamp(coordinates.y, 0, COORDS_MAX) / COORDS_MAX) * DISPLAY_HEIGHT,
+    ),
+  };
+};
+
+const normalizePath = (path?: Coordinates[]): Coordinates[] | undefined => {
+  if (!path || !NORMALIZE_COORDS) return path;
+  return path.map((point) => normalizeCoordinates(point) || point);
+};
 
 export async function handleComputerToolUse(
   block: ComputerToolUseContentBlock,
@@ -277,7 +308,7 @@ async function moveMouse(
   baseUrl: string,
   input: { coordinates: Coordinates },
 ): Promise<void> {
-  const { coordinates } = input;
+  const coordinates = normalizeCoordinates(input.coordinates) || input.coordinates;
   console.log(
     `Moving mouse to coordinates: [${coordinates.x}, ${coordinates.y}]`,
   );
@@ -304,7 +335,8 @@ async function traceMouse(
     holdKeys?: string[];
   },
 ): Promise<void> {
-  const { path, holdKeys } = input;
+  const path = normalizePath(input.path) || input.path;
+  const { holdKeys } = input;
   console.log(
     `Tracing mouse to path: ${path} ${holdKeys ? `with holdKeys: ${holdKeys}` : ''}`,
   );
@@ -334,7 +366,9 @@ async function clickMouse(
     clickCount: number;
   },
 ): Promise<void> {
-  const { coordinates, button, holdKeys, clickCount } = input;
+  const { button, holdKeys, clickCount } = input;
+  const coordinates =
+    normalizeCoordinates(input.coordinates) || input.coordinates;
   console.log(
     `Clicking mouse ${button} ${clickCount} times ${coordinates ? `at coordinates: [${coordinates.x}, ${coordinates.y}] ` : ''} ${holdKeys ? `with holdKeys: ${holdKeys}` : ''}`,
   );
@@ -365,7 +399,9 @@ async function pressMouse(
     press: Press;
   },
 ): Promise<void> {
-  const { coordinates, button, press } = input;
+  const { button, press } = input;
+  const coordinates =
+    normalizeCoordinates(input.coordinates) || input.coordinates;
   console.log(
     `Pressing mouse ${button} ${press} ${coordinates ? `at coordinates: [${coordinates.x}, ${coordinates.y}]` : ''}`,
   );
@@ -395,7 +431,8 @@ async function dragMouse(
     holdKeys?: string[];
   },
 ): Promise<void> {
-  const { path, button, holdKeys } = input;
+  const path = normalizePath(input.path) || input.path;
+  const { button, holdKeys } = input;
   console.log(
     `Dragging mouse to path: ${path} ${holdKeys ? `with holdKeys: ${holdKeys}` : ''}`,
   );
@@ -426,7 +463,9 @@ async function scroll(
     holdKeys?: string[];
   },
 ): Promise<void> {
-  const { coordinates, direction, scrollCount, holdKeys } = input;
+  const { direction, scrollCount, holdKeys } = input;
+  const coordinates =
+    normalizeCoordinates(input.coordinates) || input.coordinates;
   console.log(
     `Scrolling ${direction} ${scrollCount} times ${coordinates ? `at coordinates: [${coordinates.x}, ${coordinates.y}]` : ''}`,
   );

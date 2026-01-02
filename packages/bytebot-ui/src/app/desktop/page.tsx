@@ -7,6 +7,7 @@ import { FloatingNav } from "@/components/layout/FloatingNav";
 import { VncViewer } from "@/components/vnc/VncViewer";
 import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { LocalScreenViewer } from "@/components/local-screen/LocalScreenViewer";
+import { TracePanel } from "@/components/trace/TracePanel";
 import {
   fetchModels,
   ControllerStatus
@@ -383,6 +384,8 @@ export default function DesktopPage() {
     clearMessages,
     addLog,
     resetSession,
+    traceEntries,
+    clearTrace,
   } = useQuickTaskSession({ storageKey: taskStorageKey });
 
   // Multi-controller state management
@@ -792,6 +795,8 @@ export default function DesktopPage() {
                     ))}
                   </div>
                 </div>
+
+                <TracePanel entries={traceEntries} onClear={clearTrace} />
 
                 {/* Controllers Panel */}
                 <div className="bg-[#1e1e1e] p-3">
