@@ -46,7 +46,7 @@ type DesktopSession = {
 type WorkspaceOption = {
   id: string;
   label: string;
-  screen: 'bytebot' | 'debian' | 'kali' | 'custom';
+  screen: 'bytebot' | 'debian' | 'kali' | 'custom' | 'bytebot-edge-1' | 'bytebot-edge-2' | 'bytebot-edge-3';
   directUrl?: string;
   sessionId?: string;
   sessionPort?: number | null;
@@ -159,9 +159,9 @@ const controllerOptions: ControllerOption[] = [
 ];
 
 const defaultWorkspaces: WorkspaceOption[] = [
-  { id: "desktop-1", label: "Desktop 1", screen: "bytebot" },
-  { id: "desktop-2", label: "Desktop 2", screen: "debian" },
-  { id: "desktop-3", label: "Desktop 3", screen: "kali" },
+  { id: "bytebot-edge-1", label: "BYTEBOT EDGE 1", screen: "bytebot-edge-1", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_1 },
+  { id: "bytebot-edge-2", label: "BYTEBOT EDGE 2", screen: "bytebot-edge-2", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_2 },
+  { id: "bytebot-edge-3", label: "BYTEBOT EDGE 3", screen: "bytebot-edge-3", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_3 },
 ];
 
 function ControlPill({
@@ -267,9 +267,10 @@ export default function DesktopPage() {
 
   // Derive current screen from active workspace
   const currentWorkspace = workspaces.find(w => w.id === activeWorkspace);
-  const currentScreen = currentWorkspace?.screen || 'debian';
+  const currentScreen = currentWorkspace?.screen || 'bytebot-edge-1';
   const currentDirectUrl = currentWorkspace?.directUrl;
-  const vncControllerType = currentScreen === 'custom' ? undefined : currentScreen;
+  const isCustomScreen = currentScreen === 'custom' || currentScreen.startsWith('bytebot-edge');
+  const vncControllerType = isCustomScreen ? undefined : currentScreen;
 
   // Load workspaces and active workspace from localStorage
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 
-type ControllerType = "bytebot" | "debian" | "kali" | "browseros";
+type ControllerType = "bytebot" | "debian" | "kali" | "browseros" | "bytebot-edge-1" | "bytebot-edge-2" | "bytebot-edge-3";
 
 interface VncViewerProps {
   viewOnly?: boolean;
@@ -71,7 +71,7 @@ const getVncPassword = (controllerType?: ControllerType): string | undefined => 
 };
 
 // Build RFB credentials object
-const getRfbCredentials = (controllerType?: string) => {
+const getRfbCredentials = (controllerType?: ControllerType) => {
   const password = getVncPassword(controllerType);
   if (!password) return undefined;
   return {
@@ -103,8 +103,8 @@ export function VncViewer({
   // Set wsUrl and notify connecting
   const resolveWsUrl = (): string | null => {
     if (directUrl) return normalizeWsUrl(directUrl);
-    const directUrl = getDirectVncUrlForController(controllerType);
-    if (directUrl) return normalizeWsUrl(directUrl);
+    const envDirectUrl = getDirectVncUrlForController(controllerType);
+    if (envDirectUrl) return normalizeWsUrl(envDirectUrl);
     if (typeof window === "undefined" || !proxyPath) return null;
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     return `${proto}://${window.location.host}${proxyPath}`;
@@ -115,7 +115,7 @@ export function VncViewer({
     if (!url) return;
     setWsUrl(url);
     onStatusChange?.('connecting');
-  }, [controllerType, proxyPath, directUrl, onStatusChange]);
+  }, [controllerType, proxyPath, directUrl, onStatusChange, resolveWsUrl]);
 
   const retryConnection = () => {
     setVncError(null);
@@ -157,7 +157,7 @@ export function VncViewer({
             // Only notify, don't set error (disconnects are normal during reconnection)
             onStatusChange?.('disconnected');
           }}
-          onError={(error: any) => {
+          onError={(error: Error) => {
             console.error('VNC Error:', error);
             onStatusChange?.('error');
           }}
