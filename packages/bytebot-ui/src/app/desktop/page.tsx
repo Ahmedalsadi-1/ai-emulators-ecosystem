@@ -647,20 +647,6 @@ export default function DesktopPage() {
               ) : (
                 <VncViewer viewOnly={isPaused} controllerType={vncControllerType} directUrl={currentDirectUrl} />
               )}
-
-              {/* Dock at Bottom */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 px-3 py-2 rounded-2xl bg-[#12141a]/80 backdrop-blur-xl border border-white/10 shadow-lg">
-                {["🔍", "🖇", "🌐", "📝", "⚙️", "📦", "💻", "🎨", "📊"].map((icon, i) => (
-                  <motion.div
-                    key={i}
-                    className="w-9 h-9 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center cursor-pointer text-sm hover:bg-white/10 transition-all"
-                    whileHover={{ scale: 1.15, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {icon}
-                  </motion.div>
-                ))}
-              </div>
             </div>
           </div>
         </main>
