@@ -12,8 +12,6 @@ import {
   Terminal,
   Cpu,
   ChevronRight,
-  Settings,
-  Square,
 } from "lucide-react";
 import { VncViewer } from "@/components/vnc/VncViewer";
 import { LocalScreenViewer } from "@/components/local-screen/LocalScreenViewer";
@@ -468,12 +466,12 @@ export default function DesktopPage() {
     if (!selectedModel) {
       setSelectedModel(stored || pickRoutewayDefault(models) || null);
     }
-  }, [models, modelStorageKey]);
+  }, [models, modelStorageKey, getModelKey]);
 
   useEffect(() => {
     if (!selectedModel) return;
     window.localStorage.setItem(modelStorageKey, getModelKey(selectedModel));
-  }, [modelStorageKey, selectedModel?.name, selectedModel?.provider, getModelKey]);
+  }, [modelStorageKey, selectedModel?.name, selectedModel?.provider, getModelKey, selectedModel]);
 
   const getWindowTitle = () => {
     switch (activeWorkspace) {
@@ -543,16 +541,16 @@ export default function DesktopPage() {
             <div className="flex items-start gap-1.5 mb-2">
               <span className="text-gray-700 mt-0.5">{">"}</span>
               <ActivityCard variant="user">
-                <div className="space-y-1">
-                  <span className="text-gray-200">[User]</span>
-                  <div className="text-gray-400 pl-0">
-                    Edit the Combinator sign.
-                    <br />
-                    Change text to "Kronos"
-                    <br />
-                    and save as yc_kronos.
-                  </div>
+              <div className="space-y-1">
+                <span className="text-gray-200">[User]</span>
+                <div className="text-gray-400 pl-0">
+                  Edit the Combinator sign.
+                  <br />
+                  Change text to &quot;Kronos&quot;
+                  <br />
+                  and save as yc_kronos.
                 </div>
+              </div>
               </ActivityCard>
             </div>
 
