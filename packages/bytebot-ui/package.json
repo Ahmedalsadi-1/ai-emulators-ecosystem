@@ -5,8 +5,8 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "npm run build --prefix ../shared && tsx server.ts",
-    "build": "npm run build --prefix ../shared && tsc server.ts --outDir . --module commonjs --esModuleInterop && tsc electron/main.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck && tsc electron/preload.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck",
-    "export": "npm run build --prefix ../shared && next build --no-lint --experimental-app-only && next export",
+    "build": "npm run build --prefix ../shared && tsc server.ts --outDir . --module commonjs --esModuleInterop --skipLibCheck && tsc electron/main.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck && tsc electron/preload.ts --outDir electron --module commonjs --esModuleInterop --skipLibCheck",
+    "export": "npm run build --prefix ../shared && next build --no-lint --experimental-app-only --skipLibCheck && next export",
     "start": "npm run build --prefix ../shared && tsx server.ts",
     "start:prod": "NODE_ENV=production node server.js",
     "verify:build": "node ../../scripts/verify-build.js",
