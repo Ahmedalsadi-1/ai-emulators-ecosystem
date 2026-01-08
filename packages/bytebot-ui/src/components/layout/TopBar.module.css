@@ -1,0 +1,88 @@
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  user-select: none;
+}
+
+.left, .right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.right {
+  justify-content: flex-end;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.appleLogo {
+  font-size: 18px;
+}
+
+.appName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.desktopSelector {
+  margin-left: 16px;
+}
+
+.select {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.select:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.windowTitle {
+  font-size: 13px;
+  color: #86868B;
+}
+
+.windowBtn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+.windowBtn:nth-child(1) { background: #FF5F57; }
+.windowBtn:nth-child(2) { background: #FEBC2E; }
+.windowBtn:nth-child(3) { background: #28C840; }
+
+.userAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin-left: 8px;
+}
