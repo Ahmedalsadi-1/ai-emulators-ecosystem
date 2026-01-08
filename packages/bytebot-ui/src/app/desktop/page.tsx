@@ -6,9 +6,11 @@ import { UnifiedDock } from "@/components/layout/UnifiedDock";
 import { VncViewer } from "@/components/vnc/VncViewer";
 import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { LocalScreenViewer } from "@/components/local-screen/LocalScreenViewer";
+import { GboxDesktopView } from "@/components/gbox/GboxDesktopView";
 import { TracePanel } from "@/components/trace/TracePanel";
 import {
   fetchModels,
+  fetchTasks,
   ControllerStatus
 } from "@/utils/taskUtils";
 import { useQuickTaskSession } from "@/hooks/useQuickTaskSession";
@@ -123,12 +125,30 @@ function VncEnvWarning() {
   );
 }
 
+// Task Status Badge Component
+function TaskStatusBadge({ status, count }: { status: string; count: number }) {
+  const colors = {
+    running: "text-green-500",
+    pending: "text-yellow-500", 
+    failing: "text-red-500"
+  };
+  
+  if (count === 0) return null;
+  
+  return (
+    <span className={`${colors[status as keyof typeof colors]} font-mono`}>
+      {status.toUpperCase()}:{count}
+    </span>
+  );
+}
+
 const controllerOptions: ControllerOption[] = [
   { id: "bytebot", label: "Bytebot" },
   { id: "local-screen", label: "Local Screen" },
   { id: "browseros", label: "BrowserOS" },
   { id: "turix", label: "Turix" },
   { id: "factif-ai", label: "Factif-AI" },
+  { id: "gbox", label: "Gbox" }, // Added Gbox
   { id: "open-interface", label: "Open Interface" },
 ];
 
@@ -166,6 +186,11 @@ export default function DesktopPage() {
   // NEW STATES
   const [showControllerPopup, setShowControllerPopup] = useState(false);
   const [showTaskHistory, setShowTaskHistory] = useState(false);
+  const [activeTasks, setActiveTasks] = useState({
+    running: 0,
+    pending: 0,
+    failing: 0
+  });
 
   const taskStorageKey = `bytebot:desktopTask:${activeWorkspace}`;
   const modelStorageKey = `bytebot:desktopModel:${activeWorkspace}`;
@@ -373,7 +398,7 @@ export default function DesktopPage() {
         const result = await fetchModels();
         if (!isMounted) return;
 
-        const allowedProviders = new Set(["routeway", "groq", "openai", "proxy", "google"]);
+        const allowedProviders = new Set(["routeway", "groq", "openai", "proxy", "google", "ollama-local"]);
         const filteredModels = result.filter(
           (model) =>
             model.capabilities?.toolCalling &&
@@ -396,6 +421,37 @@ export default function DesktopPage() {
 
     return () => {
       isMounted = false;
+    };
+  }, []);
+
+  // Load active tasks count
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadActiveTasks = async () => {
+      try {
+        const result = await fetchTasks({ statuses: ["RUNNING", "PENDING", "FAILING"], limit: 100 });
+        if (!isMounted) return;
+        
+        const counts = { running: 0, pending: 0, failing: 0 };
+        result.tasks.forEach((task: any) => {
+          if (task.status === 'RUNNING') counts.running++;
+          else if (task.status === 'PENDING') counts.pending++;
+          else if (task.status === 'FAILING') counts.failing++;
+        });
+        setActiveTasks(counts);
+      } catch (error) {
+        // Silently fail - task counting is not critical
+        console.warn('Failed to load active tasks:', error);
+      }
+    };
+    
+    loadActiveTasks();
+    const interval = setInterval(loadActiveTasks, 10000); // Refresh every 10 seconds
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -437,9 +493,19 @@ export default function DesktopPage() {
         {/* LEFT COLUMN: CHAT / SECONDARY */}
         <div className="flex w-[450px] flex-col border-r border-[#333] bg-[#000]">
           {/* Header */}
-          <div className="border-b border-[#333] bg-[#000] px-3 py-2 text-[#888] font-bold tracking-widest uppercase flex items-center gap-2">
-            <KronosLogo size={14} className="opacity-50" />
-            CHAT (LEFT / SECONDARY)
+          <div className="border-b border-[#333] bg-[#000] px-3 py-2 text-[#888] font-bold tracking-widest uppercase flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <KronosLogo size={14} className="opacity-50" />
+              CHAT
+            </div>
+            
+            {/* Task Status Indicator */}
+            <div className="flex items-center gap-2 text-[9px]">
+              <span className="text-[#444]">TASKS:</span>
+              <TaskStatusBadge status="running" count={activeTasks.running} />
+              <TaskStatusBadge status="pending" count={activeTasks.pending} />
+              <TaskStatusBadge status="failing" count={activeTasks.failing} />
+            </div>
           </div>
 
                       {/* User / AI Dialogue */}
@@ -505,35 +571,32 @@ export default function DesktopPage() {
           
 
             {/* Input Area */}
-            <div className="border-t border-[#333] bg-[#000] p-4">
+            <div className="border-t border-[#333] bg-[#000] p-3">
               <div className="text-[9px] uppercase tracking-widest text-[#444] mb-2 flex justify-between items-center">
-                <span>&gt; [user chat with the kronos-os]</span>
+                <span>&gt; CHAT</span>
                 
-                {/* Header Controls: History | Model | Web | Settings */}
+                {/* Controls: Tasks | Model | Web | Settings */}
                 <div className="flex items-center gap-3">
-                   {/* History */}
+                   {/* Tasks - Navigate to /tasks page */}
                    <button 
                      type="button"
-                     onClick={() => setShowTaskHistory(!showTaskHistory)}
+                     onClick={() => router.push('/tasks')}
                      className="text-[#555] hover:text-[#e0e0e0] transition-colors"
-                     title="Task History"
+                     title="Go to Tasks"
                    >
                      <Clock className="w-3 h-3" />
                    </button>
 
-                   {/* Model Selector */}
-                   <div className="flex items-center gap-2">
-                      <span className="text-[#333] text-[9px]">MODEL:</span>
-                      <select 
-                          value={selectedModel ? getModelKey(selectedModel) : ""}
-                          onChange={(e) => handleModelChange(e.target.value)}
-                          className="bg-[#050505] border border-[#333] text-[#888] text-[9px] px-2 py-0.5 focus:outline-none focus:border-[#666] uppercase"
-                      >
-                          {models.map(m => (
-                            <option key={getModelKey(m)} value={getModelKey(m)}>{m.title}</option>
-                          ))}
-                      </select>
-                   </div>
+                   {/* Model Selector - Small and compact */}
+                   <select 
+                       value={selectedModel ? getModelKey(selectedModel) : ""}
+                       onChange={(e) => handleModelChange(e.target.value)}
+                       className="bg-[#050505] border border-[#333] text-[#666] text-[8px] px-1 py-0.5 w-24 focus:outline-none focus:border-[#555] uppercase cursor-pointer"
+                   >
+                       {models.map(m => (
+                         <option key={getModelKey(m)} value={getModelKey(m)}>{m.name.split('/').pop()}</option>
+                       ))}
+                   </select>
 
                    {/* Web */}
                    <button 
@@ -621,27 +684,28 @@ export default function DesktopPage() {
 
               {/* Main Desktop Area */}
               <div className="flex-1 border border-[#333] bg-[#050505] relative overflow-hidden flex items-center justify-center group">
-                  {isLocalScreen ? (
-                    <LocalScreenViewer />
-                  ) : (
-                    <div className="w-full h-full relative">
-                       <VncViewer
-                          viewOnly={false}
-                          controllerType={vncControllerType}
-                          directUrl={currentDirectUrl}
-                        />
-                       {/* Overlay when not connected or loading, or just for aesthetic when empty */}
-                       {(!currentDirectUrl && !vncControllerType) && (
-                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-20">
-                            <div className="text-center space-y-2">
-                              <div className="text-[14px] font-bold text-[#fff] tracking-widest">[ LIVE DESKTOP PREVIEW PLACEHOLDER AREA — LARGE ]</div>
-                              <div className="text-[10px] text-[#fff] tracking-wider">[ DESKTOP CAPTURE STREAM / SCREENSHOT PLACEHOLDER ]</div>
-                            </div>
-                         </div>
-                       )}
-                    </div>
-                  )}
-                  
+                                {isLocalScreen ? (
+                                  <LocalScreenViewer />
+                                ) : currentScreen === 'gbox' ? (
+                                  <GboxDesktopView />
+                                ) : (
+                                  <div className="w-full h-full relative">
+                                     <VncViewer
+                                        viewOnly={false}
+                                        controllerType={vncControllerType}
+                                        directUrl={currentDirectUrl}
+                                      />
+                                     {/* Overlay when not connected or loading, or just for aesthetic when empty */}
+                                     {(!currentDirectUrl && !vncControllerType && currentScreen !== 'gbox') && (
+                                       <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-20">
+                                          <div className="text-center space-y-2">
+                                            <div className="text-[14px] font-bold text-[#fff] tracking-widest">[ LIVE DESKTOP PREVIEW PLACEHOLDER AREA — LARGE ]</div>
+                                            <div className="text-[10px] text-[#fff] tracking-wider">[ DESKTOP CAPTURE STREAM / SCREENSHOT PLACEHOLDER ]</div>
+                                          </div>
+                                       </div>
+                                     )}
+                                  </div>
+                                )}                  
                   {/* Corner accents for cyberpunk feel */}
                   <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#666] opacity-50" />
                   <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#666] opacity-50" />

@@ -21,10 +21,16 @@ export interface BytebotAgentService {
 }
 
 export interface BytebotAgentModel {
-  provider: 'anthropic' | 'openai' | 'google' | 'proxy';
+  provider: 'anthropic' | 'openai' | 'google' | 'proxy' | 'lm-studio' | 'ollama-local' | 'groq' | 'routeway' | 'opencode-local';
   name: string;
   title: string;
   contextWindow?: number;
+  capabilities?: {
+    toolCalling?: boolean;
+    vision?: boolean;
+    omniparser?: boolean;
+    streaming?: boolean;
+  };
 }
 
 export class BytebotAgentInterrupt extends Error {

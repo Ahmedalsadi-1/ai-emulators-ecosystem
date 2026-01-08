@@ -1,0 +1,257 @@
+import { BytebotAgentModel } from '../agent/agent.types';
+
+export const OLLAMA_MODELS: BytebotAgentModel[] = [
+  {
+    provider: 'ollama-local',
+    name: 'llama3.2:latest',
+    title: 'Llama 3.2 Latest (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'llama3.2:3b',
+    title: 'Llama 3.2 3B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'qwen2.5:7b',
+    title: 'Qwen2.5 7B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'qwen2.5-coder:7b',
+    title: 'Qwen2.5 Coder 7B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'codellama:7b',
+    title: 'CodeLlama 7B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'gemma2:2b',
+    title: 'Gemma 2 2B (Ollama Local)',
+    contextWindow: 2048,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'llava:latest',
+    title: 'LLaVA Latest (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: true,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'llava:7b',
+    title: 'LLaVA 7B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: true,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'mistral:latest',
+    title: 'Mistral Latest (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'mixtral:latest',
+    title: 'Mixtral Latest (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'neural-chat:latest',
+    title: 'Neural Chat (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'starcoder:latest',
+    title: 'StarCoder (Ollama Local)',
+    contextWindow: 8192,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'deepseek-coder:latest',
+    title: 'DeepSeek Coder (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'deepseek-llm:7b',
+    title: 'DeepSeek LLM 7B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'orca-2:latest',
+    title: 'Orca 2 (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'phi:latest',
+    title: 'Phi (Ollama Local)',
+    contextWindow: 2048,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: ' WizardLM2:latest',
+    title: 'WizardLM2 (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'nous-hermes2:latest',
+    title: 'Nous Hermes 2 (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'openhermes:latest',
+    title: 'OpenHermes (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'dolphin-mixtral:latest',
+    title: 'Dolphin Mixtral (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'qwen:7b',
+    title: 'Qwen 7B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'yi:6b',
+    title: 'Yi 6B (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'ollama-local',
+    name: 'orca:latest',
+    title: 'Orca (Ollama Local)',
+    contextWindow: 4096,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+];

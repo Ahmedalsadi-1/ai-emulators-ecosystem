@@ -1,5 +1,5 @@
-# Base image
-FROM node:20-alpine
+# Base image - using full Node.js image instead of alpine for better type support
+FROM node:20-slim
 
 # Declare build arguments
 ARG BYTEBOT_AGENT_BASE_URL
@@ -21,7 +21,11 @@ WORKDIR /app/packages/bytebot-ui
 # Install dependencies
 RUN npm install
 
+# Build the application
 RUN npm run build
+
+# Expose port
+EXPOSE 9992
 
 # Run the application (production mode with compiled output)
 CMD ["npm", "run", "start:prod"] 

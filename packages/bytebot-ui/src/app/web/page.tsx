@@ -69,6 +69,23 @@ const BROWSEROS_NOVNC_URL =
   process.env.NEXT_PUBLIC_BROWSEROS_NOVNC_URL ||
   "http://localhost:9994/vnc.html?autoconnect=1&resize=scale&reconnect=1";
 
+// FACTIF-AI Browser Control Endpoint Configuration
+const FACTIFAI_CONTROL_ENDPOINT =
+  process.env.NEXT_PUBLIC_FACTIFAI_VNC_URL ||
+  "ws://localhost:6082/websockify"; // From docker-compose.ecosystem.yml
+
+const FACTIFAI_WEBSOCKIFY_PATH =
+  process.env.NEXT_PUBLIC_FACTIFAI_WEBSOCKIFY_PATH ||
+  "/api/proxy/factifai-websockify";
+
+const FACTIFAI_NOVNC_URL =
+  process.env.NEXT_PUBLIC_FACTIFAI_NOVNC_URL ||
+  "http://localhost:6082/vnc.html?autoconnect=1&resize=scale&reconnect=1";
+
+const ACTIVE_BROWSER_AGENT =
+  (process.env.NEXT_PUBLIC_ACTIVE_BROWSER_AGENT as 'browseros' | 'factif-ai') ||
+  'browseros';
+
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 type BrowserDisplayMode = "vnc" | "novnc";
 
@@ -80,10 +97,15 @@ function VncEnvWarning() {
   useEffect(() => {
     const missing: string[] = [];
 
-    // Check BrowserOS VNC
-    if (!process.env.NEXT_PUBLIC_BROWSEROS_DESKTOP_VNC_URL &&
-        !process.env.NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT) {
-      missing.push('BROWSEROS_DESKTOP_VNC_URL (BrowserOS VNC)');
+    if (ACTIVE_BROWSER_AGENT === 'browseros') {
+      if (!process.env.NEXT_PUBLIC_BROWSEROS_DESKTOP_VNC_URL &&
+          !process.env.NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT) {
+        missing.push('BROWSEROS_DESKTOP_VNC_URL (BrowserOS VNC)');
+      }
+    } else if (ACTIVE_BROWSER_AGENT === 'factif-ai') {
+      if (!process.env.NEXT_PUBLIC_FACTIFAI_VNC_URL) {
+        missing.push('NEXT_PUBLIC_FACTIFAI_VNC_URL (Factif-AI VNC)');
+      }
     }
 
     if (missing.length > 0) {
@@ -95,9 +117,9 @@ function VncEnvWarning() {
   if (dismissed) return null;
 
   // Only show warning if env vars are actually missing
-  const showWarning =
-    !process.env.NEXT_PUBLIC_BROWSEROS_DESKTOP_VNC_URL &&
-    !process.env.NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT;
+  const showWarning = ACTIVE_BROWSER_AGENT === 'browseros'
+    ? (!process.env.NEXT_PUBLIC_BROWSEROS_DESKTOP_VNC_URL && !process.env.NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT)
+    : (!process.env.NEXT_PUBLIC_FACTIFAI_VNC_URL);
 
   if (!showWarning) return null;
 
@@ -107,14 +129,17 @@ function VncEnvWarning() {
         <div className="flex-1">
           <h4 className="text-sm font-semibold text-amber-200">VNC Configuration Needed</h4>
           <p className="mt-1 text-xs text-amber-300/80">
-            To enable BrowserOS VNC viewing, set:
+            To enable {ACTIVE_BROWSER_AGENT === 'browseros' ? 'BrowserOS' : 'Factif-AI'} VNC viewing, set:
           </p>
           <div className="mt-2 space-y-1">
             <code className="block rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-200">
-              BROWSEROS_DESKTOP_VNC_URL=ws://localhost:9994/websockify
+              {ACTIVE_BROWSER_AGENT === 'browseros'
+                ? 'BROWSEROS_DESKTOP_VNC_URL=ws://localhost:9994/websockify'
+                : 'NEXT_PUBLIC_FACTIFAI_VNC_URL=ws://localhost:6082/websockify'
+              }
             </code>
             <p className="text-xs text-amber-400/60">
-              Start the BrowserOS VNC container and restart the UI server.
+              Start the {ACTIVE_BROWSER_AGENT === 'browseros' ? 'BrowserOS' : 'Factif-AI'} VNC container and restart the UI server.
             </p>
           </div>
         </div>
@@ -140,6 +165,12 @@ export default function WebPage() {
   const [retryKey, setRetryKey] = useState(0);
   const [useNoVncFallback, setUseNoVncFallback] = useState(false);
   const [displayMode, setDisplayMode] = useState<BrowserDisplayMode>("vnc");
+
+  const browserAgentName = ACTIVE_BROWSER_AGENT === 'browseros' ? 'BrowserOS' : 'Factif-AI';
+  const controlEndpoint = ACTIVE_BROWSER_AGENT === 'browseros' ? BROWSEROS_CONTROL_ENDPOINT : FACTIFAI_CONTROL_ENDPOINT;
+  const websockifyPath = ACTIVE_BROWSER_AGENT === 'browseros' ? BROWSEROS_WEBSOCKIFY_PATH : FACTIFAI_WEBSOCKIFY_PATH;
+  const noVncUrl = ACTIVE_BROWSER_AGENT === 'browseros' ? BROWSEROS_NOVNC_URL : FACTIFAI_NOVNC_URL;
+
 
   const handleRefresh = useCallback(() => {
     setConnectionStatus("connecting");
@@ -194,7 +225,7 @@ export default function WebPage() {
   return (
     <div
       className="relative min-h-screen overflow-hidden bg-[#0b0b0c] text-[#e6e6e6]"
-      data-browseros-endpoint={BROWSEROS_CONTROL_ENDPOINT}
+      data-browseros-endpoint={controlEndpoint}
     >
       {/* Ambient radial gradients for matte black depth */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_circle_at_top,_rgba(42,42,42,0.35),_transparent_65%)]" />
@@ -210,10 +241,10 @@ export default function WebPage() {
           transition={{ duration: 0.4 }}
           className="mb-4 flex items-center justify-between rounded-lg border border-white/10 bg-[#141417]/85 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),_0_8px_24px_rgba(0,0,0,0.4)]"
         >
-          {/* Left: BrowserOS Label */}
+          {/* Left: Browser Agent Label */}
           <div className="flex items-center gap-3">
             <div className="text-xs font-semibold uppercase tracking-[0.3em] text-[#e6e6e6]">
-              BrowserOS
+              {browserAgentName}
             </div>
             <div className="h-4 w-px bg-white/10" />
             <div className="flex items-center gap-2">
@@ -241,7 +272,7 @@ export default function WebPage() {
             </div>
           </div>
 
-          {/* Right: BrowserOS Controls */}
+          {/* Right: Browser Controls */}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -256,7 +287,7 @@ export default function WebPage() {
               type="button"
               onClick={toggleDisplayMode}
               className="flex items-center gap-1.5 rounded-md border border-white/10 bg-[#1a1b1d] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#bdbdbd] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all hover:bg-[#222327] hover:text-[#e6e6e6]"
-              title={displayMode === "vnc" ? "Switch to noVNC" : "Switch to VNC"}
+              title={displayMode === "vnc" ? `Switch to noVNC for ${browserAgentName}` : `Switch to VNC for ${browserAgentName}`}
             >
               {displayMode === "vnc" ? "Use noVNC" : "Use VNC"}
             </button>
@@ -287,16 +318,16 @@ export default function WebPage() {
             {shouldUseNoVnc ? (
               <iframe
                 key={`novnc-${retryKey}`}
-                src={BROWSEROS_NOVNC_URL}
+                src={noVncUrl}
                 className="h-full w-full"
-                title="BrowserOS noVNC"
+                title={`${browserAgentName} noVNC`}
               />
             ) : (
               <VncViewer
                 key={`${retryKey}-${displayMode}`}
                 viewOnly={false}
-                controllerType="browseros"
-                proxyPath={BROWSEROS_WEBSOCKIFY_PATH}
+                controllerType={ACTIVE_BROWSER_AGENT}
+                proxyPath={websockifyPath}
                 onStatusChange={handleConnectionStatus}
               />
             )}
@@ -311,12 +342,12 @@ export default function WebPage() {
           className="mt-3 flex items-center justify-between px-1"
         >
           <div className="flex items-center gap-2 text-[9px] text-[#666]">
-            <span className="font-mono">{BROWSEROS_CONTROL_ENDPOINT}</span>
+            <span className="font-mono">{controlEndpoint}</span>
             <span className="text-white/20">|</span>
             <span>{shouldUseNoVnc ? "noVNC fallback" : "VNC Interactive Mode"}</span>
           </div>
           <div className="text-[9px] text-[#555]">
-            BrowserOS Control Surface
+            {browserAgentName} Control Surface
           </div>
         </motion.div>
       </main>
