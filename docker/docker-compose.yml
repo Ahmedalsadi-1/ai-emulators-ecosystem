@@ -10,8 +10,7 @@ services:
     hostname: computer-1
     privileged: true
     ports:
-      - "9990:9990"
-      - "9991:9991"
+      - "9990:9990"  # VNC port only
     environment:
       - DISPLAY=:0
       - PORT=9991
@@ -29,7 +28,6 @@ services:
     privileged: true
     ports:
       - "9993:9990"
-      - "9994:9991"
     environment:
       - DISPLAY=:0
       - PORT=9991
@@ -47,7 +45,6 @@ services:
     privileged: true
     ports:
       - "9995:9990"
-      - "9996:9991"
     environment:
       - DISPLAY=:0
       - PORT=9991
@@ -55,6 +52,7 @@ services:
     networks:
       - bytebot-network
 
+  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: bytebot-postgres
@@ -70,41 +68,71 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  bytebot-agent:
-    image: ghcr.io/bytebot-ai/bytebot-agent:edge
-    container_name: bytebot-agent
+  # LLM Proxy (LiteLLM) - Aggregates all model providers
+  bytebot-llm-proxy:
+    image: ghcr.io/bytebot-ai/bytebot-llm-proxy:edge
+    container_name: bytebot-llm-proxy
     restart: unless-stopped
+    ports:
+      - "4000:4000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bytebotdb}
-      - BYTEBOT_DESKTOP_BASE_URL_1=${BYTEBOT_DESKTOP_BASE_URL_1:-http://bytebot-edge-1:9991}
-      - BYTEBOT_DESKTOP_BASE_URL_2=${BYTEBOT_DESKTOP_BASE_URL_2:-http://bytebot-edge-2:9991}
-      - BYTEBOT_DESKTOP_BASE_URL_3=${BYTEBOT_DESKTOP_BASE_URL_3:-http://bytebot-edge-3:9991}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - ROUTEWAY_API_KEY=${ROUTEWAY_API_KEY}
-    depends_on:
-      - postgres
     networks:
       - bytebot-network
 
-  bytebot-ui:
-    image: ghcr.io/bytebot-ai/bytebot-ui:edge
-    container_name: bytebot-ui
+  # AI Agent Orchestrator
+  bytebot-agent:
+    image: ghcr.io/bytebot-ai/bytebot-agent:edge
+    container_name: bytebot-agent
     restart: unless-stopped
     ports:
-      - "9992:9992"
+      - "9991:9991"
     environment:
-      - NODE_ENV=production
-      - BYTEBOT_AGENT_BASE_URL=${BYTEBOT_AGENT_BASE_URL:-http://bytebot-agent:9991}
-      - BYTEBOT_DESKTOP_VNC_URL_1=${BYTEBOT_DESKTOP_VNC_URL_1:-ws://bytebot-edge-1:9990}
-      - BYTEBOT_DESKTOP_VNC_URL_2=${BYTEBOT_DESKTOP_VNC_URL_2:-ws://bytebot-edge-2:9990}
-      - BYTEBOT_DESKTOP_VNC_URL_3=${BYTEBOT_DESKTOP_VNC_URL_3:-ws://bytebot-edge-3:9990}
+      # Database
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bytebotdb}
+      
+      # Desktop connections (internal docker network)
+      - BYTEBOT_DESKTOP_BASE_URL_1=http://bytebot-edge-1:9991
+      - BYTEBOT_DESKTOP_BASE_URL_2=http://bytebot-edge-2:9991
+      - BYTEBOT_DESKTOP_BASE_URL_3=http://bytebot-edge-3:9991
+      
+      # LLM Proxy (LiteLLM at port 4000)
+      - BYTEBOT_LLM_PROXY_URL=http://bytebot-llm-proxy:4000/v1
+
+      # LM Studio for local models (built-in agent support)
+      - LM_STUDIO_BASE_URL=http://host.docker.internal:1234
+
+      # Model configurations from local LM Studio
+      - BYTEBOT_PROXY_MODELS=${BYTEBOT_PROXY_MODELS:-qwen3-4b-agent-claude-gemini-qx86-hi-mlx@tool,ui-tars-7b-dpo@tool,qwen2.5-vl-7b-instruct@tool,llama-3.2-11b-vision-instruct@f16@tool,llama-3.2-11b-vision-instruct@q4_k_m@tool,minicpm-v-2_6@tool,text-embedding-nomic-embed-text-v1.5}
+      - BYTEBOT_TOOL_MODEL_OVERRIDES=${BYTEBOT_TOOL_MODEL_OVERRIDES:-proxy:ui-tars-7b-dpo,proxy:qwen3-4b-agent-claude-gemini-qx86-hi-mlx,proxy:qwen2.5-vl-7b-instruct,proxy:llama-3.2-11b-vision-instruct,proxy:minicpm-v-2_6,groq:llama-3.1-8b-instant,ollama-local:functiongemma:latest,ollama-local:qwen3-vl:8b}
+      - BYTEBOT_INCLUDE_LOCAL_MODELS=${BYTEBOT_INCLUDE_LOCAL_MODELS:-true}
+      
+      # OmniParser (host machine)
+      - OMNIPARSER_BASE_URL=${OMNIPARSER_BASE_URL:-http://host.docker.internal:8001}
+      - OMNIPARSER_ENABLED=${OMNIPARSER_ENABLED:-true}
+      - OMNIPARSER_TIMEOUT_MS=${OMNIPARSER_TIMEOUT_MS:-5000}
+      - OMNIPARSER_MAX_ELEMENTS=${OMNIPARSER_MAX_ELEMENTS:-20}
+      
+      # API Keys for cloud providers (fallback if LLM Proxy doesn't have them)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ROUTEWAY_API_KEY=${ROUTEWAY_API_KEY}
+      
+      # Settings
+      - BYTEBOT_REQUIRE_SESSION_ID=${BYTEBOT_REQUIRE_SESSION_ID:-true}
     depends_on:
-      - bytebot-agent
+      - postgres
+      - bytebot-llm-proxy
     networks:
       - bytebot-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   bytebot-network:

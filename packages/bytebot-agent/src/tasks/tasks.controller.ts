@@ -193,10 +193,41 @@ export class TasksController {
       dynamicModels = [...dynamicModels, ...ROUTEWAY_MODELS];
     }
 
-    console.log('[Models] Total models:', dynamicModels.length);
+    console.log('[Models] Total models so far:', dynamicModels.length);
+
     // Always add Ollama and OpenCode models
     dynamicModels = [...dynamicModels, ...OLLAMA_MODELS];
     dynamicModels = [...dynamicModels, ...OPENCODE_MODELS];
+
+    // Fetch LM Studio models from the configured URL
+    const lmStudioBaseUrl = process.env.LM_STUDIO_BASE_URL || 'http://192.168.1.118:1234';
+    try {
+      console.log('[Models] Fetching LM Studio models from:', lmStudioBaseUrl);
+      const response = await fetch(`${lmStudioBaseUrl}/v1/models`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) {
+        const data = await response.json() as { data: Array<{ id: string }> };
+        const lmStudioModels = (data.data || []).map((model) => ({
+          provider: 'lm-studio',
+          name: model.id,
+          title: `${model.id} (LM Studio Local)`,
+          contextWindow: 32768,
+          capabilities: {
+            toolCalling: true,
+            vision: model.id.includes('vl') || model.id.includes('vision'),
+            omniparser: model.id.includes('vl') || model.id.includes('vision'),
+            streaming: true,
+          },
+        }));
+        console.log('[Models] Found LM Studio models:', lmStudioModels.length);
+        dynamicModels = [...dynamicModels, ...lmStudioModels];
+      } else {
+        console.log('[Models] LM Studio returned:', response.status);
+      }
+    } catch (error) {
+      console.log('[Models] LM Studio not available:', error instanceof Error ? error.message : error);
+    }
 
     // Filter for tool-capable models if requested
     if (toolCalling === 'true') {
@@ -206,6 +237,7 @@ export class TasksController {
       console.log('[Models] Filtered to tool-capable models:', dynamicModels.length);
     }
 
+    console.log('[Models] Total models:', dynamicModels.length);
     return dynamicModels;
   }
 

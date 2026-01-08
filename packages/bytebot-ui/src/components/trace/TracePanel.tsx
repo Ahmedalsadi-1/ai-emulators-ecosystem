@@ -6,6 +6,7 @@ import type { QuickTaskTraceEntry } from "@/hooks/useQuickTaskSession";
 type TracePanelProps = {
   entries: QuickTaskTraceEntry[];
   onClear?: () => void;
+  embedded?: boolean;
 };
 
 const getTraceLabel = (entry: QuickTaskTraceEntry): string => {
@@ -25,7 +26,47 @@ const downloadTrace = (entries: QuickTaskTraceEntry[]) => {
   URL.revokeObjectURL(url);
 };
 
-export function TracePanel({ entries, onClear }: TracePanelProps) {
+export function TracePanel({ entries, onClear, embedded = false }: TracePanelProps) {
+  if (embedded) {
+    return (
+      <div className="space-y-2 w-full">
+        {entries.map((entry) => (
+          <div
+            key={entry.id}
+            className="rounded-sm border border-[#333] bg-[#111] px-2 py-1.5 text-[8px] text-[#b0b0b0]"
+          >
+            <div className="flex items-center justify-between text-[7px] uppercase tracking-[0.1em] text-[#666]">
+              <span>{getTraceLabel(entry)}</span>
+              <span>{entry.time}</span>
+            </div>
+            <div className="mt-1 text-[8px] text-[#b0b0b0]">
+              <span className="font-semibold text-[#d0d0d0]">
+                {entry.label}
+              </span>
+              {entry.sessionId && (
+                <span className="ml-2 text-[#777777]">
+                  session:{entry.sessionId}
+                </span>
+              )}
+            </div>
+            {entry.details && (
+              <p className="mt-1 text-[8px] text-[#8a8a8a] break-all font-mono">
+                {entry.details}
+              </p>
+            )}
+            {entry.image && (
+              <img
+                src={`data:image/png;base64,${entry.image}`}
+                alt="Tool result"
+                className="mt-2 max-h-24 w-full rounded-sm border border-[#2a2a2a] object-contain"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="border-b border-[#3a3a3a] bg-[#1e1e1e] p-3">
       <div className="flex items-center justify-between">

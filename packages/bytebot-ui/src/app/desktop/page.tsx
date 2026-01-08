@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import { motion } from "motion/react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FloatingNav } from "@/components/layout/FloatingNav";
+import { UnifiedDock } from "@/components/layout/UnifiedDock";
 import { VncViewer } from "@/components/vnc/VncViewer";
 import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { LocalScreenViewer } from "@/components/local-screen/LocalScreenViewer";
@@ -18,17 +17,14 @@ import { useMultiControllerState } from "@/hooks/useMultiControllerState";
 import type { Model } from "@/types";
 import type { ControllerOption } from "@/types/controller.types";
 import {
-  Globe,
-  Keyboard,
-  MessageSquarePlus,
   Send,
-  Settings,
   Terminal,
-  Search,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  RefreshCw,
+  X,
+  Check,
+  Settings,
+  Globe,
+  Clock,
+  Tv
 } from "lucide-react";
 import { KronosLogo } from "@/components/branding/KronosLogo";
 
@@ -113,37 +109,15 @@ function VncEnvWarning() {
   if (!showWarning) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 shadow-lg backdrop-blur-sm">
+    <div className="fixed bottom-20 right-4 z-50 max-w-sm border border-amber-500/50 bg-[#111] p-4 text-[10px] font-mono shadow-lg">
       <div className="flex items-start gap-3">
         <div className="flex-1">
-          <h4 className="text-sm font-semibold text-amber-200">VNC Configuration Needed</h4>
-          <p className="mt-1 text-xs text-amber-300/80">
-            To enable desktop VNC viewing, set these environment variables:
-          </p>
-          <div className="mt-2 space-y-1">
-            <code className="block rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-200">
-              BYTEBOT_DESKTOP_VNC_URL=ws://localhost:9990/websockify
-            </code>
-            <code className="block rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-200">
-              DEBIAN_DESKTOP_VNC_URL=ws://localhost:9995/websockify
-            </code>
-            <code className="block rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-200">
-              BYTEBOT_DESKTOP_KALI_VNC_URL=ws://localhost:9993/websockify
-            </code>
+          <h4 className="font-bold text-amber-500 uppercase">VNC Config Needed</h4>
+          <div className="mt-2 space-y-1 text-amber-200/80">
+            <div className="bg-amber-900/20 px-1 py-0.5">BYTEBOT_DESKTOP_VNC_URL=ws://localhost:9990/websockify</div>
           </div>
-          <p className="mt-2 text-xs text-amber-400/60">
-            Start the VNC containers and restart the UI server.
-          </p>
         </div>
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-amber-400 hover:text-amber-200"
-          aria-label="Dismiss warning"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <button onClick={() => setDismissed(true)} className="text-amber-500 hover:text-amber-300">X</button>
       </div>
     </div>
   );
@@ -159,82 +133,12 @@ const controllerOptions: ControllerOption[] = [
 ];
 
 const defaultWorkspaces: WorkspaceOption[] = [
-  { id: "bytebot-edge-1", label: "BYTEBOT EDGE 1", screen: "bytebot-edge-1", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_1 },
-  { id: "bytebot-edge-2", label: "BYTEBOT EDGE 2", screen: "bytebot-edge-2", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_2 },
-  { id: "bytebot-edge-3", label: "BYTEBOT EDGE 3", screen: "bytebot-edge-3", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_3 },
+  { id: "bytebot-edge-1", label: "KRON-1", screen: "bytebot-edge-1", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_1 },
+  { id: "bytebot-edge-2", label: "KRON-2", screen: "bytebot-edge-2", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_2 },
+  { id: "bytebot-edge-3", label: "KRON-3", screen: "bytebot-edge-3", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_3 },
+  { id: "factif-ai", label: "FACTIF-AI", screen: "factif-ai", directUrl: process.env.NEXT_PUBLIC_FACTIFAI_VNC_URL || 'ws://localhost:6082/websockify' },
+  { id: "gbox", label: "GBOX", screen: "gbox", directUrl: undefined }, // Gbox will use GboxDesktopView component
 ];
-
-function ControlPill({
-  label,
-  icon,
-  onClick,
-  active,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-sm border px-3 py-1 text-[8px] font-semibold tracking-[0.1em] transition-all ${
-        active
-          ? "border-[#4a4a4a] bg-[#2a2a2a] text-[#e0e0e0]"
-          : "border-[#3a3a3a] bg-[#1a1a1a] text-[#888888] hover:bg-[#222222] hover:text-[#b0b0b0]"
-      }`}
-    >
-      <span className="text-[#666666]">{icon}</span>
-      {label}
-    </button>
-  );
-}
-
-function VncToolbar() {
-  return (
-    <div className="flex items-center justify-between px-2 h-7 border-b border-[#3a3a3a] bg-[#1e1e1e]">
-      <span className="text-[8px] uppercase tracking-[0.1em] text-[#888888]">Live Desktop View</span>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="p-1 text-[#666666] hover:text-[#e0e0e0] transition-colors"
-          title="Search"
-        >
-          <Search className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          className="p-1 text-[#666666] hover:text-[#e0e0e0] transition-colors"
-          title="Zoom Out"
-        >
-          <ZoomOut className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          className="p-1 text-[#666666] hover:text-[#e0e0e0] transition-colors"
-          title="Zoom In"
-        >
-          <ZoomIn className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          className="p-1 text-[#666666] hover:text-[#e0e0e0] transition-colors"
-          title="Refresh"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          className="p-1 text-[#666666] hover:text-[#e0e0e0] transition-colors"
-          title="Fullscreen"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function DesktopPage() {
   const router = useRouter();
@@ -258,8 +162,16 @@ export default function DesktopPage() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [keyboardNavigationActive, setKeyboardNavigationActive] = useState(false);
   const [unavailableControllers, setUnavailableControllers] = useState<Record<string, { transient: boolean; message: string }>>({});
+  
+  // NEW STATES
+  const [showControllerPopup, setShowControllerPopup] = useState(false);
+  const [showTaskHistory, setShowTaskHistory] = useState(false);
+
   const taskStorageKey = `bytebot:desktopTask:${activeWorkspace}`;
   const modelStorageKey = `bytebot:desktopModel:${activeWorkspace}`;
+  
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.NEXT_PUBLIC_BYTEBOT_AGENT_BASE_URL ||
@@ -389,6 +301,11 @@ export default function DesktopPage() {
     clearTrace,
   } = useQuickTaskSession({ storageKey: taskStorageKey });
 
+  // Scroll to bottom of chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, traceEntries]);
+
   // Multi-controller state management
   const {
     controllers,
@@ -445,164 +362,6 @@ export default function DesktopPage() {
     await sendMessage(messageToSend, selectedModel);
   };
 
-  const handleToggleTerminal = () => {
-    setShowTerminal((prev) => !prev);
-  };
-
-  const handleOpenWeb = () => {
-    router.push("/web");
-  };
-
-  const handleNewChat = () => {
-    resetSession();
-    addLog("Started new chat session");
-  };
-
-  const handleControllerChange = async (controllerId: string, multiSelect: boolean = false) => {
-    toggleController(controllerId, multiSelect);
-
-    const label =
-      controllerOptions.find((item) => item.id === controllerId)?.label ||
-      controllerId;
-
-    // Controllers that can be launched via /computer-use/launch
-    const launchableControllers = ['turix', 'open-interface', 'browseros', 'aios', 'factif-ai'];
-
-    // Check if this controller should be launched
-    if (launchableControllers.includes(controllerId)) {
-      try {
-        // Create AbortController for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-        const response = await fetch('/api/proxy/desktop/computer-use/launch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ application: controllerId }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        // Check HTTP status code for proper error classification
-        if (!response.ok) {
-          let errorMessage = `HTTP ${response.status}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch {
-            // Ignore JSON parse errors
-          }
-
-          // Classify HTTP errors
-          if (response.status === 500) {
-            errorMessage = `bytebotd service error: ${errorMessage}`;
-          } else if (response.status === 404) {
-            errorMessage = `${label} endpoint not found`;
-          } else if (response.status >= 400 && response.status < 500) {
-            errorMessage = `Request failed: ${errorMessage}`;
-          }
-
-          addLog(`Failed to launch ${label}: ${errorMessage}`);
-          // HTTP errors from service are typically transient
-          setUnavailableControllers(prev => ({
-            ...prev,
-            [controllerId]: { transient: true, message: errorMessage },
-          }));
-          return;
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-          addLog(`Launched ${label} application`);
-          // Clear unavailable state on successful launch
-          setUnavailableControllers(prev => {
-            const next = { ...prev };
-            delete next[controllerId];
-            return next;
-          });
-        } else {
-          // Classify the error for actionable feedback
-          const message = result.message || 'Unknown error';
-          let errorMessage = `Failed to launch ${label}: ${message}`;
-          let isPermanent = false;
-
-          if (message.includes('not found') || message.includes('not installed')) {
-            errorMessage = `${label} is not installed`;
-            isPermanent = true;
-          } else if (message.includes('ENOENT') || message.includes('command not found')) {
-            errorMessage = `${label} application not found`;
-            isPermanent = true;
-          }
-
-          addLog(errorMessage);
-
-          // Mark controller as unavailable (permanent or transient based on error type)
-          if (isPermanent) {
-            setUnavailableControllers(prev => ({
-              ...prev,
-              [controllerId]: { transient: false, message: errorMessage },
-            }));
-          } else {
-            // Transient failure - allow retry
-            setUnavailableControllers(prev => ({
-              ...prev,
-              [controllerId]: { transient: true, message: errorMessage },
-            }));
-          }
-        }
-      } catch (error) {
-        // Classify network/timeout errors
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        let userMessage = `Error launching ${label}: ${errorMessage}`;
-        let isTransient = false;
-
-        if (errorMessage.includes('AbortError') || errorMessage.includes('timeout')) {
-          userMessage = `${label} launch timed out after 10s`;
-          isTransient = true;
-        } else if (
-          errorMessage.includes('fetch') ||
-          errorMessage.includes('network') ||
-          errorMessage.includes('Failed to fetch') ||
-          errorMessage.includes('CORS') ||
-          errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-          errorMessage.includes('ERR_NAME_NOT_RESOLVED')
-        ) {
-          userMessage = `Network error - check connection to bytebotd service`;
-          isTransient = true;
-        }
-
-        addLog(userMessage);
-
-        // Mark controller as unavailable for transient failures
-        if (isTransient) {
-          setUnavailableControllers(prev => ({
-            ...prev,
-            [controllerId]: { transient: true, message: userMessage },
-          }));
-        } else {
-          // For unknown errors, assume transient (could be temporary)
-          setUnavailableControllers(prev => ({
-            ...prev,
-            [controllerId]: { transient: true, message: userMessage },
-          }));
-        }
-      }
-      return;
-    }
-
-    // For non-launchable controllers, just log the selection
-    addLog(`${multiSelect ? 'Toggled' : 'Switched to'} controller: ${label}`);
-  };
-
-  const handleClearPanel = () => {
-    clearMessages();
-  };
-
-  const activeControllerLabel = primaryControllerId
-    ? controllerOptions.find((item) => item.id === primaryControllerId)?.label || "Multiple"
-    : activeControllerIds.length > 0 ? "Multiple" : "None";
   const isLocalScreen = primaryControllerId === "local-screen";
 
   // Load models on component mount
@@ -663,419 +422,294 @@ export default function DesktopPage() {
     );
   }, [modelStorageKey, selectedModel?.name, selectedModel?.provider]);
 
-  useEffect(() => {
-    if (keyboardNavigationActive) {
-      const timeout = setTimeout(() => setKeyboardNavigationActive(false), 3000);
-      return () => clearTimeout(timeout);
-    }
-  }, [keyboardNavigationActive]);
+  // Handlers for Dock Actions
+  const handleToggleControllers = () => setShowControllerPopup(!showControllerPopup);
+  const handleToggleTasks = () => setShowTaskHistory(!showTaskHistory);
+  const handleSwitchDesktop = (desktopId: string) => setActiveWorkspace(desktopId);
 
   return (
-    <div className="relative min-h-screen bg-[#1a1a1a] text-[#e0e0e0]">
-      <FloatingNav />
+    <div className="flex h-screen flex-col bg-[#000] text-[#e0e0e0] font-mono text-xs overflow-hidden select-none">
       <VncEnvWarning />
+      
+      {/* Main Content Area - Split Pane */}
+      <div className="flex flex-1 overflow-hidden border-x border-[#333] mx-2 mt-2 bg-[#000]">
+        
+        {/* LEFT COLUMN: CHAT / SECONDARY */}
+        <div className="flex w-[450px] flex-col border-r border-[#333] bg-[#000]">
+          {/* Header */}
+          <div className="border-b border-[#333] bg-[#000] px-3 py-2 text-[#888] font-bold tracking-widest uppercase flex items-center gap-2">
+            <KronosLogo size={14} className="opacity-50" />
+            CHAT (LEFT / SECONDARY)
+          </div>
 
-      <main className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-7xl"
-        >
-          {/* Main Container - Matte Black with thin beveled borders */}
-          <div className="rounded-sm border border-[#3a3a3a] bg-[#1a1a1a]">
-            {/* Header Bar */}
-            <div className="flex items-center justify-between gap-3 rounded-t-sm border-b border-[#3a3a3a] bg-[#1e1e1e] px-4 py-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#e0e0e0]">
-                  <KronosLogo size={48} className="h-6 w-auto" />
-                  Kron-Desktop
-                </div>
-                {keyboardNavigationActive && (
-                  <span className="rounded-sm border border-[#4a4a4a] bg-[#2a2a2a] px-2 py-0.5 text-[8px] text-[#b0b0b0]">
-                    Keyboard Mode
-                  </span>
-                )}
-                {activeControllerIds.length > 0 && (
-                  <span className="rounded-sm border border-[#4a4a4a] bg-[#2a2a2a] px-2 py-0.5 text-[8px] text-[#b0b0b0]">
-                    {activeControllerIds.length} active
-                  </span>
-                )}
-              </div>
+                      {/* User / AI Dialogue */}
 
-              <div className="flex items-center gap-3">
-                <div className="flex items-center rounded-sm border border-[#3a3a3a] bg-[#1a1a1a] px-2 py-1.5 text-[8px] tracking-[0.08em] text-[#b0b0b0]">
-                  <span className="mr-2 text-[7px] uppercase tracking-[0.1em] text-[#666666]">
-                    Model
-                  </span>
-                  {modelFetchError ? (
-                    <div className="flex flex-col items-start gap-1">
-                      <span className="text-[8px] text-[#c9a227]">
-                        Fetch failed
-                      </span>
-                      <span className="text-[7px] text-[#888888] max-w-[120px] truncate" title={modelFetchError.message}>
-                        {modelFetchError.message}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setModelFetchError(null);
-                          fetchModels().then(result => {
-                            setModels(result);
-                            setModelFetchError(null);
-                          }).catch(error => {
-                            setModelFetchError({
-                              url: '/api/tasks/models',
-                              message: error instanceof Error ? error.message : String(error),
-                            });
-                          });
-                        }}
-                        className="text-[7px] text-[#888888] hover:text-[#b0b0b0] underline"
+                    <div className="flex-1 flex flex-col overflow-hidden bg-[#000]">
+
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+                         {/* Welcome/Placeholder */}
+
+                         {messages.length === 0 && (
+
+                           <div className="border border-[#333] border-dashed p-4 text-center opacity-40">
+
+                             <div className="mb-2 uppercase tracking-widest">[USER / AI DIALOGUE PLACEHOLDER]</div>
+
+                             <div>System Ready. Waiting for input...</div>
+
+                           </div>
+
+                         )}
+
+          
+
+                         {messages.map((entry) => (
+
+                          <div key={entry.id} className="flex flex-col gap-1 group">
+
+                            <div className={`border px-3 py-2 max-w-[90%] ${
+
+                              entry.role === 'USER' 
+
+                                ? 'border-[#333] bg-[#0a0a0a] self-end ml-auto' 
+
+                                : 'border-[#444] bg-[#050505] self-start mr-auto'
+
+                            }`}>
+
+                              <div className="mb-1 flex items-center justify-between gap-4 text-[9px] uppercase tracking-wider text-[#555]">
+
+                                <span className="font-bold">{entry.role === "USER" ? "USER MESSAGE" : "AI RESPONSE"}</span>
+
+                                <span>{entry.time}</span>
+
+                              </div>
+
+                              <div className="whitespace-pre-wrap leading-relaxed text-[#ccc]">
+
+                                {entry.text}
+
+                              </div>
+
+                            </div>
+
+                          </div>
+
+                         ))}
+
+                         <div ref={chatEndRef} />
+
+                      </div>
+
+          
+
+            {/* Input Area */}
+            <div className="border-t border-[#333] bg-[#000] p-4">
+              <div className="text-[9px] uppercase tracking-widest text-[#444] mb-2 flex justify-between items-center">
+                <span>&gt; [user chat with the kronos-os]</span>
+                
+                {/* Header Controls: History | Model | Web | Settings */}
+                <div className="flex items-center gap-3">
+                   {/* History */}
+                   <button 
+                     type="button"
+                     onClick={() => setShowTaskHistory(!showTaskHistory)}
+                     className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                     title="Task History"
+                   >
+                     <Clock className="w-3 h-3" />
+                   </button>
+
+                   {/* Model Selector */}
+                   <div className="flex items-center gap-2">
+                      <span className="text-[#333] text-[9px]">MODEL:</span>
+                      <select 
+                          value={selectedModel ? getModelKey(selectedModel) : ""}
+                          onChange={(e) => handleModelChange(e.target.value)}
+                          className="bg-[#050505] border border-[#333] text-[#888] text-[9px] px-2 py-0.5 focus:outline-none focus:border-[#666] uppercase"
                       >
-                        Retry
-                      </button>
-                    </div>
-                  ) : (
-                    <select
-                      value={selectedModel ? getModelKey(selectedModel) : ""}
-                      onChange={(event) => handleModelChange(event.target.value)}
-                      className="bg-transparent text-[8px] font-medium tracking-[0.08em] text-[#b0b0b0] focus:outline-none"
-                    >
-                      {models.map((model) => (
-                        <option key={getModelKey(model)} value={getModelKey(model)}>
-                          {model.title}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                          {models.map(m => (
+                            <option key={getModelKey(m)} value={getModelKey(m)}>{m.title}</option>
+                          ))}
+                      </select>
+                   </div>
+
+                   {/* Web */}
+                   <button 
+                     type="button"
+                     onClick={() => router.push('/web')}
+                     className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                     title="Open Web"
+                   >
+                     <Globe className="w-3 h-3" />
+                   </button>
+
+                   {/* Settings */}
+                   <button 
+                     type="button"
+                     onClick={() => router.push('/settings')}
+                     className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                     title="Settings"
+                   >
+                     <Settings className="w-3 h-3" />
+                   </button>
                 </div>
-                {taskStatus && (
-                  <span className="rounded-sm border border-[#3a3a3a] bg-[#1a1a1a] px-2 py-1.5 text-[8px] font-medium uppercase tracking-[0.1em] text-[#888888]">
-                    {taskStatus}
-                  </span>
-                )}
               </div>
+              
+              <form onSubmit={handleSend} className="flex flex-col gap-2">
+                <div className="w-full border border-[#333] bg-[#000] p-3 focus-within:border-[#666] min-h-[100px] flex flex-col relative">
+                  <textarea 
+                    value={command}
+                    onChange={(e) => setCommand(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend(e);
+                      }
+                    }}
+                    className="flex-1 bg-transparent text-[#e0e0e0] placeholder-[#333] focus:outline-none resize-none font-mono text-[11px] leading-relaxed"
+                    placeholder="Enter command..."
+                    autoFocus
+                  />
+                  
+                  {/* Footer of Input Box */}
+                  <div className="flex justify-end items-center gap-3 mt-2 pt-2 border-t border-[#333]/30">
+                    {/* Controller Toggle (TV) */}
+                    <button 
+                      type="button"
+                      onClick={() => setShowControllerPopup(!showControllerPopup)}
+                      className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                      title="Controllers"
+                    >
+                      <Tv className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button 
+                      type="submit"
+                      disabled={isLoading || !selectedModel}
+                      className="flex items-center gap-2 px-4 py-1.5 border border-[#333] bg-[#0a0a0a] hover:bg-[#111] text-[#888] hover:text-[#e0e0e0] transition-colors uppercase tracking-widest text-[9px]"
+                    >
+                      <span>SEND COMMAND</span>
+                      <Send className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
 
-            {/* Main Content Grid */}
-            <div className="grid gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
-              {/* Left Column: Agent Feed + Controllers */}
-              <div className="flex flex-col border-r border-[#3a3a3a]">
-                {/* Agent Feed Panel */}
-                <div className="border-b border-[#3a3a3a] bg-[#1e1e1e] p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#888888]">Agent Feed</span>
-                    <button
-                      type="button"
-                      onClick={handleClearPanel}
-                      className="rounded-sm border border-[#3a3a3a] bg-[#1a1a1a] px-2 py-0.5 text-[7px] font-medium tracking-[0.1em] text-[#666666] transition-all hover:bg-[#222222] hover:text-[#888888]"
-                    >
-                      Clear
-                    </button>
+                    </div>
+
                   </div>
 
-                  <div className="mt-3 h-[280px] space-y-2 overflow-auto pr-1">
-                    {messages.length === 0 && (
-                      <div className="text-[8px] text-[#555555]">No messages yet.</div>
-                    )}
+        {/* RIGHT COLUMN: LIVE DESKTOP PREVIEW */}
+        <div className="flex flex-1 flex-col bg-[#000] relative">
+           {/* Header */}
+           <div className="border-b border-[#333] bg-[#000] px-3 py-2 text-[#888] font-bold tracking-widest uppercase flex justify-between items-center">
+            <span>LIVE DESKTOP PREVIEW (RIGHT / PRIMARY)</span>
+            {activeWorkspace && (
+              <span className="text-[#444] px-2 border border-[#333] text-[9px]">{workspaces.find(w => w.id === activeWorkspace)?.label}</span>
+            )}
+           </div>
 
-                    {messages.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="rounded-sm border border-[#3a3a3a] bg-[#1a1a1a] px-2 py-1.5 text-[8px] text-[#b0b0b0]"
-                      >
-                        <div className="flex items-center justify-between text-[7px] uppercase tracking-[0.1em] text-[#666666]">
-                          <span>
-                            {entry.role === "USER" ? "You" : "Bytebot"}
-                          </span>
-                          <span>{entry.time}</span>
-                        </div>
-                        <p className="mt-1 whitespace-pre-line text-[8px] leading-snug text-[#b0b0b0]">
-                          {entry.text}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <TracePanel entries={traceEntries} onClear={clearTrace} />
-
-                {/* Controllers Panel */}
-                <div className="bg-[#1e1e1e] p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#888888]">Controllers</span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {controllerOptions.map((controller) => {
-                      const controllerState = controllers.find(c => c.id === controller.id);
-                      const isActive = controllerState?.isActive || false;
-                      const isPrimary = primaryControllerId === controller.id;
-                      const status = controllerStatuses[controller.id];
-
-                      return (
-                        <div key={controller.id} className="relative">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              const unavailable = unavailableControllers[controller.id];
-                              if (unavailable?.transient) {
-                                handleControllerChange(controller.id, e.ctrlKey || e.metaKey);
-                              } else if (!unavailable) {
-                                handleControllerChange(controller.id, e.ctrlKey || e.metaKey);
-                              }
-                            }}
-                            title={`${controller.label} controller${isActive ? ' (active)' : ''}${isPrimary ? ' (primary)' : ''}${unavailableControllers[controller.id] ? ` - ${unavailableControllers[controller.id].message}` : ''} - Press Ctrl/Cmd+click for multi-selection`}
-                            aria-label={`${controller.label} controller${isActive ? ' (active)' : ''}${isPrimary ? ' (primary)' : ''}${unavailableControllers[controller.id] ? ` - Unavailable: ${unavailableControllers[controller.id].message}` : ''} - Press Ctrl/Cmd+click for multi-selection`}
-                            aria-pressed={isActive}
-                            aria-disabled={!!unavailableControllers[controller.id] && !unavailableControllers[controller.id]?.transient}
-                            disabled={!!unavailableControllers[controller.id] && !unavailableControllers[controller.id]?.transient}
-                            className={`flex items-center gap-1 rounded-sm border px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] transition-all focus:outline-none focus:ring-1 focus:ring-[#4a4a4a] ${
-                              unavailableControllers[controller.id]
-                                ? unavailableControllers[controller.id].transient
-                                  ? "border-[#5a4a3a] bg-[#2a251a] text-[#c9a227] cursor-pointer hover:bg-[#352a1a]"
-                                  : "border-[#4a3a3a] bg-[#251a1a] text-[#888888] cursor-not-allowed opacity-50"
-                                : isPrimary
-                                  ? "border-[#4a4a4a] bg-[#2a2a2a] text-[#e0e0e0]"
-                                  : isActive
-                                    ? "border-[#3a3a3a] bg-[#222222] text-[#b0b0b0]"
-                                    : "border-[#3a3a3a] bg-[#1a1a1a] text-[#888888] hover:bg-[#222222] hover:text-[#b0b0b0]"
-                            }`}
-                          >
-                            {status && (
-                              <span
-                                className={`inline-block w-1 h-1 rounded-full ${
-                                  status.status === 'connected'
-                                    ? 'bg-[#4ade80]'
-                                    : status.status === 'disconnected' || status.status === 'error'
-                                    ? 'bg-[#ef4444]'
-                                    : 'bg-[#c9a227]'
-                                }`}
-                              />
-                            )}
-                            {controller.label}
-                            {unavailableControllers[controller.id]?.transient && (
-                              <span className="text-[6px] text-[#c9a227]">(retry)</span>
-                            )}
-                          </button>
-                          {status && status.status !== 'connected' && (
-                            <div className="absolute top-full mt-1 left-0 z-10">
-                              <div className="bg-[#111] text-[#888] text-[7px] px-2 py-0.5 rounded-sm whitespace-nowrap max-w-32 truncate border border-[#3a3a3a]">
-                                {status.message}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+           {/* Desktop Content */}
+           <div className="flex-1 p-6 flex flex-col gap-4 overflow-hidden">
+              {/* Top Bar inside Desktop Preview (from ASCII) */}
+              <div className="w-full border border-[#333] bg-[#000] py-1 text-center text-[#444] text-[10px] uppercase tracking-[0.2em]">
+                [       KRONOS SCREEN       ]
               </div>
 
-              {/* Right Column: VNC + Smart Prompt */}
-              <div className="flex flex-col">
-                {/* VNC Section with Toolbar */}
-                <div className="border-b border-[#3a3a3a] bg-[#1a1a1a]">
-                  <VncToolbar />
-
-                  {/* Workspace Tabs */}
-                  <div className="flex items-center gap-1 border-b border-[#3a3a3a] bg-[#1e1e1e] px-2 py-1.5">
-                    {workspaces.map((workspace) => (
-                      <button
-                        key={workspace.id}
-                        type="button"
-                        onClick={() => setActiveWorkspace(workspace.id)}
-                        className={`rounded-sm border px-2.5 py-1 text-[8px] font-medium uppercase tracking-[0.1em] transition-all ${
-                          activeWorkspace === workspace.id
-                            ? "border-[#4a4a4a] bg-[#2a2a2a] text-[#e0e0e0]"
-                            : "border-[#3a3a3a] bg-[#1a1a1a] text-[#888888] hover:bg-[#222222] hover:text-[#b0b0b0]"
-                        }`}
-                      >
-                        {workspace.label}
-                      </button>
-                    ))}
-                    <span className="ml-auto text-[7px] uppercase tracking-[0.1em] text-[#666666]">
-                      {activeControllerLabel}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 border-b border-[#3a3a3a] bg-[#1a1a1a] px-2 py-1.5 text-[8px]">
-                    <span className="text-[7px] uppercase tracking-[0.1em] text-[#666666]">
-                      Sessions
-                    </span>
-                    <select
-                      value={newSessionType}
-                      onChange={(event) =>
-                        setNewSessionType(event.target.value as DesktopSessionType)
-                      }
-                      className="rounded-sm border border-[#3a3a3a] bg-[#111111] px-2 py-1 text-[8px] text-[#c0c0c0]"
-                    >
-                      <option value="bytebot">Bytebot</option>
-                      <option value="debian">Debian</option>
-                      <option value="kali">Kali</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={handleCreateSession}
-                      disabled={creatingSession}
-                      className="rounded-sm border border-[#3a3a3a] bg-[#111111] px-2.5 py-1 text-[8px] uppercase tracking-[0.08em] text-[#c0c0c0] transition-all hover:bg-[#1d1d1d] disabled:opacity-50"
-                    >
-                      {creatingSession ? 'Creating…' : 'Create Desktop'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={loadSessions}
-                      className="rounded-sm border border-[#3a3a3a] bg-[#111111] px-2.5 py-1 text-[8px] uppercase tracking-[0.08em] text-[#c0c0c0] transition-all hover:bg-[#1d1d1d]"
-                    >
-                      Refresh
-                    </button>
-                    {sessionError && (
-                      <span className="text-[8px] text-[#ef4444]">{sessionError}</span>
-                    )}
-                    <span className="ml-auto text-[7px] uppercase tracking-[0.1em] text-[#666666]">
-                      {sessions.length} active
-                    </span>
-                  </div>
-
-                  {/* Viewer Container */}
-                  <div className="bg-[#0f0f0f]">
-                    <div className="aspect-[4/3] w-full">
-                      {isLocalScreen ? (
-                        <LocalScreenViewer />
-                      ) : (
-                        <VncViewer
+              {/* Main Desktop Area */}
+              <div className="flex-1 border border-[#333] bg-[#050505] relative overflow-hidden flex items-center justify-center group">
+                  {isLocalScreen ? (
+                    <LocalScreenViewer />
+                  ) : (
+                    <div className="w-full h-full relative">
+                       <VncViewer
                           viewOnly={false}
                           controllerType={vncControllerType}
                           directUrl={currentDirectUrl}
                         />
-                      )}
+                       {/* Overlay when not connected or loading, or just for aesthetic when empty */}
+                       {(!currentDirectUrl && !vncControllerType) && (
+                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-20">
+                            <div className="text-center space-y-2">
+                              <div className="text-[14px] font-bold text-[#fff] tracking-widest">[ LIVE DESKTOP PREVIEW PLACEHOLDER AREA — LARGE ]</div>
+                              <div className="text-[10px] text-[#fff] tracking-wider">[ DESKTOP CAPTURE STREAM / SCREENSHOT PLACEHOLDER ]</div>
+                            </div>
+                         </div>
+                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Smart Prompt Section */}
-                <div className="bg-[#1e1e1e] p-3">
-                  <div className="mb-2 text-[8px] font-semibold uppercase tracking-[0.1em] text-[#888888]">
-                    Smart Prompt
-                  </div>
-                  <form
-                    onSubmit={handleSend}
-                    className="flex flex-wrap items-center gap-2"
-                  >
-                    <div className="flex flex-1 items-center gap-2 rounded-sm border border-[#3a3a3a] bg-[#1a1a1a] px-3 py-1.5">
-                      <input
-                        value={command}
-                        onChange={(event) => setCommand(event.target.value)}
-                        placeholder="Describe what you want to automate"
-                        className="flex-1 bg-transparent text-[10px] text-[#b0b0b0] focus:outline-none placeholder:text-[#555555]"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={isLoading || !command.trim() || !selectedModel}
-                      className="flex h-8 w-8 items-center justify-center rounded-sm border border-[#3a3a3a] bg-[#1a1a1a] text-[#888888] transition-all hover:bg-[#222222] disabled:opacity-40"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                    </button>
-                  </form>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <ControlPill
-                      label="New Chat"
-                      icon={<MessageSquarePlus className="h-3 w-3" />}
-                      onClick={handleNewChat}
-                    />
-                    <ControlPill
-                      label="Open Web"
-                      icon={<Globe className="h-3 w-3" />}
-                      onClick={handleOpenWeb}
-                    />
-                    <ControlPill
-                      label="Terminal"
-                      icon={<Terminal className="h-3 w-3" />}
-                      onClick={handleToggleTerminal}
-                      active={showTerminal}
-                    />
-                    <ControlPill
-                      label="Shortcuts"
-                      icon={<Keyboard className="h-3 w-3" />}
-                      onClick={() => setShowKeyboardHelp(true)}
-                    />
-                    <ControlPill
-                      label="Settings"
-                      icon={<Settings className="h-3 w-3" />}
-                      onClick={() => router.push("/settings")}
-                    />
-                  </div>
-                </div>
-
-                {showTerminal && (
-                  <TerminalPanel onClose={() => setShowTerminal(false)} />
-                )}
+                  )}
+                  
+                  {/* Corner accents for cyberpunk feel */}
+                  <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#666] opacity-50" />
+                  <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#666] opacity-50" />
+                  <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#666] opacity-50" />
+                  <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#666] opacity-50" />
               </div>
-            </div>
-          </div>
-        </motion.div>
-      </main>
+           </div>
 
-      {/* Keyboard Shortcuts Help Modal */}
-      {showKeyboardHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000]/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-sm border border-[#3a3a3a] bg-[#1a1a1a] p-4 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#e0e0e0]">
-                Keyboard Shortcuts
-              </h3>
-              <button
-                onClick={() => setShowKeyboardHelp(false)}
-                className="rounded-sm p-1 text-[#666666] hover:text-[#b0b0b0]"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <h4 className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.1em] text-[#888888]">
-                  Controller Selection
-                </h4>
+           {/* POPUPS LAYER (Above Desktop but below Dock if needed, or z-50 to overlap everything) */}
+           {/* Controller Popup */}
+           {showControllerPopup && (
+             <div className="absolute bottom-4 right-4 z-40 w-64 border border-[#333] bg-[#0a0a0a] shadow-2xl p-4">
+                <div className="flex items-center justify-between mb-3 border-b border-[#333] pb-2">
+                  <span className="text-[#888] font-bold uppercase tracking-widest">CONTROLLERS</span>
+                  <button onClick={() => setShowControllerPopup(false)} className="text-[#555] hover:text-[#fff]"><X className="w-3 h-3"/></button>
+                </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-[8px] text-[#666666]">1-5</span>
-                    <span className="text-[8px] text-[#b0b0b0]">Switch to controller</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[8px] text-[#666666]">Ctrl/Cmd + 1-5</span>
-                    <span className="text-[8px] text-[#b0b0b0]">Toggle multi-selection</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[8px] text-[#666666]">Escape</span>
-                    <span className="text-[8px] text-[#b0b0b0]">Clear selection</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[8px] text-[#666666]">Tab</span>
-                    <span className="text-[8px] text-[#b0b0b0]">Next controller</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[8px] text-[#666666]">Shift + Tab</span>
-                    <span className="text-[8px] text-[#b0b0b0]">Previous controller</span>
-                  </div>
+                  {controllerOptions.map(c => {
+                    const isActive = activeControllerIds.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => toggleController(c.id)}
+                        className={`w-full text-left px-3 py-2 text-[10px] uppercase tracking-wider flex items-center justify-between border ${ 
+                          isActive ? "border-[#444] bg-[#111] text-[#e0e0e0]" : "border-transparent text-[#666] hover:bg-[#050505] hover:text-[#aaa]"
+                        }`}
+                      >
+                        {c.label}
+                        {isActive && <Check className="w-3 h-3" />}
+                      </button>
+                    )
+                  })}
                 </div>
-              </div>
+             </div>
+           )}
 
-              <div>
-                <h4 className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.1em] text-[#888888]">
-                  Tips
-                </h4>
-                <ul className="text-[8px] text-[#666666] space-y-0.5">
-                  <li>• Brighter panel indicates primary controller</li>
-                  <li>• Dimmer panel indicates active secondary controllers</li>
-                  <li>• Use Ctrl/Cmd+click for multi-selection in UI</li>
-                  <li>• Controllers maintain individual configurations</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+           {/* Tasks Popup */}
+           {showTaskHistory && (
+             <div className="absolute bottom-4 right-16 z-40 w-80 h-96 border border-[#333] bg-[#0a0a0a] shadow-2xl p-4 flex flex-col">
+                <div className="flex items-center justify-between mb-3 border-b border-[#333] pb-2">
+                  <span className="text-[#888] font-bold uppercase tracking-widest">RECENT TASKS</span>
+                  <button onClick={() => setShowTaskHistory(false)} className="text-[#555] hover:text-[#fff]"><X className="w-3 h-3"/></button>
+                </div>
+                <div className="flex-1 overflow-y-auto text-[#666] italic text-center py-10">
+                   No recent tasks found in history.
+                </div>
+             </div>
+           )}
+
+        </div>
+      </div>
+
+      {/* Terminal Panel Overlay */}
+      {showTerminal && (
+        <div className="fixed inset-x-0 bottom-32 z-50 mx-auto max-w-4xl border border-[#333] bg-[#000] shadow-2xl">
+           <TerminalPanel onClose={() => setShowTerminal(false)} />
         </div>
       )}
+
+      {/* Unified Dock */}
+      <div className="mt-auto relative z-50">
+        <UnifiedDock 
+          activeDesktop={activeWorkspace}
+          onSwitchDesktop={handleSwitchDesktop}
+          onToggleControllers={handleToggleControllers}
+          onToggleTasks={handleToggleTasks}
+        />
+      </div>
     </div>
   );
 }
