@@ -9,10 +9,11 @@ import {
   Send,
   ChevronDown,
   CheckCircle2,
-  Activity,
   Terminal,
-  Command,
   Cpu,
+  ChevronRight,
+  Settings,
+  Square,
 } from "lucide-react";
 import { VncViewer } from "@/components/vnc/VncViewer";
 import { LocalScreenViewer } from "@/components/local-screen/LocalScreenViewer";
@@ -110,11 +111,13 @@ function ModelSelector({
     <div className="relative" ref={dropdownRef}>
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-gray-400 hover:text-white transition-all"
+        className="flex items-center gap-2 px-3 py-2 rounded-md text-xs text-gray-400 hover:text-white transition-all bg-white/5 hover:bg-white/10"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
-        <span className="truncate max-w-[120px]">{selectedModel?.title || "Select model"}</span>
+        <span className="truncate max-w-[140px]">
+          {selectedModel?.title || "Select model"}
+        </span>
         <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </motion.button>
 
@@ -132,7 +135,7 @@ function ModelSelector({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4 }}
-              className="absolute bottom-full left-0 mb-1 w-64 rounded-lg overflow-hidden z-50 bg-[#1a1c22]/95 backdrop-blur-xl border border-white/10 shadow-xl"
+              className="absolute bottom-full left-0 mb-2 w-64 rounded-lg overflow-hidden z-50 bg-[#1a1c22]/95 backdrop-blur-xl border border-white/10 shadow-xl"
             >
               <div className="p-2 border-b border-white/5">
                 <input
@@ -140,7 +143,7 @@ function ModelSelector({
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded text-xs bg-white/5 border border-white/10 text-white placeholder-gray-500 outline-none"
+                  className="w-full px-3 py-1.5 rounded text-xs bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:bg-white/10"
                   autoFocus
                 />
               </div>
@@ -205,12 +208,12 @@ function ControllerDropdown({
     <div className="relative" ref={dropdownRef}>
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-gray-400 hover:text-white transition-all"
+        className="flex items-center gap-2 px-3 py-2 rounded-md text-xs text-gray-400 hover:text-white transition-all bg-white/5 hover:bg-white/10"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
         <Cpu className="w-3 h-3" />
-        <span>{activeLabel}</span>
+        <span className="truncate max-w-[120px]">{activeLabel}</span>
         <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </motion.button>
 
@@ -228,7 +231,7 @@ function ControllerDropdown({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4 }}
-              className="absolute bottom-full left-0 mb-1 w-44 rounded-lg overflow-hidden z-50 bg-[#1a1c22]/95 backdrop-blur-xl border border-white/10 shadow-xl"
+              className="absolute bottom-full left-0 mb-2 w-44 rounded-lg overflow-hidden z-50 bg-[#1a1c22]/95 backdrop-blur-xl border border-white/10 shadow-xl"
             >
               {controllerOptions.map((controller) => (
                 <motion.button
@@ -257,36 +260,27 @@ function ControllerDropdown({
   );
 }
 
-function ChatCard({
-  children,
+function ActivityCard({
   variant = "assistant",
+  children,
 }: {
-  children: React.ReactNode;
   variant?: "user" | "assistant" | "action";
+  children: React.ReactNode;
 }) {
-  const variants = {
-    user: "bg-white/[0.03] border-white/5",
-    assistant: "bg-purple-500/[0.03] border-purple-500/10",
-    action: "bg-white/[0.02] border-white/5",
+  const variantStyles = {
+    user: "bg-white/[0.02] border-l-2 border-white/20",
+    assistant: "bg-white/[0.02] border-l-2 border-white/20",
+    action: "bg-white/[0.01] border-l-2 border-white/10",
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-lg p-3 border ${variants[variant]} mb-2 shadow-sm`}
+      className={`p-3 rounded text-xs leading-relaxed text-gray-300 ${variantStyles[variant]} mb-2`}
     >
       {children}
     </motion.div>
-  );
-}
-
-function ActionItem({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {
-  return (
-    <div className="flex items-center gap-2 py-0.5">
-      <Icon className="w-3.5 h-3.5 text-gray-500" />
-      <span className="text-xs text-gray-400">{text}</span>
-    </div>
   );
 }
 
@@ -294,10 +288,7 @@ export default function DesktopPage() {
   const router = useRouter();
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
-  const getModelKey = useCallback(
-    (model: Model) => `${model.provider}:${model.name}`,
-    []
-  );
+  const getModelKey = useCallback((model: Model) => `${model.provider}:${model.name}`, []);
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>(defaultWorkspaces);
   const [activeWorkspace, setActiveWorkspace] = useState<string>("bytebot");
   const [isPaused, setIsPaused] = useState(false);
@@ -338,8 +329,8 @@ export default function DesktopPage() {
               : "bytebot"
           );
         }
-      } catch (error) {
-        console.error("Failed to parse saved workspaces:", error);
+      } catch {
+        // Restore defaults on parse error
       }
     }
   }, []);
@@ -349,40 +340,37 @@ export default function DesktopPage() {
     localStorage.setItem("bytebot:desktop:activeWorkspace", activeWorkspace);
   }, [workspaces, activeWorkspace]);
 
-  const addWorkspaceFromSession = useCallback(
-    (session: DesktopSession) => {
-      if (!session.wsUrl) return;
-      const workspaceId = `session-${session.id}`;
-      setWorkspaces((prev) => {
-        const exists = prev.find((w) => w.id === workspaceId);
-        if (exists)
-          return prev.map((w) =>
-            w.id === workspaceId
-              ? {
-                  ...w,
-                  label: session.name || `Session ${session.port ?? ""}`.trim(),
-                  screen: "custom",
-                  directUrl: session.wsUrl,
-                  sessionId: session.id,
-                  sessionPort: session.port,
-                }
-              : w
-          );
-        return [
-          ...prev,
-          {
-            id: workspaceId,
-            label: session.name || `Session ${session.port ?? ""}`.trim(),
-            screen: "custom",
-            directUrl: session.wsUrl,
-            sessionId: session.id,
-            sessionPort: session.port,
-          },
-        ];
-      });
-    },
-    []
-  );
+  const addWorkspaceFromSession = useCallback((session: DesktopSession) => {
+    if (!session.wsUrl) return;
+    const workspaceId = `session-${session.id}`;
+    setWorkspaces((prev) => {
+      const exists = prev.find((w) => w.id === workspaceId);
+      if (exists)
+        return prev.map((w) =>
+          w.id === workspaceId
+            ? {
+                ...w,
+                label: session.name || `Session ${session.port ?? ""}`.trim(),
+                screen: "custom",
+                directUrl: session.wsUrl,
+                sessionId: session.id,
+                sessionPort: session.port,
+              }
+            : w
+        );
+      return [
+        ...prev,
+        {
+          id: workspaceId,
+          label: session.name || `Session ${session.port ?? ""}`.trim(),
+          screen: "custom",
+          directUrl: session.wsUrl,
+          sessionId: session.id,
+          sessionPort: session.port,
+        },
+      ];
+    });
+  }, []);
 
   const loadSessions = useCallback(async () => {
     try {
@@ -437,33 +425,34 @@ export default function DesktopPage() {
   const handleCommandSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commandInput.trim()) return;
+    handleSend(commandInput);
     setCommandInput("");
   };
 
-   useEffect(() => {
-     let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-     const loadModels = async () => {
-       try {
-         const result = await fetchModels();
-         if (!isMounted) return;
+    const loadModels = async () => {
+      try {
+        const result = await fetchModels();
+        if (!isMounted) return;
 
-         const allowedProviders = new Set(["routeway", "groq", "openai", "proxy", "google", "ollama-local"]);
-         const filteredModels = result.filter(
-           (model: Model) => model.capabilities?.toolCalling && allowedProviders.has(model.provider)
-         );
-         setModels(filteredModels);
-       } catch {
-         if (!isMounted) return;
-       }
-     };
+        const allowedProviders = new Set(["routeway", "groq", "openai", "proxy", "google", "ollama-local"]);
+        const filteredModels = result.filter(
+          (model: Model) => model.capabilities?.toolCalling && allowedProviders.has(model.provider)
+        );
+        setModels(filteredModels);
+      } catch {
+        if (!isMounted) return;
+      }
+    };
 
-     loadModels();
+    loadModels();
 
-     return () => {
-       isMounted = false;
-     };
-   }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (models.length === 0) return;
@@ -484,237 +473,300 @@ export default function DesktopPage() {
   useEffect(() => {
     if (!selectedModel) return;
     window.localStorage.setItem(modelStorageKey, getModelKey(selectedModel));
-  }, [modelStorageKey, selectedModel?.name, selectedModel?.provider]);
+  }, [modelStorageKey, selectedModel?.name, selectedModel?.provider, getModelKey]);
 
   const getWindowTitle = () => {
     switch (activeWorkspace) {
       case "bytebot":
-        return "Bytebot Desktop";
+        return "BYTEBOT DESKTOP";
       case "debian":
-        return "Debian";
+        return "DEBIAN";
       case "kali":
-        return "Kali Linux";
+        return "KALI LINUX";
       case "browseros":
-        return "BrowserOS";
+        return "BROWSEROS";
       default:
-        return "Desktop";
+        return "DESKTOP";
     }
   };
 
+  const navItems = [
+    { label: "Home", id: "home" },
+    { label: "Tasks", id: "tasks" },
+    { label: "Desktop", id: "desktop", active: true },
+    { label: "Web", id: "web" },
+    { label: "Settings", id: "settings" },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#0d0e11] text-gray-300 font-sans flex flex-col">
-      {/* Main Workspace */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Chat / Execution Log */}
-        <aside className="w-[32%] min-w-[300px] max-w-[380px] bg-[#12141a]/80 backdrop-blur-xl border-r border-white/5 flex flex-col">
-          {/* Header */}
-          <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+    <div className="min-h-screen bg-[#0a0b0e] text-gray-300 font-sans flex flex-col overflow-hidden">
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden gap-0">
+        {/* LEFT PANEL - Activity/Chat Log */}
+        <aside className="w-[28%] min-w-[280px] max-w-[360px] bg-gradient-to-b from-[#0d0e11] to-[#0a0b0e] border-r border-white/5 flex flex-col relative">
+          {/* Subtle inner glow */}
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-white/[0.02] via-transparent to-transparent" />
+
+          {/* Top Header */}
+          <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between relative z-10">
             <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-gray-500" />
-              <span className="text-xs text-gray-500 uppercase tracking-wider">Activity Log</span>
+              <Terminal className="w-3 h-3 text-gray-600" />
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider font-medium">
+                CHAT (LEFT / SECONDARY)
+              </span>
             </div>
-            <motion.button
-              onClick={() => setIsPaused(!isPaused)}
-              className="p-1 rounded hover:bg-white/5 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {isPaused ? (
-                <Play className="w-3.5 h-3.5 text-gray-500" />
-              ) : (
-                <Pause className="w-3.5 h-3.5 text-gray-500" />
-              )}
-            </motion.button>
+            <div className="flex items-center gap-1">
+              <motion.button
+                onClick={() => setIsPaused(!isPaused)}
+                className="p-1 rounded hover:bg-white/5 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {isPaused ? (
+                  <Play className="w-3.5 h-3.5 text-gray-600" />
+                ) : (
+                  <Pause className="w-3.5 h-3.5 text-gray-600" />
+                )}
+              </motion.button>
+              <motion.button
+                className="p-1 rounded hover:bg-white/5 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+              </motion.button>
+            </div>
           </div>
 
-          {/* Chat Messages - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            <ChatCard variant="user">
-              <p className="text-xs text-gray-300 leading-relaxed">
-                Open the terminal and check the current directory contents
-              </p>
-            </ChatCard>
+          {/* Activity Cards Scroll Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-2 relative z-10">
+            <div className="flex items-start gap-1.5 mb-2">
+              <span className="text-gray-700 mt-0.5">{">"}</span>
+              <ActivityCard variant="user">
+                <div className="space-y-1">
+                  <span className="text-gray-200">[User]</span>
+                  <div className="text-gray-400 pl-0">
+                    Edit the Combinator sign.
+                    <br />
+                    Change text to "Kronos"
+                    <br />
+                    and save as yc_kronos.
+                  </div>
+                </div>
+              </ActivityCard>
+            </div>
 
-            <ChatCard variant="assistant">
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Opening terminal session...
-              </p>
-            </ChatCard>
+            <div className="flex items-start gap-1.5 mb-2">
+              <span className="text-gray-700 mt-0.5">{">"}</span>
+              <ActivityCard variant="assistant">
+                <div className="space-y-1">
+                  Assistant. Opening the kronos now
+                </div>
+              </ActivityCard>
+            </div>
 
-            <ChatCard variant="action">
-              <div className="space-y-1">
-                <ActionItem icon={Terminal} text="Terminal opened" />
-                <ActionItem icon={Command} text="ls -la" />
-                <ActionItem icon={Activity} text="Reading directory contents..." />
-              </div>
-            </ChatCard>
+            <div className="flex items-start gap-1.5 mb-2">
+              <span className="text-gray-700 mt-0.5">{">"}</span>
+              <ActivityCard variant="assistant">
+                <div className="space-y-1">
+                  <span className="text-gray-400">Understood. Opening the</span>
+                  <span className="text-gray-400">now.</span>
+                </div>
+              </ActivityCard>
+            </div>
 
-            <ChatCard variant="assistant">
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Found 12 items including config files and project directories
-              </p>
-            </ChatCard>
+            <div className="flex items-start gap-1.5 mb-2">
+              <span className="text-gray-700 mt-0.5">{">"}</span>
+              <ActivityCard variant="action">
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-[10px]">Example of tool use for this instance</span>
+                  <div className="text-gray-500 pl-3 space-y-0.5 mt-1">
+                    <div>• screenshot (Desktop)</div>
+                    <div>• click (Photote Icon)</div>
+                    <div>• type (Kronos')</div>
+                    <div>• save_file (yc_roos)</div>
+                  </div>
+                </div>
+              </ActivityCard>
+            </div>
+
+            <div className="flex items-start gap-1.5 mb-2">
+              <span className="text-gray-700 mt-0.5">{">"}</span>
+              <ActivityCard variant="assistant">
+                <div className="space-y-1">
+                  <span className="text-gray-400">
+                    {">"} {">"} [user chat with the kronos os
+                  </span>
+                </div>
+              </ActivityCard>
+            </div>
           </div>
 
-          {/* Input Prompt Line */}
-          <div className="px-4 py-3 border-t border-white/5">
-            <div className="flex items-center gap-2 text-gray-600">
-              <span className="text-xs">{`>`}</span>
-              <input
-                type="text"
-                placeholder="Continue..."
-                className="flex-1 bg-transparent text-xs text-gray-500 placeholder-gray-600 outline-none"
-              />
+          {/* Bottom Input Hint */}
+          <div className="px-4 py-3 border-t border-white/5 relative z-10">
+            <div className="flex items-center gap-1.5 text-gray-700 text-xs">
+              <span>{">"}</span>
+              <span className="font-mono text-[10px]">{"_"}</span>
             </div>
           </div>
         </aside>
 
-        {/* Right Panel - Live Desktop Preview */}
-        <main className="flex-1 flex flex-col bg-[#0d0e11]">
-          {/* Desktop Window */}
-          <div className="flex-1 flex flex-col p-4">
-            <div className="flex-1 rounded-xl overflow-hidden border border-white/10 bg-[#1a1c22] shadow-2xl">
-              {/* Window Header */}
-              <div className="h-9 bg-[#1f2229] border-b border-white/5 flex items-center px-4 gap-3">
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56] border border-red-400/20" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e] border border-yellow-400/20" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f] border border-green-400/20" />
-                </div>
-                <div className="flex-1 text-center">
-                  <span className="text-xs text-gray-500">{getWindowTitle()}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500/50" />
-                </div>
+        {/* RIGHT PANEL - Live Desktop Preview */}
+        <main className="flex-1 bg-[#0a0b0e] flex flex-col p-4">
+          {/* Desktop Window Container */}
+          <div className="flex-1 flex flex-col rounded-lg overflow-hidden border border-white/10 bg-[#0d0e11] shadow-2xl">
+            {/* Window Header Bar */}
+            <div className="h-8 bg-[#12141a] border-b border-white/5 flex items-center px-3 gap-3 flex-shrink-0">
+              {/* Traffic Light Buttons */}
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/70 border border-red-400/20" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70 border border-yellow-400/20" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500/70 border border-green-400/20" />
               </div>
 
-              {/* Desktop Content */}
-              <div className="h-[calc(100%-36px)] w-full bg-[#0d0e11] relative">
-                {primaryControllerId === "local-screen" ? (
-                  <LocalScreenViewer />
-                ) : primaryControllerId === "os-ai" ? (
-                  <UITARSViewer controllerType={primaryControllerId} viewOnly={isPaused} />
-                ) : primaryControllerId === "gbox-android" ? (
-                  <GboxAndroidView />
-                ) : (
-                  <VncViewer viewOnly={isPaused} controllerType={vncControllerType} directUrl={currentDirectUrl} />
-                )}
+              {/* Window Title */}
+              <div className="flex-1 text-center">
+                <span className="text-[11px] text-gray-500 font-medium tracking-wider">
+                  ✕ {getWindowTitle()}
+                </span>
+              </div>
 
-                {/* macOS-style Dock */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 px-2 py-1 rounded-2xl bg-[#1a1c22]/80 backdrop-blur-xl border border-white/10">
-                {["Finder", "Safari", "Terminal", "Code", "Notes"].map((app) => (
+              {/* Status Indicator */}
+              <div className="flex items-center gap-2 text-[10px] text-gray-600">
+                <span className="text-gray-600">BYTEBOT CONTROLLER</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500/50" />
+              </div>
+            </div>
+
+            {/* Desktop Content Area */}
+            <div className="flex-1 w-full bg-[#0a0b0e] relative overflow-hidden">
+              {primaryControllerId === "local-screen" ? (
+                <LocalScreenViewer />
+              ) : primaryControllerId === "os-ai" ? (
+                <UITARSViewer controllerType={primaryControllerId} viewOnly={isPaused} />
+              ) : primaryControllerId === "gbox-android" ? (
+                <GboxAndroidView />
+              ) : (
+                <VncViewer viewOnly={isPaused} controllerType={vncControllerType} directUrl={currentDirectUrl} />
+              )}
+
+              {/* Dock at Bottom */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 px-3 py-2 rounded-2xl bg-[#12141a]/80 backdrop-blur-xl border border-white/10 shadow-lg">
+                {["🔍", "🖇", "🌐", "📝", "⚙️", "📦", "💻", "🎨", "📊"].map((icon, i) => (
                   <motion.div
-                    key={app}
-                    className="w-10 h-10 rounded-xl bg-gradient-to-b from-white/10 to-white/5 border border-white/10 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform"
-                    whileHover={{ scale: 1.1 }}
+                    key={i}
+                    className="w-9 h-9 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center cursor-pointer text-sm hover:bg-white/10 transition-all"
+                    whileHover={{ scale: 1.15, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <span className="text-[10px] text-gray-400">{app[0]}</span>
+                    {icon}
                   </motion.div>
                 ))}
-                </div>
               </div>
             </div>
           </div>
         </main>
       </div>
 
-      {/* Navigation Bar */}
-      <nav className="h-10 flex items-center justify-center gap-8 border-y border-white/5 bg-[#0d0e11]/50">
-        {[
-          { label: "Home", path: "/" },
-          { label: "Tasks", path: "/tasks" },
-          { label: "Desktop", path: "/desktop", active: true },
-          { label: "Web", path: "/web" },
-          { label: "Settings", path: "/settings" },
-        ].map((item) => (
-          <motion.button
-            key={item.path}
-            onClick={() => router.push(item.path)}
-            className={`text-xs transition-all ${
-              item.active ? "text-white font-medium" : "text-gray-500 hover:text-gray-300"
-            }`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {item.label}
-          </motion.button>
-        ))}
+      {/* NAVIGATION BAR - Thin, quiet */}
+      <nav className="h-10 flex items-center justify-between px-6 border-t border-white/5 bg-[#0a0b0e]/50">
+        <div className="flex items-center gap-8">
+          {navItems.map((item) => (
+            <motion.button
+              key={item.id}
+              onClick={() => item.id === "web" && handleOpenWeb()}
+              className={`text-xs transition-all font-medium ${
+                item.active ? "text-white" : "text-gray-500 hover:text-gray-400"
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {item.label}
+            </motion.button>
+          ))}
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] text-gray-600">/desktop</span>
+        </div>
       </nav>
 
-      {/* System Control Bar */}
-      <div className="h-12 flex items-center px-4 gap-4 bg-[#0d0e11]/80 border-t border-white/5">
+      {/* BOTTOM CONTROL BAR - System state */}
+      <div className="h-12 flex items-center px-4 gap-4 bg-[#0a0b0e]/80 border-t border-white/5">
         {/* Left - Dropdowns */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <ControllerDropdown
             controllerOptions={controllerOptions}
             activeControllerIds={activeControllerIds}
             toggleController={toggleController}
           />
-           <ModelSelector
-             selectedModel={selectedModel}
-             models={models}
-             onSelect={handleModelChange}
-           />
+          <span className="text-gray-700">|</span>
+          <ModelSelector
+            selectedModel={selectedModel}
+            models={models}
+            onSelect={handleModelChange}
+          />
         </div>
 
         {/* Center - Command Input */}
-        <div className="flex-1 max-w-xl">
+        <div className="flex-1 max-w-2xl">
           <form onSubmit={handleCommandSubmit} className="relative">
             <input
               type="text"
               value={commandInput}
               onChange={(e) => setCommandInput(e.target.value)}
-              placeholder="Enter command..."
-              className="w-full h-8 px-4 pr-10 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-300 placeholder-gray-600 outline-none focus:bg-white/10 focus:border-white/20 transition-all"
+              placeholder="Type a message..."
+              className="w-full h-8 px-3 pr-8 rounded bg-white/5 border border-white/10 text-xs text-gray-300 placeholder-gray-700 outline-none focus:bg-white/10 focus:border-white/20 transition-all"
             />
             <motion.button
               type="submit"
-              disabled={!commandInput.trim()}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 disabled:opacity-30 transition-colors"
+              disabled={!commandInput.trim() || isLoading}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-gray-600 disabled:opacity-20 transition-opacity"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Send className="w-3.5 h-3.5 text-gray-500" />
+              <Send className="w-3.5 h-3.5" />
             </motion.button>
           </form>
         </div>
 
-        {/* Right - Buttons & Brand */}
-        <div className="flex items-center gap-3">
+        {/* Right - Brand & Actions */}
+        <div className="flex items-center gap-3 ml-auto">
           <motion.button
-            onClick={handleOpenWeb}
-            className="px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Open Web
-          </motion.button>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-            <div className="w-4 h-4 rounded bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-              <span className="text-[8px] font-bold text-white">K</span>
-            </div>
-            <span className="text-xs text-gray-400">Kronos-OS</span>
-          </div>
-
-          <motion.div
-            className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer"
-            whileHover={{ scale: 1.1, rotate: 90 }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded text-xs text-gray-500 hover:text-gray-400 transition-all"
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <span className="text-sm">✦</span>
-          </motion.div>
+            <span>🌐</span>
+            <span>Desktop Selector</span>
+            <ChevronDown className="w-3 h-3" />
+          </motion.button>
+
+          <div className="w-px h-4 bg-white/10" />
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+            <span className="text-[11px] font-bold text-white bg-gradient-to-br from-purple-500 to-blue-500 px-2 py-1 rounded">
+              K
+            </span>
+            <span className="text-xs text-gray-400 font-medium">KRONOS-OS</span>
+          </div>
+
+          <motion.button
+            className="p-1 text-gray-600 hover:text-gray-400 transition-colors"
+            whileHover={{ rotate: 90, scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="text-lg">✦</span>
+          </motion.button>
         </div>
       </div>
 
-     <ToolTraceSlideshow
-       traces={(traceEntries as never)}
-       taskTitle="Task Execution"
-       isVisible={showToolSlideshow}
-       onClose={() => setShowToolSlideshow(false)}
-     />
+      {/* Hidden Components */}
+      <ToolTraceSlideshow
+        traces={(traceEntries as never)}
+        taskTitle="Task Execution"
+        isVisible={showToolSlideshow}
+        onClose={() => setShowToolSlideshow(false)}
+      />
 
       <OrganizedChatPanel
         isOpen={false}
