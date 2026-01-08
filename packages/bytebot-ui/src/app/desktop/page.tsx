@@ -172,6 +172,89 @@ function ModelSelector({
         )}
       </AnimatePresence>
     </div>
+   );
+}
+
+function WorkspaceSelector({
+  workspaces,
+  activeWorkspace,
+  onSelectWorkspace,
+}: {
+  workspaces: WorkspaceOption[];
+  activeWorkspace: string;
+  onSelectWorkspace: (id: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const activeLabel = workspaces.find((w) => w.id === activeWorkspace)?.label || "Desktop";
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded text-xs text-gray-500 hover:text-gray-400 transition-all"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <span>🌐</span>
+        <span className="truncate max-w-[120px]">{activeLabel}</span>
+        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50"
+              onClick={() => setIsOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="absolute top-full left-0 mt-2 w-48 rounded-lg overflow-hidden z-50 bg-[#1a1c22]/95 backdrop-blur-xl border border-white/10 shadow-xl"
+            >
+              {workspaces.map((workspace) => (
+                <motion.button
+                  key={workspace.id}
+                  onClick={() => {
+                    onSelectWorkspace(workspace.id);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-all ${
+                    activeWorkspace === workspace.id
+                      ? "bg-white/10 text-white"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span className="flex-1">{workspace.label}</span>
+                  {activeWorkspace === workspace.id && (
+                    <CheckCircle2 className="w-3 h-3 text-purple-400" />
+                  )}
+                </motion.button>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -301,6 +384,7 @@ export default function DesktopPage() {
   const vncControllerType = currentScreen === "custom" ? undefined : currentScreen;
 
   const [commandInput, setCommandInput] = useState("");
+  const commandInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const savedWorkspaces = localStorage.getItem("bytebot:desktop:workspaces");
@@ -397,6 +481,8 @@ export default function DesktopPage() {
     isLoading,
     sendMessage,
     traceEntries,
+    messages,
+    logs,
   } = useQuickTaskSession({ storageKey: taskStorageKey });
 
   const { activeControllerIds, primaryControllerId, toggleController } = useMultiControllerState(controllerOptions);
@@ -463,15 +549,36 @@ export default function DesktopPage() {
           model.name === storedModel ||
           model.title === storedModel
       );
-    if (!selectedModel) {
-      setSelectedModel(stored || pickRoutewayDefault(models) || null);
-    }
-  }, [models, modelStorageKey, getModelKey]);
+     if (!selectedModel) {
+       setSelectedModel(stored || pickRoutewayDefault(models) || null);
+     }
+   }, [models, modelStorageKey, getModelKey, selectedModel]);
 
   useEffect(() => {
     if (!selectedModel) return;
     window.localStorage.setItem(modelStorageKey, getModelKey(selectedModel));
-  }, [modelStorageKey, selectedModel?.name, selectedModel?.provider, getModelKey, selectedModel]);
+   }, [modelStorageKey, selectedModel?.name, selectedModel?.provider, getModelKey, selectedModel]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K to focus command input
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        commandInputRef.current?.focus();
+      }
+
+      // Escape to clear command input
+      if (e.key === "Escape" && document.activeElement === commandInputRef.current) {
+        e.preventDefault();
+        setCommandInput("");
+        commandInputRef.current?.blur();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const getWindowTitle = () => {
     switch (activeWorkspace) {
@@ -536,69 +643,69 @@ export default function DesktopPage() {
             </div>
           </div>
 
-          {/* Activity Cards Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 relative z-10">
-            <div className="flex items-start gap-1.5 mb-2">
-              <span className="text-gray-700 mt-0.5">{">"}</span>
-              <ActivityCard variant="user">
-              <div className="space-y-1">
-                <span className="text-gray-200">[User]</span>
-                <div className="text-gray-400 pl-0">
-                  Edit the Combinator sign.
-                  <br />
-                  Change text to &quot;Kronos&quot;
-                  <br />
-                  and save as yc_kronos.
-                </div>
-              </div>
-              </ActivityCard>
-            </div>
-
-            <div className="flex items-start gap-1.5 mb-2">
-              <span className="text-gray-700 mt-0.5">{">"}</span>
-              <ActivityCard variant="assistant">
-                <div className="space-y-1">
-                  Assistant. Opening the kronos now
-                </div>
-              </ActivityCard>
-            </div>
-
-            <div className="flex items-start gap-1.5 mb-2">
-              <span className="text-gray-700 mt-0.5">{">"}</span>
-              <ActivityCard variant="assistant">
-                <div className="space-y-1">
-                  <span className="text-gray-400">Understood. Opening the</span>
-                  <span className="text-gray-400">now.</span>
-                </div>
-              </ActivityCard>
-            </div>
-
-            <div className="flex items-start gap-1.5 mb-2">
-              <span className="text-gray-700 mt-0.5">{">"}</span>
-              <ActivityCard variant="action">
-                <div className="space-y-1">
-                  <span className="text-gray-500 text-[10px]">Example of tool use for this instance</span>
-                  <div className="text-gray-500 pl-3 space-y-0.5 mt-1">
-                    <div>• screenshot (Desktop)</div>
-                    <div>• click (Photote Icon)</div>
-                    <div>• type (Kronos')</div>
-                    <div>• save_file (yc_roos)</div>
-                  </div>
-                </div>
-              </ActivityCard>
-            </div>
-
-            <div className="flex items-start gap-1.5 mb-2">
-              <span className="text-gray-700 mt-0.5">{">"}</span>
-              <ActivityCard variant="assistant">
-                <div className="space-y-1">
-                  <span className="text-gray-400">
-                    {">"} {">"} [user chat with the kronos os
-                  </span>
-                </div>
-              </ActivityCard>
-            </div>
-          </div>
+           {/* Activity Cards Scroll Area */}
+           <div className="flex-1 overflow-y-auto p-4 space-y-2 relative z-10">
+             {messages.length === 0 && logs.length === 0 ? (
+               <div className="flex items-center justify-center h-full text-center">
+                 <div className="text-gray-600 text-xs">
+                   <div className="text-gray-700 mb-2">No activity yet</div>
+                   <div className="text-gray-700 text-[10px]">Send a message to start</div>
+                 </div>
+               </div>
+             ) : (
+               <>
+                 {messages.map((msg) => (
+                   <div key={msg.id} className="flex items-start gap-1.5 mb-2">
+                     <span className="text-gray-700 mt-0.5">{">"}</span>
+                     <ActivityCard variant={msg.role === "USER" ? "user" : "assistant"}>
+                       <div className="space-y-1">
+                         <span className="text-gray-200 text-[10px]">[{msg.role}]</span>
+                         <div className="text-gray-400 pl-0 text-xs whitespace-pre-wrap break-words">
+                           {msg.text}
+                         </div>
+                         <div className="text-gray-600 text-[9px] mt-1">{msg.time}</div>
+                       </div>
+                     </ActivityCard>
+                   </div>
+                 ))}
+                 {traceEntries.length > 0 && (
+                   <div className="flex items-start gap-1.5 mb-2">
+                     <span className="text-gray-700 mt-0.5">{">"}</span>
+                     <ActivityCard variant="action">
+                       <div className="space-y-1">
+                         <span className="text-gray-500 text-[10px]">Tool Execution Trace</span>
+                         <div className="text-gray-500 pl-3 space-y-0.5 mt-1">
+                           {traceEntries.slice(-5).map((entry) => (
+                             <div key={entry.id} className="text-[9px]">
+                               • {entry.label || entry.toolName} {entry.time && `(${entry.time})`}
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     </ActivityCard>
+                   </div>
+                 )}
+                 {isLoading && (
+                   <div className="flex items-start gap-1.5 mb-2">
+                     <span className="text-gray-700 mt-0.5">{">"}</span>
+                     <ActivityCard variant="assistant">
+                       <div className="space-y-1">
+                         <span className="text-gray-200 text-[10px]">[LOADING]</span>
+                         <div className="flex items-center gap-2">
+                           <motion.div
+                             animate={{ rotate: 360 }}
+                             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                             className="w-2 h-2 rounded-full border border-gray-600 border-t-gray-300"
+                           />
+                           <span className="text-gray-500 text-xs">Processing...</span>
+                         </div>
+                       </div>
+                     </ActivityCard>
+                   </div>
+                 )}
+               </>
+             )}
+           </div>
 
           {/* Bottom Input Hint */}
           <div className="px-4 py-3 border-t border-white/5 relative z-10">
@@ -695,11 +802,13 @@ export default function DesktopPage() {
         <div className="flex-1 max-w-2xl">
           <form onSubmit={handleCommandSubmit} className="relative">
             <input
+              ref={commandInputRef}
               type="text"
               value={commandInput}
               onChange={(e) => setCommandInput(e.target.value)}
-              placeholder="Type a message..."
-              className="w-full h-8 px-3 pr-8 rounded bg-white/5 border border-white/10 text-xs text-gray-300 placeholder-gray-700 outline-none focus:bg-white/10 focus:border-white/20 transition-all"
+              disabled={isLoading}
+              placeholder={isLoading ? "Processing..." : "Type a message..."}
+              className="w-full h-8 px-3 pr-8 rounded bg-white/5 border border-white/10 text-xs text-gray-300 placeholder-gray-700 outline-none focus:bg-white/10 focus:border-white/20 transition-all disabled:opacity-50"
             />
             <motion.button
               type="submit"
@@ -713,19 +822,15 @@ export default function DesktopPage() {
           </form>
         </div>
 
-        {/* Right - Brand & Actions */}
-        <div className="flex items-center gap-3 ml-auto">
-          <motion.button
-            className="flex items-center gap-2 px-3 py-1.5 rounded text-xs text-gray-500 hover:text-gray-400 transition-all"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <span>🌐</span>
-            <span>Desktop Selector</span>
-            <ChevronDown className="w-3 h-3" />
-          </motion.button>
+         {/* Right - Brand & Actions */}
+         <div className="flex items-center gap-3 ml-auto">
+           <WorkspaceSelector
+             workspaces={workspaces}
+             activeWorkspace={activeWorkspace}
+             onSelectWorkspace={setActiveWorkspace}
+           />
 
-          <div className="w-px h-4 bg-white/10" />
+           <div className="w-px h-4 bg-white/10" />
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
             <span className="text-[11px] font-bold text-white bg-gradient-to-br from-purple-500 to-blue-500 px-2 py-1 rounded">
