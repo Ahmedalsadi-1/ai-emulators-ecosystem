@@ -260,30 +260,48 @@ export async function fetchTaskCounts(): Promise<Record<string, number>> {
   }
 }
 
-export async function fetchModels(): Promise<Model[]> {
-  console.log("Fetching models from /api/tasks/models");
+export async function fetchModels(options?: {
+  toolCalling?: boolean;
+  timeoutMs?: number;
+}): Promise<Model[]> {
+  const params = new URLSearchParams();
+  if (options?.toolCalling !== undefined) {
+    params.set("toolCalling", String(options.toolCalling));
+  }
+  const query = params.toString();
+  const url = `${API_CONFIG.baseUrl}/tasks/models${query ? `?${query}` : ""}`;
+  const timeoutMs = options?.timeoutMs ?? 8000;
+
+  const controller = new AbortController();
+  const timeoutId =
+    typeof window !== "undefined"
+      ? window.setTimeout(() => controller.abort(), timeoutMs)
+      : setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    const response = await fetch(`${API_CONFIG.baseUrl}/tasks/models?toolCalling=true`, {
+    const response = await fetch(url, {
       method: "GET",
       headers: API_CONFIG.headers,
-      // Remove credentials for Electron compatibility
-      // credentials: API_CONFIG.credentials,
+      signal: controller.signal,
     });
 
-    console.log("Fetch response status:", response.status);
     if (!response.ok) {
-      throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
+      console.warn(
+        `Failed to fetch models: ${response.status} ${response.statusText}`,
+      );
+      return [];
     }
 
     const data = await response.json();
-    console.log("Fetched models data:", data?.length || 0, "models");
     if (Array.isArray(data)) {
       return data;
     }
     return data.models || [];
   } catch (error) {
-    console.error("Error fetching models:", error);
-    throw error;
+    console.warn("Error fetching models:", error);
+    return [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

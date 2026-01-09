@@ -80,7 +80,7 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       console.log("Loading models...");
       try {
-        const result = await fetchModels();
+        const result = await fetchModels({ toolCalling: true });
         if (!isMounted) return;
         console.log("Loaded models:", result.length);
         const toolModels = result.filter((m) => m.capabilities?.toolCalling);
@@ -92,6 +92,7 @@ export default function Home() {
           "google",
           "ollama-local",
           "opencode-local",
+          "lm-studio",
         ]);
         const filteredModels = toolModels.filter((model) => allowedProviders.has(model.provider));
         console.log("Tool-capable models:", toolModels.length);

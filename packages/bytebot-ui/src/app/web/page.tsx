@@ -242,6 +242,12 @@ export default function WebPage() {
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
   const [command, setCommand] = useState("");
+  const [showLocalOnly, setShowLocalOnly] = useState(false);
+
+  const localProviders = useMemo(
+    () => new Set(["ollama-local", "opencode-local", "lm-studio"]),
+    [],
+  );
 
   const storageKey = useMemo(
     () => `bytebot:webTask:${selectedAgent}`,
@@ -305,7 +311,7 @@ export default function WebPage() {
 
     const loadModels = async () => {
       try {
-        const result = await fetchModels();
+        const result = await fetchModels({ toolCalling: true });
         if (!isMounted) return;
 
         const allowedProviders = new Set([
@@ -315,6 +321,8 @@ export default function WebPage() {
           "proxy",
           "google",
           "ollama-local",
+          "opencode-local",
+          "lm-studio",
         ]);
         const filteredModels = result.filter(
           (model) =>
@@ -338,6 +346,21 @@ export default function WebPage() {
       isMounted = false;
     };
   }, [addLog]);
+
+  const displayModels = useMemo(
+    () =>
+      showLocalOnly
+        ? models.filter((model) => localProviders.has(model.provider))
+        : models,
+    [localProviders, models, showLocalOnly],
+  );
+
+  useEffect(() => {
+    if (!displayModels.length) return;
+    if (!selectedModel || !displayModels.includes(selectedModel)) {
+      setSelectedModel(displayModels[0]);
+    }
+  }, [displayModels, selectedModel]);
 
   const handleRefresh = useCallback(() => {
     setConnectionStatus("connecting");
@@ -592,14 +615,27 @@ export default function WebPage() {
 
             <div className="mt-3 grid gap-3 lg:grid-cols-[220px_1fr]">
               <div className="space-y-2">
-                <label className="text-[9px] uppercase tracking-[0.2em] text-[#7c7c80]">
-                  Model
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] uppercase tracking-[0.2em] text-[#7c7c80]">
+                    Model
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowLocalOnly((prev) => !prev)}
+                    className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] ${
+                      showLocalOnly
+                        ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-200"
+                        : "border-white/10 bg-black/40 text-[#7c7c80]"
+                    }`}
+                  >
+                    {showLocalOnly ? "Local" : "All"}
+                  </button>
+                </div>
                 <select
                   value={selectedModel ? `${selectedModel.provider}:${selectedModel.name}` : ""}
                   onChange={(event) => {
                     const key = event.target.value;
-                    const match = models.find(
+                    const match = displayModels.find(
                       (model) => `${model.provider}:${model.name}` === key,
                     );
                     if (match) {
@@ -611,7 +647,7 @@ export default function WebPage() {
                   <option value="" disabled>
                     Select model
                   </option>
-                  {models.map((model) => (
+                  {displayModels.map((model) => (
                     <option
                       key={`${model.provider}:${model.name}`}
                       value={`${model.provider}:${model.name}`}

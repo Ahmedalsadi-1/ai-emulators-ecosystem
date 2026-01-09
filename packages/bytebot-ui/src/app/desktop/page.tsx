@@ -447,7 +447,7 @@ export default function DesktopPage() {
 
     const loadModels = async () => {
       try {
-        const result = await fetchModels();
+        const result = await fetchModels({ toolCalling: true });
         if (!isMounted) return;
 
         const allowedProviders = new Set([

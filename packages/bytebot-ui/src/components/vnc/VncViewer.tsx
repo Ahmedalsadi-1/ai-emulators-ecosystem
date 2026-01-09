@@ -102,6 +102,7 @@ export function VncViewer({
   
   // Store the current VncScreen instance ref to properly disconnect
   const vncScreenRef = useRef<{ disconnect: () => void } | null>(null);
+  const disconnectingRef = useRef(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -110,13 +111,15 @@ export function VncViewer({
     return () => {
       isMountedRef.current = false;
       // Disconnect VNC on unmount
-      if (vncScreenRef.current) {
+      if (vncScreenRef.current && !disconnectingRef.current) {
+        disconnectingRef.current = true;
         try {
           vncScreenRef.current.disconnect();
         } catch (e) {
           // Ignore cleanup errors
         }
         vncScreenRef.current = null;
+        disconnectingRef.current = false;
       }
     };
   }, []);
@@ -143,13 +146,15 @@ export function VncViewer({
   // Reset connection when controller type or URL changes
   useEffect(() => {
     // Disconnect existing connection before creating a new one
-    if (vncScreenRef.current) {
+    if (vncScreenRef.current && !disconnectingRef.current) {
+      disconnectingRef.current = true;
       try {
         vncScreenRef.current.disconnect();
       } catch (e) {
         // Ignore cleanup errors
       }
       vncScreenRef.current = null;
+      disconnectingRef.current = false;
     }
     
     const url = resolveWsUrl();
@@ -165,13 +170,15 @@ export function VncViewer({
 
   const retryConnection = useCallback(() => {
     // Disconnect existing connection before retrying
-    if (vncScreenRef.current) {
+    if (vncScreenRef.current && !disconnectingRef.current) {
+      disconnectingRef.current = true;
       try {
         vncScreenRef.current.disconnect();
       } catch (e) {
         // Ignore cleanup errors
       }
       vncScreenRef.current = null;
+      disconnectingRef.current = false;
     }
     
     setVncError(null);
@@ -214,15 +221,16 @@ export function VncViewer({
             credentials: credentials,
           }}
           onDisconnect={() => {
-            // Only notify, don't set error (disconnects are normal during reconnection)
-            if (isMountedRef.current) {
-              onStatusChange?.('disconnected');
-            }
+            if (!isMountedRef.current) return;
+            setShouldRender(false);
+            vncScreenRef.current = null;
+            onStatusChange?.('disconnected');
           }}
           onError={(error: Error) => {
             if (!isMountedRef.current) return;
             setVncError(error.message || 'VNC connection error');
             setShouldRender(false);
+            vncScreenRef.current = null;
             onStatusChange?.('error');
           }}
           // Use connectionKey in key to force fresh RFB instance on retry/switch

@@ -1,0 +1,108 @@
+# Android Emulator for Agent Control via mobile-mcp
+# Uses budtmo/docker-android with ADB and VNC access
+#
+# This container provides:
+# - Android emulator controllable via ADB (for mobile-mcp)
+# - noVNC web interface for viewing (port 6083)
+# - HTTP API for automation (port 8000)
+# - WebSocket for real-time control (port 8001)
+
+services:
+  android-emulator:
+    image: budtmo/docker-android:emulator_latest
+    container_name: kronos-android-emulator
+    hostname: android-emulator
+    privileged: true  # Required for KVM/QEMU
+    # Supported devices: [ emulator_only, realphone, only_realphone, realphone_new]
+    # For agent control, we use emulator_only
+    devices:
+      - /dev/kvm:/dev/kvm  # KVM virtualization support
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    environment:
+      # Device configuration
+      - DEVICE=emulator_only
+      # Screen resolution (1920x1080 is good for agents)
+      - SCREEN_WIDTH=1920
+      - SCREEN_HEIGHT=1080
+      - SCREEN_DENSITY=420
+      # Android version (Android 13 is stable)
+      - ANDROID_VERSION=13
+      # Enable WebRTC for better VNC performance
+      - WEBRTC=1
+      # Auto-start emulator
+      - AUTO_START_EMULATOR=true
+      # Enable ADB TCPIP mode for external connections
+      - ADB_TCPIP=5555
+      # Disable emulator window (headless mode)
+      - EMULATOR_HEADLESS=false
+      # Disable audio (reduces resource usage)
+      - DISABLE_AUDIO=true
+      # Timezone
+      - TZ=America/Chicago
+    ports:
+      # VNC web interface (noVNC) - view the Android screen
+      - "6083:6080"
+      # HTTP API for automation scripts
+      - "8000:8000"
+      # WebSocket for real-time communication
+      - "8001:8001"
+      # ADB TCP/IP port (for mobile-mcp)
+      - "5555:5555"
+    volumes:
+      # Persist emulator data across restarts
+      - android-data:/root/.android
+      # Persist app data
+      - android-apps:/data
+      # Logs for debugging
+      - android-logs:/var/log
+    networks:
+      - kronos-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Mobile-MCP Server for controlling the Android emulator
+  mobile-mcp:
+    image: node:20-alpine
+    container_name: kronos-mobile-mcp
+    hostname: mobile-mcp
+    depends_on:
+      - android-emulator
+    environment:
+      # Connect to Android emulator via ADB
+      - ADB_HOST=android-emulator
+      - ADB_PORT=5555
+      # MCP server configuration
+      - MCP_SERVER_NAME=kronos-android
+      - MCP_TRANSPORT=stdio
+      - PORT=3001
+    ports:
+      # MCP server port
+      - "3001:3001"
+    volumes:
+      # Mobile-MCP server code
+      - ./mobile-mcp:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - kronos-network
+    restart: unless-stopped
+    command: >
+      sh -c "cd /app && npm install && npm start"
+
+networks:
+  kronos-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  android-data:
+  android-apps:
+  android-logs:
