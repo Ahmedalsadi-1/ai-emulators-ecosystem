@@ -42,6 +42,11 @@ interface UITARSState {
 }
 
 // Simulated UI-TARS viewer based on os-ai-computer-use backend
+const UI_TARS_WS_URL =
+  process.env.NEXT_PUBLIC_UI_TARS_WS_URL ||
+  process.env.NEXT_PUBLIC_OS_AI_WS_URL ||
+  "ws://localhost:8765/ws";
+
 export function UITARSViewer({
   controllerType,
   viewOnly = false,
@@ -61,7 +66,7 @@ export function UITARSViewer({
   useEffect(() => {
     const connectWebSocket = () => {
       try {
-        wsRef.current = new WebSocket("ws://localhost:8765/ws");
+        wsRef.current = new WebSocket(UI_TARS_WS_URL);
 
         wsRef.current.onopen = () => {
           console.log("UI-TARS WebSocket connected");
@@ -87,9 +92,9 @@ export function UITARSViewer({
                 status: "idle",
                 lastError: undefined,
               }));
-          } else if (data.error) {
+            } else if (data.error) {
               const errorMessage = data.error?.message || String(data.error) || "Unknown connection error";
-              console.error("UI-TARS error:", data.error);
+              console.warn("UI-TARS error:", data.error);
               setState((prev) => ({
                 ...prev,
                 connected: false,
@@ -98,7 +103,7 @@ export function UITARSViewer({
               }));
             }
           } catch (error) {
-            console.error("Failed to parse UI-TARS message:", error);
+            console.warn("Failed to parse UI-TARS message:", error);
             setState((prev) => ({
               ...prev,
               connected: false,
@@ -108,21 +113,26 @@ export function UITARSViewer({
           }
         };
 
-        wsRef.current.onclose = () => {
-          console.log("UI-TARS WebSocket disconnected");
-          setState((prev) => ({ ...prev, connected: false }));
+        wsRef.current.onclose = (event) => {
+          console.warn("UI-TARS WebSocket disconnected", event);
+          setState((prev) => ({
+            ...prev,
+            connected: false,
+            status: "error",
+            lastError: `Connection closed (code: ${event.code})`,
+          }));
           // Reconnect after delay
           setTimeout(connectWebSocket, 3000);
         };
 
         wsRef.current.onerror = (error) => {
-          console.error("UI-TARS WebSocket error:", error);
+          console.warn("UI-TARS WebSocket error:", error);
           setState((prev) => ({
             ...prev,
             connected: false,
             status: "error",
-            lastError: "WebSocket connection failed",
-          }));
+            lastError: `WebSocket connection failed (${UI_TARS_WS_URL})`,
+              }));
         };
       } catch (error) {
         console.error("Failed to connect to UI-TARS:", error);
@@ -145,6 +155,14 @@ export function UITARSViewer({
   const handleAction = useCallback(
     async (action: string, params: Record<string, unknown> = {}) => {
       if (!wsRef.current || state.status === "processing") return;
+      if (wsRef.current.readyState !== WebSocket.OPEN) {
+        setState((prev) => ({
+          ...prev,
+          status: "error",
+          lastError: "UI-TARS WebSocket is not ready yet.",
+        }));
+        return;
+      }
 
       setState((prev) => ({ ...prev, status: "processing", lastAction: action }));
 
@@ -314,7 +332,7 @@ export function UITARSViewer({
                 {state.lastError || "Unable to connect to UI-TARS backend"}
               </p>
               <p className="text-gray-600 text-xs mt-1">
-                Make sure os-ai-computer-use is running on port 8765
+                Make sure UI-TARS backend is running at {UI_TARS_WS_URL}
               </p>
               <button
                 onClick={() => handleAction("screenshot")}
@@ -334,7 +352,7 @@ export function UITARSViewer({
                 Connecting to UI-TARS...
               </p>
               <p className="text-gray-600 text-xs mt-2">
-                Using os-ai-computer-use backend at localhost:8765
+                Using UI-TARS backend at {UI_TARS_WS_URL}
               </p>
             </div>
           </div>

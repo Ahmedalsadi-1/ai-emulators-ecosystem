@@ -12,10 +12,19 @@ export interface PerformanceMetrics {
   error?: string;
 }
 
+export interface FallbackMetric {
+  originalProvider: string;
+  originalModel: string;
+  fallbackProvider: string;
+  fallbackModel: string;
+  timestamp: Date;
+}
+
 @Injectable()
 export class PerformanceMonitorService {
   private readonly logger = new Logger(PerformanceMonitorService.name);
   private metrics: PerformanceMetrics[] = [];
+  private fallbackMetrics: FallbackMetric[] = [];
   private readonly maxMetrics = 1000; // Keep last 1000 metrics
 
   recordMetrics(metrics: Omit<PerformanceMetrics, 'timestamp'>) {
@@ -88,5 +97,34 @@ export class PerformanceMonitorService {
     return [...this.metrics]
       .sort((a, b) => b.responseTime - a.responseTime)
       .slice(0, limit);
+  }
+
+  recordFallback(
+    originalProvider: string,
+    originalModel: string,
+    fallbackProvider: string,
+    fallbackModel: string,
+  ) {
+    const entry: FallbackMetric = {
+      originalProvider,
+      originalModel,
+      fallbackProvider,
+      fallbackModel,
+      timestamp: new Date(),
+    };
+
+    this.fallbackMetrics.push(entry);
+
+    if (this.fallbackMetrics.length > this.maxMetrics) {
+      this.fallbackMetrics = this.fallbackMetrics.slice(-this.maxMetrics);
+    }
+
+    this.logger.debug(
+      `Fallback recorded: ${originalProvider}/${originalModel} -> ${fallbackProvider}/${fallbackModel}`,
+    );
+  }
+
+  getFallbacks(limit: number = 100): FallbackMetric[] {
+    return this.fallbackMetrics.slice(-limit);
   }
 }

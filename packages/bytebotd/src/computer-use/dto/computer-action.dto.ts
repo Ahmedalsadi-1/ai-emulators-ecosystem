@@ -21,6 +21,10 @@ import {
  * Base class for action DTOs with common validation decorator
  */
 abstract class BaseActionDto {
+  @IsOptional()
+  @IsString()
+  session_id?: string;
+
   abstract action: string;
 }
 

@@ -45,22 +45,25 @@ export function GboxAndroidView({ className }: GboxAndroidViewProps) {
   useEffect(() => {
     const checkGBoxHealth = async () => {
       try {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 2000);
         const response = await fetch(`${gboxAndroidUrl}/health`, {
           mode: 'no-cors',
+          signal: controller.signal,
         });
+        window.clearTimeout(timeout);
         setState(prev => ({
           ...prev,
           connected: response.ok || response.status === 0,
           loading: false,
           error: response.ok ? null : 'GBox service health check failed',
         }));
-      } catch (error) {
-        console.error('GBox health check failed:', error);
+      } catch {
         setState(prev => ({
           ...prev,
           connected: false,
           loading: false,
-          error: 'Unable to connect to GBox service',
+          error: 'Unable to reach GBox service',
         }));
       }
     };

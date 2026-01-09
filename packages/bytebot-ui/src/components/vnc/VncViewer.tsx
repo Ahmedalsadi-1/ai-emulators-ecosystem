@@ -92,6 +92,8 @@ export function VncViewer({
   const [VncComponent, setVncComponent] = useState<any>(null);
   const [wsUrl, setWsUrl] = useState<string | null>(null);
   const [vncError, setVncError] = useState<string | null>(null);
+  const [shouldRender, setShouldRender] = useState(true);
+  const [connectionId, setConnectionId] = useState(0); // Increment to force reconnection
 
   useEffect(() => {
     // Dynamically import the VncScreen component only on the client side
@@ -119,9 +121,9 @@ export function VncViewer({
 
   const retryConnection = () => {
     setVncError(null);
-    const url = resolveWsUrl();
-    if (!url) return;
-    setWsUrl(url);
+    setShouldRender(true);
+    // Increment connection ID to force a completely fresh connection
+    setConnectionId(prev => prev + 1);
     onStatusChange?.('connecting');
   };
 
@@ -145,7 +147,7 @@ export function VncViewer({
         </div>
       )}
       
-      {VncComponent && wsUrl && !vncError && (
+      {VncComponent && wsUrl && !vncError && shouldRender && (
         <VncComponent
           rfbOptions={{
             secure: false,
@@ -158,10 +160,12 @@ export function VncViewer({
             onStatusChange?.('disconnected');
           }}
           onError={(error: Error) => {
-            console.error('VNC Error:', error);
+            setVncError(error.message || 'VNC connection error');
+            setShouldRender(false);
             onStatusChange?.('error');
           }}
-          key={`${controllerType}-${viewOnly ? 'view' : 'interactive'}`}
+          // Use connectionId in key to force fresh RFB instance on retry
+          key={`${controllerType}-${viewOnly ? 'view' : 'interactive'}-${connectionId}`}
           url={wsUrl}
           scaleViewport
           viewOnly={viewOnly}

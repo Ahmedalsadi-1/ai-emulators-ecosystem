@@ -4,9 +4,10 @@ import { createProxyServer } from "http-proxy";
 import next from "next";
 import { createServer } from "http";
 import dotenv from "dotenv";
+import path from "path";
 
-// Load environment variables
-dotenv.config();
+// Load environment variables - .env.local takes precedence
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
@@ -63,7 +64,20 @@ if (!BYTEBOT_AGENT_BASE_URL) {
 const tasksHttpProxy = BYTEBOT_AGENT_BASE_URL ? createProxyMiddleware({
   target: BYTEBOT_AGENT_BASE_URL,
   changeOrigin: true,
-  pathRewrite: { "^/api/proxy/tasks": "/tasks" },
+  pathRewrite: (path) => {
+    // For /api/proxy/tasks/* → /tasks/*
+    if (path.startsWith('/api/proxy/tasks')) {
+      return path.replace('/api/proxy/tasks', '/tasks');
+    }
+    // For /api/tasks/* → /tasks/* (remainder path after mount point)
+    // Path here is the remainder after /api/tasks, e.g., /models, /?query
+    if (path === '/' || path.startsWith('/?')) {
+      // Root path /api/tasks → /tasks
+      return '/tasks' + path;
+    }
+    // For other paths like /models → /tasks/models
+    return '/tasks' + path;
+  },
 }) : null;
 
 // WebSocket proxy for Socket.IO connections to backend
@@ -120,8 +134,13 @@ vncProxy.on("error", (error, req, res) => {
 // Apply HTTP proxies in correct order (specific routes before generic)
 if (tasksHttpProxy) {
   expressApp.use("/api/proxy/tasks", tasksHttpProxy);
+  // Also proxy /api/tasks (used by frontend directly)
+  expressApp.use("/api/tasks", tasksHttpProxy);
 } else {
   expressApp.use("/api/proxy/tasks", (req, res) => {
+    res.status(500).json({ error: "BYTEBOT_AGENT_BASE_URL not configured" });
+  });
+  expressApp.use("/api/tasks", (req, res) => {
     res.status(500).json({ error: "BYTEBOT_AGENT_BASE_URL not configured" });
   });
 }

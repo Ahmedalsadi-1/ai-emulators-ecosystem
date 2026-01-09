@@ -6,6 +6,7 @@ const LM_STUDIO_BASE_URL = process.env.LM_STUDIO_BASE_URL || 'http://192.168.1.1
 
 // Ollama configuration - support both local and remote
 const OLLAMA_BASE_URL = process.env.OLLAMA_HOST || 'http://localhost:11434';
+const OMNIPARSER_ENABLED = process.env.OMNIPARSER_ENABLED === 'true';
 
 /**
  * Models known to have tool calling capability
@@ -110,7 +111,7 @@ export class DynamicModelsService {
           capabilities: {
             toolCalling: TOOL_CALLING_MODELS.has(name) || name.includes('functiongemma') || name.includes('qwen3-vl'),
             vision: VISION_MODELS.has(name) || name.includes('vl') || name.includes('vision'),
-            omniparser: VISION_MODELS.has(name) || name.includes('vl') || name.includes('vision'),
+            omniparser: OMNIPARSER_ENABLED && (VISION_MODELS.has(name) || name.includes('vl') || name.includes('vision')),
             streaming: true,
           },
         };
@@ -164,7 +165,7 @@ export class DynamicModelsService {
           capabilities: {
             toolCalling: TOOL_CALLING_MODELS.has(name) || name.includes('qwen') || name.includes('llama') || name.includes('claude'),
             vision: hasVision,
-            omniparser: hasVision,
+            omniparser: OMNIPARSER_ENABLED && hasVision,
             streaming: true,
           },
         };

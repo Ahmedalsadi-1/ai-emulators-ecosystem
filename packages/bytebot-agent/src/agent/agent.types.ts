@@ -42,6 +42,7 @@ export interface BytebotAgentService {
     capabilities?: {
       toolCalling?: boolean;
       vision?: boolean;
+      omniparser?: boolean;
       streaming?: boolean;
     };
   }

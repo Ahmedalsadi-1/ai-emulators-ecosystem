@@ -36,14 +36,15 @@ async function apiRequest<T>(
     });
 
     if (!response.ok) {
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}`,
+      console.warn(
+        `API request failed: ${response.status} ${response.statusText} (${endpoint})`,
       );
+      return null;
     }
 
     return await response.json();
   } catch (error) {
-    console.error(`Error in API request to ${endpoint}:`, error);
+    console.warn(`Error in API request to ${endpoint}:`, error);
     return null;
   }
 }

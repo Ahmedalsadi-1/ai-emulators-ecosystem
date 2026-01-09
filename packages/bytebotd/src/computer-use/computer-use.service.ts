@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { NutService } from '../nut/nut.service';
+import { VncBridgeService } from '../vnc/vnc-bridge.service';
 import {
   ComputerAction,
   MoveMouseAction,
@@ -26,10 +27,45 @@ import {
 export class ComputerUseService {
   private readonly logger = new Logger(ComputerUseService.name);
 
-  constructor(private readonly nutService: NutService) {}
+  constructor(
+    private readonly nutService: NutService,
+    private readonly vncBridge: VncBridgeService,
+  ) {}
 
-  async action(params: ComputerAction): Promise<any> {
+  async action(params: ComputerAction & { session_id?: string }): Promise<any> {
     this.logger.log(`Executing computer action: ${params.action}`);
+    const vncEligibleActions = new Set([
+      'move_mouse',
+      'trace_mouse',
+      'click_mouse',
+      'press_mouse',
+      'drag_mouse',
+      'scroll',
+      'type_keys',
+      'press_keys',
+      'type_text',
+      'paste_text',
+      'screenshot',
+    ]);
+    const shouldUseVnc =
+      this.vncBridge.isEnabled() &&
+      vncEligibleActions.has(params.action) &&
+      (Boolean(params.session_id) ||
+        process.env.VNC_BRIDGE_FORCE === 'true');
+
+    if (shouldUseVnc) {
+      const result = await this.vncBridge.handleAction(
+        params.session_id,
+        params,
+      );
+      if (!result.success) {
+        throw new Error(result.error || 'VNC action failed');
+      }
+      if (params.action === 'screenshot' && result.screenshot) {
+        return { image: result.screenshot.data, width: result.screenshot.width, height: result.screenshot.height };
+      }
+      return { success: true };
+    }
 
     switch (params.action) {
       case 'move_mouse': {

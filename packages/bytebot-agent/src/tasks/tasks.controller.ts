@@ -165,6 +165,7 @@ export class TasksController {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const groqApiKey = process.env.GROQ_API_KEY;
     const routewayApiKey = process.env.ROUTEWAY_API_KEY;
+    const omniparserEnabled = process.env.OMNIPARSER_ENABLED === 'true';
 
     console.log('[Models] API Keys check:', {
       anthropic: false, // Explicitly excluded
@@ -199,6 +200,66 @@ export class TasksController {
     dynamicModels = [...dynamicModels, ...OLLAMA_MODELS];
     dynamicModels = [...dynamicModels, ...OPENCODE_MODELS];
 
+    if (proxyUrl) {
+      try {
+        const response = await fetch(`${proxyUrl}/model/info`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (response.ok) {
+          const proxyModels = await response.json();
+          const proxyModelList: BytebotAgentModel[] = (proxyModels.data || [])
+            .map((model: any) => {
+              const name =
+                model.litellm_params?.model || model.id || model.model_name;
+              const title = model.model_name || name;
+              const lowered = String(name || '').toLowerCase();
+              const supportsTool =
+                model.supports_function_calling ??
+                model.litellm_params?.supports_function_calling ??
+                false;
+              const isVision =
+                lowered.includes('vision') || lowered.includes('vl');
+              const nameImpliesTool = [
+                'ui-tars',
+                'tars',
+                'gpt',
+                'gemini',
+                'claude',
+                'deepseek',
+                'qwen',
+                'llama',
+                'mixtral',
+              ].some((token) => lowered.includes(token));
+
+              return {
+                provider: 'proxy',
+                name,
+                title: `${title} (Proxy)`,
+                contextWindow: model.context_window || 128000,
+                capabilities: {
+                  toolCalling: Boolean(supportsTool || nameImpliesTool),
+                  vision: isVision,
+                  omniparser: omniparserEnabled && isVision,
+                  streaming: true,
+                },
+              };
+            })
+            .filter((model: BytebotAgentModel) => Boolean(model.name));
+
+          dynamicModels = [...dynamicModels, ...proxyModelList];
+        } else {
+          this.logger.warn(`Proxy model fetch failed: ${response.status}`);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Proxy model fetch error: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    }
+
     // Fetch LM Studio models from the configured URL
     const lmStudioBaseUrl = process.env.LM_STUDIO_BASE_URL || 'http://192.168.1.118:1234';
     try {
@@ -216,7 +277,7 @@ export class TasksController {
           capabilities: {
             toolCalling: true,
             vision: model.id.includes('vl') || model.id.includes('vision'),
-            omniparser: model.id.includes('vl') || model.id.includes('vision'),
+            omniparser: omniparserEnabled && (model.id.includes('vl') || model.id.includes('vision')),
             streaming: true,
           },
         }));
@@ -227,6 +288,16 @@ export class TasksController {
       }
     } catch (error) {
       console.log('[Models] LM Studio not available:', error instanceof Error ? error.message : error);
+    }
+
+    if (omniparserEnabled) {
+      dynamicModels = dynamicModels.map((model) => ({
+        ...model,
+        capabilities: {
+          ...model.capabilities,
+          omniparser: Boolean(model.capabilities?.vision),
+        },
+      }));
     }
 
     // Filter for tool-capable models if requested

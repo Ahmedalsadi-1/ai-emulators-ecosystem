@@ -26,7 +26,13 @@ import {
   Settings,
   Globe,
   Clock,
-  Tv
+  Tv,
+  Maximize2,
+  Minimize2,
+  Pause,
+  Play,
+  MessageSquarePlus,
+  Square
 } from "lucide-react";
 import { KronosLogo } from "@/components/branding/KronosLogo";
 
@@ -44,13 +50,13 @@ type DesktopSession = {
 type WorkspaceOption = {
   id: string;
   label: string;
-  screen: 'bytebot' | 'debian' | 'kali' | 'custom' | 'bytebot-edge-1' | 'bytebot-edge-2' | 'bytebot-edge-3';
+  screen: 'bytebot' | 'debian' | 'kali' | 'custom' | 'bytebot-edge-1' | 'bytebot-edge-2' | 'bytebot-edge-3' | 'factif-ai' | 'gbox';
   directUrl?: string;
   sessionId?: string;
   sessionPort?: number | null;
 };
 
-const WORKSPACE_STORAGE_VERSION = "2";
+const WORKSPACE_STORAGE_VERSION = "3";
 const WORKSPACE_STORAGE_VERSION_KEY = "bytebot:desktop:workspaceVersion";
 
 const pickRoutewayDefault = (candidates: Model[]): Model | null =>
@@ -152,12 +158,17 @@ const controllerOptions: ControllerOption[] = [
   { id: "open-interface", label: "Open Interface" },
 ];
 
+const controllerWorkspaceMap: Record<string, string> = {
+  "factif-ai": "factif-ai",
+  gbox: "gbox",
+};
+
 const defaultWorkspaces: WorkspaceOption[] = [
   { id: "bytebot-edge-1", label: "KRON-1", screen: "bytebot-edge-1", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_1 },
   { id: "bytebot-edge-2", label: "KRON-2", screen: "bytebot-edge-2", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_2 },
   { id: "bytebot-edge-3", label: "KRON-3", screen: "bytebot-edge-3", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_3 },
   { id: "factif-ai", label: "FACTIF-AI", screen: "factif-ai", directUrl: process.env.NEXT_PUBLIC_FACTIFAI_VNC_URL || 'ws://localhost:6082/websockify' },
-  { id: "gbox", label: "GBOX", screen: "gbox", directUrl: undefined }, // Gbox will use GboxDesktopView component
+  { id: "gbox", label: "GBOX", screen: "gbox", directUrl: process.env.NEXT_PUBLIC_GBOX_DESKTOP_VNC_URL }, // Gbox will use GboxDesktopView component
 ];
 
 export default function DesktopPage() {
@@ -182,6 +193,8 @@ export default function DesktopPage() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [keyboardNavigationActive, setKeyboardNavigationActive] = useState(false);
   const [unavailableControllers, setUnavailableControllers] = useState<Record<string, { transient: boolean; message: string }>>({});
+  const [focusDesktop, setFocusDesktop] = useState(false);
+  const [localScreenBackend, setLocalScreenBackend] = useState<"os-ai" | "ui-tars">("os-ai");
   
   // NEW STATES
   const [showControllerPopup, setShowControllerPopup] = useState(false);
@@ -192,8 +205,8 @@ export default function DesktopPage() {
     failing: 0
   });
 
-  const taskStorageKey = `bytebot:desktopTask:${activeWorkspace}`;
-  const modelStorageKey = `bytebot:desktopModel:${activeWorkspace}`;
+  const taskStorageKey = `bytebot:desktopTask:unified`; // Unified chat across all workspaces
+  const modelStorageKey = `bytebot:desktopModel:unified`; // Unified model selection across all workspaces
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   
@@ -201,13 +214,39 @@ export default function DesktopPage() {
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.NEXT_PUBLIC_BYTEBOT_AGENT_BASE_URL ||
     'http://localhost:9991';
+  const controllerHealth = [
+    {
+      id: 'factif-ai',
+      label: 'FACTIF',
+      ready: Boolean(process.env.NEXT_PUBLIC_FACTIFAI_VNC_URL),
+    },
+    {
+      id: 'browseros',
+      label: 'BROWSEROS',
+      ready: Boolean(
+        process.env.NEXT_PUBLIC_BROWSEROS_DESKTOP_VNC_URL ||
+          process.env.NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT,
+      ),
+    },
+    {
+      id: 'gbox',
+      label: 'GBOX',
+      ready: Boolean(
+        process.env.NEXT_PUBLIC_GBOX_DESKTOP_VNC_URL ||
+          process.env.NEXT_PUBLIC_GBOX_ANDROID_URL,
+      ),
+    },
+  ];
 
   // Derive current screen from active workspace
   const currentWorkspace = workspaces.find(w => w.id === activeWorkspace);
-  const currentScreen = currentWorkspace?.screen || 'bytebot-edge-1';
+  const currentScreen = (currentWorkspace?.screen || 'bytebot-edge-1') as WorkspaceOption['screen'];
   const currentDirectUrl = currentWorkspace?.directUrl;
   const isCustomScreen = currentScreen === 'custom' || currentScreen.startsWith('bytebot-edge');
-  const vncControllerType = isCustomScreen ? undefined : currentScreen;
+  const vncControllerType =
+    isCustomScreen || currentScreen === 'factif-ai' || currentScreen === 'gbox'
+      ? undefined
+      : currentScreen;
 
   // Load workspaces and active workspace from localStorage
   useEffect(() => {
@@ -340,6 +379,14 @@ export default function DesktopPage() {
     clearSelection,
     navigateControllers,
   } = useMultiControllerState(controllerOptions);
+
+  useEffect(() => {
+    if (!primaryControllerId) return;
+    const targetWorkspace = controllerWorkspaceMap[primaryControllerId];
+    if (targetWorkspace && targetWorkspace !== activeWorkspace) {
+      setActiveWorkspace(targetWorkspace);
+    }
+  }, [primaryControllerId, activeWorkspace]);
 
   // Keyboard shortcuts
   useControllerKeyboardShortcuts({
@@ -484,33 +531,80 @@ export default function DesktopPage() {
   const handleSwitchDesktop = (desktopId: string) => setActiveWorkspace(desktopId);
 
   return (
-    <div className="flex h-screen flex-col bg-[#000] text-[#e0e0e0] font-mono text-xs overflow-hidden select-none">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-[#050507] text-[#e0e0e0] font-mono text-xs select-none">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_circle_at_top,_rgba(98,97,255,0.12),_transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_bottom,_rgba(8,8,10,0.95),_transparent_70%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,_rgba(255,255,255,0.04),_transparent_55%)] opacity-70" />
+
       <VncEnvWarning />
-      
+
       {/* Main Content Area - Split Pane */}
-      <div className="flex flex-1 overflow-hidden border-x border-[#333] mx-2 mt-2 bg-[#000]">
+      <div className="relative z-10 mx-2 mt-2 flex flex-1 overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0d]/80 shadow-[0_25px_70px_rgba(0,0,0,0.55)]">
         
         {/* LEFT COLUMN: CHAT / SECONDARY */}
-        <div className="flex w-[450px] flex-col border-r border-[#333] bg-[#000]">
+        <div className={`flex w-[450px] flex-col border-r border-white/10 bg-[#0b0b0d]/90 backdrop-blur-sm ${focusDesktop ? "hidden" : ""}`}>
           {/* Header */}
-          <div className="border-b border-[#333] bg-[#000] px-3 py-2 text-[#888] font-bold tracking-widest uppercase flex items-center justify-between">
+          <div className="border-b border-white/10 bg-[#0f0f14]/80 px-3 py-2 text-[#b1b1b5] font-bold tracking-widest uppercase flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <KronosLogo size={14} className="opacity-50" />
+              <KronosLogo size={14} className="opacity-70" />
               CHAT
             </div>
             
-            {/* Task Status Indicator */}
-            <div className="flex items-center gap-2 text-[9px]">
-              <span className="text-[#444]">TASKS:</span>
-              <TaskStatusBadge status="running" count={activeTasks.running} />
-              <TaskStatusBadge status="pending" count={activeTasks.pending} />
-              <TaskStatusBadge status="failing" count={activeTasks.failing} />
+            {/* Chat Controls: New Chat | Pause | Resume */}
+            <div className="flex items-center gap-2">
+              {/* New Chat */}
+              <button 
+                type="button"
+                onClick={() => {
+                  clearMessages();
+                  resetSession();
+                  addLog('Started new chat session');
+                }}
+                className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                title="New Chat"
+              >
+                <MessageSquarePlus className="w-3 h-3" />
+              </button>
+
+              {/* Pause Task */}
+              <button 
+                type="button"
+                onClick={() => {
+                  addLog('Task paused');
+                  // TODO: Implement actual pause logic
+                }}
+                className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                title="Pause Task"
+              >
+                <Pause className="w-3 h-3" />
+              </button>
+
+              {/* Resume Task */}
+              <button 
+                type="button"
+                onClick={() => {
+                  addLog('Task resumed');
+                  // TODO: Implement actual resume logic
+                }}
+                className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                title="Resume Task"
+              >
+                <Play className="w-3 h-3" />
+              </button>
+
+              {/* Task Status Indicator */}
+              <div className="flex items-center gap-2 text-[9px] ml-2">
+                <span className="text-[#444]">TASKS:</span>
+                <TaskStatusBadge status="running" count={activeTasks.running} />
+                <TaskStatusBadge status="pending" count={activeTasks.pending} />
+                <TaskStatusBadge status="failing" count={activeTasks.failing} />
+              </div>
             </div>
           </div>
 
                       {/* User / AI Dialogue */}
 
-                    <div className="flex-1 flex flex-col overflow-hidden bg-[#000]">
+                    <div className="flex-1 flex flex-col overflow-hidden bg-[#08080b]/70">
 
                       <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
@@ -621,7 +715,7 @@ export default function DesktopPage() {
               </div>
               
               <form onSubmit={handleSend} className="flex flex-col gap-2">
-                <div className="w-full border border-[#333] bg-[#000] p-3 focus-within:border-[#666] min-h-[100px] flex flex-col relative">
+                <div className="w-full border border-white/10 bg-black/60 p-3 focus-within:border-white/30 min-h-[100px] flex flex-col relative shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                   <textarea 
                     value={command}
                     onChange={(e) => setCommand(e.target.value)}
@@ -631,18 +725,18 @@ export default function DesktopPage() {
                         handleSend(e);
                       }
                     }}
-                    className="flex-1 bg-transparent text-[#e0e0e0] placeholder-[#333] focus:outline-none resize-none font-mono text-[11px] leading-relaxed"
+                    className="flex-1 bg-transparent text-[#e0e0e0] placeholder-[#404046] focus:outline-none resize-none font-mono text-[11px] leading-relaxed"
                     placeholder="Enter command..."
                     autoFocus
                   />
                   
                   {/* Footer of Input Box */}
-                  <div className="flex justify-end items-center gap-3 mt-2 pt-2 border-t border-[#333]/30">
+                  <div className="flex justify-end items-center gap-3 mt-2 pt-2 border-t border-white/10">
                     {/* Controller Toggle (TV) */}
                     <button 
                       type="button"
                       onClick={() => setShowControllerPopup(!showControllerPopup)}
-                      className="text-[#555] hover:text-[#e0e0e0] transition-colors"
+                      className="text-[#6b6b70] hover:text-[#e0e0e0] transition-colors"
                       title="Controllers"
                     >
                       <Tv className="w-3.5 h-3.5" />
@@ -651,7 +745,7 @@ export default function DesktopPage() {
                     <button 
                       type="submit"
                       disabled={isLoading || !selectedModel}
-                      className="flex items-center gap-2 px-4 py-1.5 border border-[#333] bg-[#0a0a0a] hover:bg-[#111] text-[#888] hover:text-[#e0e0e0] transition-colors uppercase tracking-widest text-[9px]"
+                      className="flex items-center gap-2 px-4 py-1.5 border border-white/10 bg-white/5 hover:bg-white/10 text-[#b1b1b5] hover:text-[#e0e0e0] transition-colors uppercase tracking-widest text-[9px]"
                     >
                       <span>SEND COMMAND</span>
                       <Send className="w-3 h-3" />
@@ -666,28 +760,39 @@ export default function DesktopPage() {
                   </div>
 
         {/* RIGHT COLUMN: LIVE DESKTOP PREVIEW */}
-        <div className="flex flex-1 flex-col bg-[#000] relative">
+        <div className="flex flex-1 flex-col bg-[#0a0a0d]/80 relative">
            {/* Header */}
-           <div className="border-b border-[#333] bg-[#000] px-3 py-2 text-[#888] font-bold tracking-widest uppercase flex justify-between items-center">
+           <div className="border-b border-white/10 bg-[#0f0f14]/80 px-3 py-2 text-[#b1b1b5] font-bold tracking-widest uppercase flex justify-between items-center">
             <span>LIVE DESKTOP PREVIEW (RIGHT / PRIMARY)</span>
-            {activeWorkspace && (
-              <span className="text-[#444] px-2 border border-[#333] text-[9px]">{workspaces.find(w => w.id === activeWorkspace)?.label}</span>
-            )}
+            <div className="flex items-center gap-2">
+              {activeWorkspace && (
+                <span className="text-[#777] px-2 border border-white/10 text-[9px] bg-black/40">{workspaces.find(w => w.id === activeWorkspace)?.label}</span>
+              )}
+              <button
+                type="button"
+                onClick={() => setFocusDesktop((prev) => !prev)}
+                className="flex items-center gap-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-[9px] text-[#9a9aa3] transition hover:bg-white/10 hover:text-white"
+                title={focusDesktop ? "Exit focus mode" : "Focus desktop"}
+              >
+                {focusDesktop ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+                {focusDesktop ? "Exit" : "Focus"}
+              </button>
+            </div>
            </div>
 
            {/* Desktop Content */}
            <div className="flex-1 p-6 flex flex-col gap-4 overflow-hidden">
               {/* Top Bar inside Desktop Preview (from ASCII) */}
-              <div className="w-full border border-[#333] bg-[#000] py-1 text-center text-[#444] text-[10px] uppercase tracking-[0.2em]">
+              <div className="w-full border border-white/10 bg-black/40 py-1 text-center text-[#6f6f78] text-[10px] uppercase tracking-[0.2em]">
                 [       KRONOS SCREEN       ]
               </div>
 
               {/* Main Desktop Area */}
-              <div className="flex-1 border border-[#333] bg-[#050505] relative overflow-hidden flex items-center justify-center group">
+              <div className="flex-1 border border-white/10 bg-[#050508] relative overflow-hidden flex items-center justify-center group shadow-[inset_0_1px_0_rgba(255,255,255,0.04),_0_20px_60px_rgba(0,0,0,0.55)]">
                                 {isLocalScreen ? (
-                                  <LocalScreenViewer />
+                                  <LocalScreenViewer preferredBackend={localScreenBackend} />
                                 ) : currentScreen === 'gbox' ? (
-                                  <GboxDesktopView />
+                                  <GboxDesktopView directUrl={currentDirectUrl} />
                                 ) : (
                                   <div className="w-full h-full relative">
                                      <VncViewer
@@ -717,10 +822,32 @@ export default function DesktopPage() {
            {/* POPUPS LAYER (Above Desktop but below Dock if needed, or z-50 to overlap everything) */}
            {/* Controller Popup */}
            {showControllerPopup && (
-             <div className="absolute bottom-4 right-4 z-40 w-64 border border-[#333] bg-[#0a0a0a] shadow-2xl p-4">
-                <div className="flex items-center justify-between mb-3 border-b border-[#333] pb-2">
-                  <span className="text-[#888] font-bold uppercase tracking-widest">CONTROLLERS</span>
-                  <button onClick={() => setShowControllerPopup(false)} className="text-[#555] hover:text-[#fff]"><X className="w-3 h-3"/></button>
+             <div className="absolute bottom-4 right-4 z-40 w-64 border border-white/10 bg-[#0f0f12]/95 shadow-2xl p-4 backdrop-blur-md">
+                <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+                  <span className="text-[#b1b1b5] font-bold uppercase tracking-widest">CONTROLLERS</span>
+                  <button onClick={() => setShowControllerPopup(false)} className="text-[#777] hover:text-[#fff]"><X className="w-3 h-3"/></button>
+                </div>
+                <div className="mb-3 space-y-2">
+                  <div className="text-[9px] uppercase tracking-widest text-[#6f6f78]">Desktops</div>
+                  <div className="flex flex-col gap-1">
+                    {workspaces.map((workspace) => {
+                      const isActive = activeWorkspace === workspace.id;
+                      return (
+                        <button
+                          key={workspace.id}
+                          onClick={() => {
+                            setActiveWorkspace(workspace.id);
+                            setShowControllerPopup(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-[10px] uppercase tracking-wider border ${ 
+                            isActive ? "border-white/10 bg-white/5 text-[#e0e0e0]" : "border-transparent text-[#808088] hover:bg-white/5 hover:text-[#d1d1d5]"
+                          }`}
+                        >
+                          {workspace.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   {controllerOptions.map(c => {
@@ -730,7 +857,7 @@ export default function DesktopPage() {
                         key={c.id}
                         onClick={() => toggleController(c.id)}
                         className={`w-full text-left px-3 py-2 text-[10px] uppercase tracking-wider flex items-center justify-between border ${ 
-                          isActive ? "border-[#444] bg-[#111] text-[#e0e0e0]" : "border-transparent text-[#666] hover:bg-[#050505] hover:text-[#aaa]"
+                          isActive ? "border-white/10 bg-white/5 text-[#e0e0e0]" : "border-transparent text-[#808088] hover:bg-white/5 hover:text-[#d1d1d5]"
                         }`}
                       >
                         {c.label}
@@ -739,17 +866,42 @@ export default function DesktopPage() {
                     )
                   })}
                 </div>
+                {isLocalScreen && (
+                  <div className="mt-4 border-t border-white/10 pt-3">
+                    <div className="mb-2 text-[9px] uppercase tracking-widest text-[#6f6f78]">Local Screen Backend</div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLocalScreenBackend("os-ai")}
+                        className={`flex-1 rounded-md border px-2 py-1 text-[9px] uppercase tracking-widest ${localScreenBackend === "os-ai"
+                          ? "border-white/20 bg-white/10 text-white"
+                          : "border-white/10 bg-black/30 text-[#9a9aa3] hover:text-white"}`}
+                      >
+                        OS-AI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLocalScreenBackend("ui-tars")}
+                        className={`flex-1 rounded-md border px-2 py-1 text-[9px] uppercase tracking-widest ${localScreenBackend === "ui-tars"
+                          ? "border-white/20 bg-white/10 text-white"
+                          : "border-white/10 bg-black/30 text-[#9a9aa3] hover:text-white"}`}
+                      >
+                        UI-TARS
+                      </button>
+                    </div>
+                  </div>
+                )}
              </div>
            )}
 
            {/* Tasks Popup */}
            {showTaskHistory && (
-             <div className="absolute bottom-4 right-16 z-40 w-80 h-96 border border-[#333] bg-[#0a0a0a] shadow-2xl p-4 flex flex-col">
-                <div className="flex items-center justify-between mb-3 border-b border-[#333] pb-2">
-                  <span className="text-[#888] font-bold uppercase tracking-widest">RECENT TASKS</span>
-                  <button onClick={() => setShowTaskHistory(false)} className="text-[#555] hover:text-[#fff]"><X className="w-3 h-3"/></button>
+             <div className="absolute bottom-4 right-16 z-40 w-80 h-96 border border-white/10 bg-[#0f0f12]/95 shadow-2xl p-4 flex flex-col backdrop-blur-md">
+                <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+                  <span className="text-[#b1b1b5] font-bold uppercase tracking-widest">RECENT TASKS</span>
+                  <button onClick={() => setShowTaskHistory(false)} className="text-[#777] hover:text-[#fff]"><X className="w-3 h-3"/></button>
                 </div>
-                <div className="flex-1 overflow-y-auto text-[#666] italic text-center py-10">
+                <div className="flex-1 overflow-y-auto text-[#777] italic text-center py-10">
                    No recent tasks found in history.
                 </div>
              </div>
@@ -772,6 +924,7 @@ export default function DesktopPage() {
           onSwitchDesktop={handleSwitchDesktop}
           onToggleControllers={handleToggleControllers}
           onToggleTasks={handleToggleTasks}
+          controllerHealth={controllerHealth}
         />
       </div>
     </div>

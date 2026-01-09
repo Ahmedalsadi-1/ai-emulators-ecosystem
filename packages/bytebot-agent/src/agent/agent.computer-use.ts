@@ -20,21 +20,107 @@ import {
   isApplicationToolUseBlock,
   isPasteTextToolUseBlock,
   isReadFileToolUseBlock,
+  MessageContentBlock,
 } from '@bytebot/shared';
 import { Logger } from '@nestjs/common';
 import { DEFAULT_DISPLAY_SIZE } from './agent.constants';
 
 const DEFAULT_DESKTOP_BASE_URL =
-  process.env.BYTEBOT_DESKTOP_BASE_URL || 'http://localhost:9990';
+  process.env.BYTEBOT_VNC_BRIDGE_URL ||
+  process.env.BYTEBOT_DESKTOP_BASE_URL ||
+  'http://localhost:9990';
 const REQUIRE_SESSION_ID = process.env.BYTEBOT_REQUIRE_SESSION_ID === 'true';
 const NORMALIZE_COORDS =
   process.env.BYTEBOT_NORMALIZE_COORDS === 'true' ||
   process.env.BYTEBOT_SMOLAGENTS_MODE === 'true';
+const OMNIPARSER_ENABLED = process.env.OMNIPARSER_ENABLED === 'true';
+const OMNIPARSER_BASE_URL =
+  process.env.OMNIPARSER_BASE_URL || 'http://host.docker.internal:8001';
+const OMNIPARSER_TIMEOUT_MS =
+  Number(process.env.OMNIPARSER_TIMEOUT_MS) || 5000;
+const OMNIPARSER_MAX_ELEMENTS =
+  Number(process.env.OMNIPARSER_MAX_ELEMENTS) || 20;
+const OMNIPARSER_PARSE_PATH = process.env.OMNIPARSER_PARSE_PATH || '/parse/';
+const OMNIPARSER_MIN_INTERVAL_MS =
+  Number(process.env.OMNIPARSER_MIN_INTERVAL_MS) || 0;
 const COORDS_MAX = Number(process.env.BYTEBOT_COORDS_MAX) || 1000;
 const DISPLAY_WIDTH =
   Number(process.env.BYTEBOT_DESKTOP_WIDTH) || DEFAULT_DISPLAY_SIZE.width;
 const DISPLAY_HEIGHT =
   Number(process.env.BYTEBOT_DESKTOP_HEIGHT) || DEFAULT_DISPLAY_SIZE.height;
+let lastOmniParserAt = 0;
+
+const normalizeBaseUrl = (baseUrl: string): string =>
+  baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+
+const truncateText = (text: string, maxLength: number): string =>
+  text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+
+const parseWithOmniParser = async (
+  imageBase64: string,
+  logger: Logger,
+): Promise<{ summaryText: string; annotatedImage?: string } | null> => {
+  if (!OMNIPARSER_ENABLED) return null;
+  if (OMNIPARSER_MIN_INTERVAL_MS > 0) {
+    const now = Date.now();
+    if (now - lastOmniParserAt < OMNIPARSER_MIN_INTERVAL_MS) {
+      logger.debug('OmniParser throttled to reduce CPU usage');
+      return null;
+    }
+    lastOmniParserAt = now;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OMNIPARSER_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      `${normalizeBaseUrl(OMNIPARSER_BASE_URL)}${OMNIPARSER_PARSE_PATH}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64_image: imageBase64 }),
+        signal: controller.signal,
+      },
+    );
+
+    if (!response.ok) {
+      logger.warn(`OmniParser request failed: ${response.status}`);
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      parsed_content_list?: unknown;
+      som_image_base64?: string;
+      latency?: number;
+    };
+
+    const parsedList = Array.isArray(data.parsed_content_list)
+      ? data.parsed_content_list
+      : [];
+    const limited = parsedList.slice(0, OMNIPARSER_MAX_ELEMENTS);
+    const summary = truncateText(JSON.stringify(limited), 2000);
+    const latencyMs =
+      typeof data.latency === 'number'
+        ? Math.round(data.latency * 1000)
+        : undefined;
+    const summaryText = latencyMs
+      ? `OmniParser (${latencyMs}ms): ${summary}`
+      : `OmniParser: ${summary}`;
+
+    return {
+      summaryText,
+      annotatedImage: data.som_image_base64,
+    };
+  } catch (error) {
+    logger.warn(
+      `OmniParser request error: ${error instanceof Error ? error.message : error}`,
+    );
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -56,6 +142,14 @@ const normalizeCoordinates = (
 const normalizePath = (path?: Coordinates[]): Coordinates[] | undefined => {
   if (!path || !NORMALIZE_COORDS) return path;
   return path.map((point) => normalizeCoordinates(point) || point);
+};
+
+const withSessionId = <T extends Record<string, any>>(
+  payload: T,
+  sessionId?: string,
+): T & { session_id?: string } => {
+  if (!sessionId) return payload;
+  return { ...payload, session_id: sessionId };
 };
 
 export async function handleComputerToolUse(
@@ -103,22 +197,40 @@ export async function handleComputerToolUse(
     logger.debug('Processing screenshot request');
     try {
       logger.debug('Taking screenshot');
-      const image = await screenshot(baseUrl);
+      const image = await screenshot(baseUrl, sessionId);
       logger.debug('Screenshot captured successfully');
+      const omniparserResult = await parseWithOmniParser(image, logger);
+
+      const content: MessageContentBlock[] = [];
+      if (omniparserResult?.summaryText) {
+        content.push({
+          type: MessageContentType.Text,
+          text: omniparserResult.summaryText,
+        });
+      }
+      content.push({
+        type: MessageContentType.Image,
+        source: {
+          data: image,
+          media_type: 'image/png',
+          type: 'base64',
+        },
+      });
+      if (omniparserResult?.annotatedImage) {
+        content.push({
+          type: MessageContentType.Image,
+          source: {
+            data: omniparserResult.annotatedImage,
+            media_type: 'image/png',
+            type: 'base64',
+          },
+        });
+      }
 
       return {
         type: MessageContentType.ToolResult,
         tool_use_id: block.id,
-        content: [
-          {
-            type: MessageContentType.Image,
-            source: {
-              data: image,
-              media_type: 'image/png',
-              type: 'base64',
-            },
-          },
-        ],
+        content,
       };
     } catch (error) {
       logger.error(`Screenshot failed: ${error.message}`, error.stack);
@@ -174,44 +286,44 @@ export async function handleComputerToolUse(
 
   try {
     if (isMoveMouseToolUseBlock(block)) {
-      await moveMouse(baseUrl, block.input);
+      await moveMouse(baseUrl, block.input, sessionId);
     }
     if (isTraceMouseToolUseBlock(block)) {
-      await traceMouse(baseUrl, block.input);
+      await traceMouse(baseUrl, block.input, sessionId);
     }
     if (isClickMouseToolUseBlock(block)) {
-      await clickMouse(baseUrl, block.input);
+      await clickMouse(baseUrl, block.input, sessionId);
     }
     if (isPressMouseToolUseBlock(block)) {
-      await pressMouse(baseUrl, block.input);
+      await pressMouse(baseUrl, block.input, sessionId);
     }
     if (isDragMouseToolUseBlock(block)) {
-      await dragMouse(baseUrl, block.input);
+      await dragMouse(baseUrl, block.input, sessionId);
     }
     if (isScrollToolUseBlock(block)) {
-      await scroll(baseUrl, block.input);
+      await scroll(baseUrl, block.input, sessionId);
     }
     if (isTypeKeysToolUseBlock(block)) {
-      await typeKeys(baseUrl, block.input);
+      await typeKeys(baseUrl, block.input, sessionId);
     }
     if (isPressKeysToolUseBlock(block)) {
-      await pressKeys(baseUrl, block.input);
+      await pressKeys(baseUrl, block.input, sessionId);
     }
     if (isTypeTextToolUseBlock(block)) {
-      await typeText(baseUrl, block.input);
+      await typeText(baseUrl, block.input, sessionId);
     }
     if (isPasteTextToolUseBlock(block)) {
-      await pasteText(baseUrl, block.input);
+      await pasteText(baseUrl, block.input, sessionId);
     }
     if (isWaitToolUseBlock(block)) {
-      await wait(baseUrl, block.input);
+      await wait(baseUrl, block.input, sessionId);
     }
     if (isApplicationToolUseBlock(block)) {
-      await application(baseUrl, block.input);
+      await application(baseUrl, block.input, sessionId);
     }
     if (isReadFileToolUseBlock(block)) {
       logger.debug(`Reading file: ${block.input.path}`);
-      const result = await readFile(baseUrl, block.input);
+      const result = await readFile(baseUrl, block.input, sessionId);
 
       if (result.success && result.data) {
         // Return document content block
@@ -255,7 +367,7 @@ export async function handleComputerToolUse(
       await new Promise((resolve) => setTimeout(resolve, delayMs));
 
       logger.debug('Taking screenshot');
-      image = await screenshot(baseUrl);
+      image = await screenshot(baseUrl, sessionId);
       logger.debug('Screenshot captured successfully');
     } catch (error) {
       logger.error('Failed to take screenshot', error);
@@ -274,6 +386,13 @@ export async function handleComputerToolUse(
     };
 
     if (image) {
+      const omniparserResult = await parseWithOmniParser(image, logger);
+      if (omniparserResult?.summaryText) {
+        toolResult.content.push({
+          type: MessageContentType.Text,
+          text: omniparserResult.summaryText,
+        });
+      }
       toolResult.content.push({
         type: MessageContentType.Image,
         source: {
@@ -282,6 +401,16 @@ export async function handleComputerToolUse(
           type: 'base64',
         },
       });
+      if (omniparserResult?.annotatedImage) {
+        toolResult.content.push({
+          type: MessageContentType.Image,
+          source: {
+            data: omniparserResult.annotatedImage,
+            media_type: 'image/png',
+            type: 'base64',
+          },
+        });
+      }
     }
 
     return toolResult;
@@ -307,6 +436,7 @@ export async function handleComputerToolUse(
 async function moveMouse(
   baseUrl: string,
   input: { coordinates: Coordinates },
+  sessionId?: string,
 ): Promise<void> {
   const coordinates = normalizeCoordinates(input.coordinates) || input.coordinates;
   console.log(
@@ -317,10 +447,15 @@ async function moveMouse(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'move_mouse',
-        coordinates,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'move_mouse',
+            coordinates,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in move_mouse action:', error);
@@ -334,6 +469,7 @@ async function traceMouse(
     path: Coordinates[];
     holdKeys?: string[];
   },
+  sessionId?: string,
 ): Promise<void> {
   const path = normalizePath(input.path) || input.path;
   const { holdKeys } = input;
@@ -345,11 +481,16 @@ async function traceMouse(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'trace_mouse',
-        path,
-        holdKeys,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'trace_mouse',
+            path,
+            holdKeys,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in trace_mouse action:', error);
@@ -365,6 +506,7 @@ async function clickMouse(
     holdKeys?: string[];
     clickCount: number;
   },
+  sessionId?: string,
 ): Promise<void> {
   const { button, holdKeys, clickCount } = input;
   const coordinates =
@@ -377,13 +519,18 @@ async function clickMouse(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'click_mouse',
-        coordinates,
-        button,
-        holdKeys: holdKeys && holdKeys.length > 0 ? holdKeys : undefined,
-        clickCount,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'click_mouse',
+            coordinates,
+            button,
+            holdKeys: holdKeys && holdKeys.length > 0 ? holdKeys : undefined,
+            clickCount,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in click_mouse action:', error);
@@ -398,6 +545,7 @@ async function pressMouse(
     button: Button;
     press: Press;
   },
+  sessionId?: string,
 ): Promise<void> {
   const { button, press } = input;
   const coordinates =
@@ -410,12 +558,17 @@ async function pressMouse(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'press_mouse',
-        coordinates,
-        button,
-        press,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'press_mouse',
+            coordinates,
+            button,
+            press,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in press_mouse action:', error);
@@ -430,6 +583,7 @@ async function dragMouse(
     button: Button;
     holdKeys?: string[];
   },
+  sessionId?: string,
 ): Promise<void> {
   const path = normalizePath(input.path) || input.path;
   const { button, holdKeys } = input;
@@ -441,12 +595,17 @@ async function dragMouse(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'drag_mouse',
-        path,
-        button,
-        holdKeys: holdKeys && holdKeys.length > 0 ? holdKeys : undefined,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'drag_mouse',
+            path,
+            button,
+            holdKeys: holdKeys && holdKeys.length > 0 ? holdKeys : undefined,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in drag_mouse action:', error);
@@ -462,6 +621,7 @@ async function scroll(
     scrollCount: number;
     holdKeys?: string[];
   },
+  sessionId?: string,
 ): Promise<void> {
   const { direction, scrollCount, holdKeys } = input;
   const coordinates =
@@ -474,13 +634,18 @@ async function scroll(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'scroll',
-        coordinates,
-        direction,
-        scrollCount,
-        holdKeys: holdKeys && holdKeys.length > 0 ? holdKeys : undefined,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'scroll',
+            coordinates,
+            direction,
+            scrollCount,
+            holdKeys: holdKeys && holdKeys.length > 0 ? holdKeys : undefined,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in scroll action:', error);
@@ -494,6 +659,7 @@ async function typeKeys(
     keys: string[];
     delay?: number;
   },
+  sessionId?: string,
 ): Promise<void> {
   const { keys, delay } = input;
   console.log(`Typing keys: ${keys}`);
@@ -502,11 +668,16 @@ async function typeKeys(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'type_keys',
-        keys,
-        delay,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'type_keys',
+            keys,
+            delay,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in type_keys action:', error);
@@ -520,6 +691,7 @@ async function pressKeys(
     keys: string[];
     press: Press;
   },
+  sessionId?: string,
 ): Promise<void> {
   const { keys, press } = input;
   console.log(`Pressing keys: ${keys}`);
@@ -528,11 +700,16 @@ async function pressKeys(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'press_keys',
-        keys,
-        press,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'press_keys',
+            keys,
+            press,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in press_keys action:', error);
@@ -546,6 +723,7 @@ async function typeText(
     text: string;
     delay?: number;
   },
+  sessionId?: string,
 ): Promise<void> {
   const { text, delay } = input;
   console.log(`Typing text: ${text}`);
@@ -554,11 +732,16 @@ async function typeText(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'type_text',
-        text,
-        delay,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'type_text',
+            text,
+            delay,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in type_text action:', error);
@@ -569,6 +752,7 @@ async function typeText(
 async function pasteText(
   baseUrl: string,
   input: { text: string },
+  sessionId?: string,
 ): Promise<void> {
   const { text } = input;
   console.log(`Pasting text: ${text}`);
@@ -577,10 +761,15 @@ async function pasteText(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'paste_text',
-        text,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'paste_text',
+            text,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in paste_text action:', error);
@@ -591,6 +780,7 @@ async function pasteText(
 async function wait(
   baseUrl: string,
   input: { duration: number },
+  sessionId?: string,
 ): Promise<void> {
   const { duration } = input;
   console.log(`Waiting for ${duration}ms`);
@@ -599,10 +789,15 @@ async function wait(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'wait',
-        duration,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'wait',
+            duration,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in wait action:', error);
@@ -610,16 +805,24 @@ async function wait(
   }
 }
 
-async function cursorPosition(baseUrl: string): Promise<Coordinates> {
+async function cursorPosition(
+  baseUrl: string,
+  sessionId?: string,
+): Promise<Coordinates> {
   console.log('Getting cursor position');
 
   try {
     const response = await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'cursor_position',
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'cursor_position',
+          },
+          sessionId,
+        ),
+      ),
     });
 
     const data = await response.json();
@@ -630,13 +833,16 @@ async function cursorPosition(baseUrl: string): Promise<Coordinates> {
   }
 }
 
-async function screenshot(baseUrl: string): Promise<string> {
+async function screenshot(baseUrl: string, sessionId?: string): Promise<string> {
   console.log('Taking screenshot');
 
   try {
-    const requestBody = {
-      action: 'screenshot',
-    };
+    const requestBody = withSessionId(
+      {
+        action: 'screenshot',
+      },
+      sessionId,
+    );
 
     const response = await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
@@ -664,6 +870,7 @@ async function screenshot(baseUrl: string): Promise<string> {
 async function application(
   baseUrl: string,
   input: { application: string },
+  sessionId?: string,
 ): Promise<void> {
   const { application } = input;
   console.log(`Opening application: ${application}`);
@@ -672,10 +879,15 @@ async function application(
     await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'application',
-        application,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'application',
+            application,
+          },
+          sessionId,
+        ),
+      ),
     });
   } catch (error) {
     console.error('Error in application action:', error);
@@ -686,6 +898,7 @@ async function application(
 async function readFile(
   baseUrl: string,
   input: { path: string },
+  sessionId?: string,
 ): Promise<{
   success: boolean;
   data?: string;
@@ -701,10 +914,15 @@ async function readFile(
     const response = await fetch(`${baseUrl}/computer-use`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'read_file',
-        path,
-      }),
+      body: JSON.stringify(
+        withSessionId(
+          {
+            action: 'read_file',
+            path,
+          },
+          sessionId,
+        ),
+      ),
     });
 
     if (!response.ok) {

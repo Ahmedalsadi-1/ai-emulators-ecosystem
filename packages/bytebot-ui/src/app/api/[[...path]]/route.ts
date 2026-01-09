@@ -4,7 +4,11 @@ import { NextRequest } from "next/server";
 /* generic proxy helper                                                 */
 /* -------------------------------------------------------------------- */
 async function proxy(req: NextRequest, path: string[]): Promise<Response> {
-  const BASE_URL = process.env.BYTEBOT_AGENT_BASE_URL!;
+  // Support both BYTEBOT_AGENT_BASE_URL and NEXT_PUBLIC_BYTEBOT_AGENT_BASE_URL
+  const BASE_URL = process.env.BYTEBOT_AGENT_BASE_URL || process.env.NEXT_PUBLIC_BYTEBOT_AGENT_BASE_URL;
+  if (!BASE_URL) {
+    throw new Error("BYTEBOT_AGENT_BASE_URL not configured");
+  }
   const subPath = path.length ? path.join("/") : "";
   const url = `${BASE_URL}/${subPath}${req.nextUrl.search}`;
 
