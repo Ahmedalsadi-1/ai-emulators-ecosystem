@@ -166,6 +166,13 @@ export class TasksController {
     const groqApiKey = process.env.GROQ_API_KEY;
     const routewayApiKey = process.env.ROUTEWAY_API_KEY;
     const omniparserEnabled = process.env.OMNIPARSER_ENABLED === 'true';
+    const toolOverridesRaw = process.env.BYTEBOT_TOOL_MODEL_OVERRIDES || '';
+    const toolOverrideSet = new Set(
+      toolOverridesRaw
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean),
+    );
 
     console.log('[Models] API Keys check:', {
       anthropic: false, // Explicitly excluded
@@ -298,6 +305,22 @@ export class TasksController {
           omniparser: Boolean(model.capabilities?.vision),
         },
       }));
+    }
+
+    if (toolOverrideSet.size > 0) {
+      dynamicModels = dynamicModels.map((model) => {
+        const key = `${model.provider}:${model.name}`;
+        if (toolOverrideSet.has(key)) {
+          return {
+            ...model,
+            capabilities: {
+              ...model.capabilities,
+              toolCalling: true,
+            },
+          };
+        }
+        return model;
+      });
     }
 
     // Filter for tool-capable models if requested

@@ -23,4 +23,26 @@ export const OPENCODE_MODELS: BytebotAgentModel[] = [
       streaming: true,
     },
   },
+  {
+    provider: 'opencode-local',
+    name: 'opencode/glm-6.7-free',
+    title: 'GLM 6.7 Free (OpenCode Local)',
+    contextWindow: 32768,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'opencode-local',
+    name: 'opencode/minimax-m2.1-free',
+    title: 'MiniMax M2.1 Free (OpenCode Local)',
+    contextWindow: 32768,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
 ];

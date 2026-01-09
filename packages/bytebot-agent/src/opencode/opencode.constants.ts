@@ -10,7 +10,29 @@ export const OPENCODE_MODELS: BytebotAgentModel[] = [
     title: 'OpenCode Big Pickle (Local)',
     contextWindow: 200000,
     capabilities: {
-      toolCalling: false,
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'opencode-local',
+    name: 'opencode/glm-6.7-free',
+    title: 'OpenCode GLM 6.7 Free (Local)',
+    contextWindow: 32768,
+    capabilities: {
+      toolCalling: true,
+      vision: false,
+      streaming: true,
+    },
+  },
+  {
+    provider: 'opencode-local',
+    name: 'opencode/minimax-m2.1-free',
+    title: 'OpenCode MiniMax M2.1 Free (Local)',
+    contextWindow: 32768,
+    capabilities: {
+      toolCalling: true,
       vision: false,
       streaming: true,
     },

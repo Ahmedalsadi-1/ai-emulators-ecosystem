@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 
 type ControllerType = "bytebot" | "debian" | "kali" | "browseros" | "bytebot-edge-1" | "bytebot-edge-2" | "bytebot-edge-3";
 
@@ -80,6 +80,9 @@ const getRfbCredentials = (controllerType?: ControllerType) => {
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type VncScreenComponent = React.ComponentType<any>;
+
 export function VncViewer({
   viewOnly = true,
   controllerType,
@@ -88,44 +91,95 @@ export function VncViewer({
   onStatusChange
 }: VncViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [VncComponent, setVncComponent] = useState<any>(null);
+  const [VncComponent, setVncComponent] = useState<VncScreenComponent | null>(null);
   const [wsUrl, setWsUrl] = useState<string | null>(null);
   const [vncError, setVncError] = useState<string | null>(null);
   const [shouldRender, setShouldRender] = useState(true);
-  const [connectionId, setConnectionId] = useState(0); // Increment to force reconnection
+  const [connectionKey, setConnectionKey] = useState(0);
+  
+  // Track if component is mounted to avoid state updates on unmounted components
+  const isMountedRef = useRef(true);
+  
+  // Store the current VncScreen instance ref to properly disconnect
+  const vncScreenRef = useRef<{ disconnect: () => void } | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+      // Disconnect VNC on unmount
+      if (vncScreenRef.current) {
+        try {
+          vncScreenRef.current.disconnect();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        vncScreenRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Dynamically import the VncScreen component only on the client side
     import("react-vnc").then(({ VncScreen }) => {
-      setVncComponent(() => VncScreen);
+      if (isMountedRef.current) {
+        setVncComponent(() => VncScreen);
+      }
     });
   }, []);
 
   // Set wsUrl and notify connecting
-  const resolveWsUrl = (): string | null => {
+  const resolveWsUrl = useCallback((): string | null => {
     if (directUrl) return normalizeWsUrl(directUrl);
     const envDirectUrl = getDirectVncUrlForController(controllerType);
     if (envDirectUrl) return normalizeWsUrl(envDirectUrl);
     if (typeof window === "undefined" || !proxyPath) return null;
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     return `${proto}://${window.location.host}${proxyPath}`;
-  };
+  }, [controllerType, proxyPath, directUrl]);
 
+  // Reset connection when controller type or URL changes
   useEffect(() => {
+    // Disconnect existing connection before creating a new one
+    if (vncScreenRef.current) {
+      try {
+        vncScreenRef.current.disconnect();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      vncScreenRef.current = null;
+    }
+    
     const url = resolveWsUrl();
     if (!url) return;
+    
     setWsUrl(url);
+    setVncError(null);
+    setShouldRender(true);
+    // Increment connection key to force fresh RFB instance
+    setConnectionKey(prev => prev + 1);
     onStatusChange?.('connecting');
   }, [controllerType, proxyPath, directUrl, onStatusChange, resolveWsUrl]);
 
-  const retryConnection = () => {
+  const retryConnection = useCallback(() => {
+    // Disconnect existing connection before retrying
+    if (vncScreenRef.current) {
+      try {
+        vncScreenRef.current.disconnect();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      vncScreenRef.current = null;
+    }
+    
     setVncError(null);
     setShouldRender(true);
-    // Increment connection ID to force a completely fresh connection
-    setConnectionId(prev => prev + 1);
+    // Increment connection key to force fresh RFB instance
+    setConnectionKey(prev => prev + 1);
     onStatusChange?.('connecting');
-  };
+  }, [onStatusChange]);
 
   // Get credentials for this controller type
   const credentials = getRfbCredentials(controllerType);
@@ -149,6 +203,10 @@ export function VncViewer({
       
       {VncComponent && wsUrl && !vncError && shouldRender && (
         <VncComponent
+          ref={(el: { disconnect: () => void } | null) => {
+            // Store the ref to the VncScreen instance for proper cleanup
+            vncScreenRef.current = el;
+          }}
           rfbOptions={{
             secure: false,
             shared: true,
@@ -157,15 +215,18 @@ export function VncViewer({
           }}
           onDisconnect={() => {
             // Only notify, don't set error (disconnects are normal during reconnection)
-            onStatusChange?.('disconnected');
+            if (isMountedRef.current) {
+              onStatusChange?.('disconnected');
+            }
           }}
           onError={(error: Error) => {
+            if (!isMountedRef.current) return;
             setVncError(error.message || 'VNC connection error');
             setShouldRender(false);
             onStatusChange?.('error');
           }}
-          // Use connectionId in key to force fresh RFB instance on retry
-          key={`${controllerType}-${viewOnly ? 'view' : 'interactive'}-${connectionId}`}
+          // Use connectionKey in key to force fresh RFB instance on retry/switch
+          key={`${controllerType}-${viewOnly ? 'view' : 'interactive'}-${connectionKey}`}
           url={wsUrl}
           scaleViewport
           viewOnly={viewOnly}

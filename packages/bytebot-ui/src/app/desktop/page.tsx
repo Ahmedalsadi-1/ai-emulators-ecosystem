@@ -177,6 +177,7 @@ export default function DesktopPage() {
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const getModelKey = (model: Model) => `${model.provider}:${model.name}`;
   const [modelFetchError, setModelFetchError] = useState<{url: string; message: string} | null>(null);
+  const [showLocalOnly, setShowLocalOnly] = useState(false);
   const [command, setCommand] = useState("");
   const [showTerminal, setShowTerminal] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>(
@@ -435,6 +436,10 @@ export default function DesktopPage() {
   };
 
   const isLocalScreen = primaryControllerId === "local-screen";
+  const localProviders = new Set(["ollama-local", "opencode-local", "lm-studio"]);
+  const displayModels = showLocalOnly
+    ? models.filter((model) => localProviders.has(model.provider))
+    : models;
 
   // Load models on component mount
   useEffect(() => {
@@ -455,8 +460,10 @@ export default function DesktopPage() {
           "opencode-local",
           "lm-studio",
         ]);
-        const filteredModels = result.filter((model) =>
-          allowedProviders.has(model.provider),
+        const filteredModels = result.filter(
+          (model) =>
+            allowedProviders.has(model.provider) &&
+            model.capabilities?.toolCalling,
         );
         setModels(filteredModels);
         setModelFetchError(null);
@@ -522,6 +529,14 @@ export default function DesktopPage() {
       );
     setSelectedModel(stored || pickRoutewayDefault(models) || null);
   }, [models, modelStorageKey]);
+
+  useEffect(() => {
+    if (!showLocalOnly) return;
+    if (!selectedModel) return;
+    if (!localProviders.has(selectedModel.provider)) {
+      setSelectedModel(displayModels[0] || null);
+    }
+  }, [showLocalOnly, selectedModel, displayModels, localProviders]);
 
   // Save selected model to localStorage
   useEffect(() => {
@@ -694,10 +709,21 @@ export default function DesktopPage() {
                        onChange={(e) => handleModelChange(e.target.value)}
                        className="bg-[#050505] border border-[#333] text-[#666] text-[8px] px-1 py-0.5 w-24 focus:outline-none focus:border-[#555] uppercase cursor-pointer"
                    >
-                       {models.map(m => (
+                       {displayModels.length === 0 && (
+                         <option value="">No local models</option>
+                       )}
+                       {displayModels.map(m => (
                          <option key={getModelKey(m)} value={getModelKey(m)}>{m.name.split('/').pop()}</option>
                        ))}
                    </select>
+                   <button
+                     type="button"
+                     onClick={() => setShowLocalOnly((prev) => !prev)}
+                     className={`text-[8px] px-2 py-0.5 border uppercase tracking-widest ${showLocalOnly ? "border-white/30 text-white" : "border-[#333] text-[#666]"} hover:text-[#e0e0e0]`}
+                     title={showLocalOnly ? "Showing local models only" : "Showing all tool-capable models"}
+                   >
+                     {showLocalOnly ? "LOCAL" : "ALL"}
+                   </button>
 
                    {/* Web */}
                    <button 
