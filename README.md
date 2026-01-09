@@ -1,182 +1,240 @@
 <div align="center">
 
-<img src="docs/images/bytebot-logo.png" width="500" alt="Bytebot Logo">
+# 🌐 KRONOS-OS
 
-# Bytebot: AI Desktop Agent with Multi-Environment Automation
+**The Ultimate AI-Powered Desktop Automation Platform - Coming Soon: Closed Source Enterprise Edition**
 
-<a href="https://trendshift.io/repositories/14624" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14624" alt="bytebot-ai%2Fbytebot | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Docker](https://img.shields.io/badge/docker-ready-green.svg)](https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem)
+![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)](https://typescriptlang.org)
 
-**AI that controls multiple desktop environments to complete complex tasks autonomously**
+**🚀 Next-Generation AI Desktop Control for Enterprise & Power Users**
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/bytebot?referralCode=L9lKXQ)
-
-[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://github.com/bytebot-ai/bytebot/tree/main/docker)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![Discord](https://img.shields.io/discord/1232768900274585720?color=7289da&label=discord)](https://discord.com/invite/d9ewZkWPTP)
-
-[🌐 Website](https://bytebot.ai) • [📚 Documentation](https://docs.bytebot.ai) • [💬 Discord](https://discord.com/invite/d9ewZkWPTP) • [𝕏 Twitter](https://x.com/bytebot_ai)
-
-<!-- Keep these links. Translations will automatically update with the README. -->
-[Deutsch](https://zdoc.app/de/bytebot-ai/bytebot) |
-[Español](https://zdoc.app/es/bytebot-ai/bytebot) |
-[français](https://zdoc.app/fr/bytebot-ai/bytebot) |
-[日本語](https://zdoc.app/ja/bytebot-ai/bytebot) |
-[한국어](https://zdoc.app/ko/bytebot-ai/bytebot) |
-[Português](https://zdoc.app/pt/bytebot-ai/bytebot) |
-[Русский](https://zdoc.app/ru/bytebot-ai/bytebot) |
-[中文](https://zdoc.app/zh/bytebot-ai/bytebot)
 </div>
 
 ---
 
-## 🎯 What Makes Bytebot Revolutionary
+## 🎯 Why KRONOS-OS?
 
-Bytebot is not just another AI assistant—it's an AI that owns and controls **multiple complete desktop environments**. Unlike browser-only agents or traditional RPA tools, Bytebot provides AI with full access to:
+**KRONOS-OS** is a revolutionary AI-powered desktop automation platform that gives your AI agents complete control over **multiple isolated workspaces** - from virtual Linux desktops to Android emulators and browser automation.
 
- - **Multiple Desktop Environments**: Debian Linux, Kali Linux, custom environments, Android, and UI-TARS browser automation
-- **Real Applications**: Browsers, IDEs, office tools, password managers, email clients
-- **File System Access**: Download, organize, and process files autonomously
-- **Complex Workflows**: Multi-step processes across different applications and websites
-- **Visual Automation**: Real-time screen control with mouse and keyboard automation
+### 💎 The KRONOS-OS Advantage
 
-**Think of Bytebot as a virtual team of AI specialists, each with their own specialized desktop environment.**
+| Feature | Traditional Tools | KRONOS-OS |
+|----------|------------------|--------------|
+| **Multi-Workspace Control** | ❌ Single environment | ✅ 5+ isolated workspaces |
+| **Mobile Integration** | ❌ Limited/None | ✅ Full Android emulator with ADB control |
+| **Browser Automation** | ⚠️ Browser plugins | ✅ UI-TARS AI-powered browser with full control |
+| **Real Desktops** | ❌ Headless/Container only | ✅ VNC/noVNC with full GUI access |
+| **Agent Orchestration** | ⚠️ Basic task queues | ✅ Multi-provider fallback (Routeway → Groq → OpenAI) |
+| **Tool-Use Enforcement** | ❌ Open access | ✅ Session-based security model |
+| **Real-Time Collaboration** | ⚠️ Limited | ✅ WebSocket streaming + multi-user support |
+
+### 🎯 Perfect For
+
+- **Enterprise Automation**: Automate repetitive workflows across multiple environments
+- **Security Research**: Use Kali Linux desktop for penetration testing
+- **Mobile Testing**: Full Android emulator control with 18 MCP tools
+- **Web Scraping**: AI-powered browser automation with UI-TARS
+- **Development Testing**: Spin up isolated test environments on demand
+- **Data Processing**: Multi-step workflows across browsers, files, and terminals
+
+### 🔮 Future-Proof: Enterprise Edition Coming
+
+> **⚠️ Important**: KRONOS-OS Open Source version is available now. An **Enterprise Edition with advanced features and closed-source core** will be released in Q2 2025.
+
+**Enterprise Edition will include:**
+- 🔒 Closed-source security enhancements
+- 🎯 Priority support SLAs
+- 📊 Advanced analytics dashboard
+- 🔐 Enterprise-grade authentication (SSO, MFA)
+- 🏢 Multi-tenant architecture
+- 🚀 Optimized performance profiles
+
+**Get Early Access**: Join our waitlist at [kronos-os.com](https://kronos-os.com) for Enterprise Edition announcements.
 
 ---
 
-## 🚀 Live Demo
-
-### Multi-Desktop Task Automation
-```
-User: "Research cybersecurity tools and create a comparison report"
-
-Bytebot spins up Kali Linux desktop → Opens browser → Researches tools →
-Creates comparison document → Downloads relevant PDFs → Organizes findings
-```
-
-### Real-World Business Automation
-```
-User: "Process vendor invoices from three different portals"
-
-Bytebot: Debian Desktop → Portal A (login + download) → Portal B → Portal C →
-Extract data from PDFs → Create consolidated report → Email results
-```
-
----
-
-## 🏗️ Architecture Overview
+## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Bytebot Ecosystem                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
-│  │ Debian      │ │ Kali Linux  │ │ Custom Env  │  ← Desktops │
-│  │ Desktop     │ │ Desktop     │ │ Desktop     │           │
-│  │ (Port 9990) │ │ (Port 9993) │ │ (Port 999x) │           │
-│  └─────────────┘ └─────────────┘ └─────────────┘           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
-│  │ AI Agent    │ │ Web UI      │ │ PostgreSQL  │  ← Services │
-│  │ (Port 9991) │ │ (Port 9992) │ │ (Port 5432) │           │
-│  └─────────────┘ └─────────────┘ └─────────────┘           │
-├─────────────────────────────────────────────────────────────┤
+┌─────────────────────────────────────────────────────────────────┐
+│                    KRONOS-OS Platform                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                             │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │ Docker Network: bytebot-full_bytebot-network       │   │
+│  │              KRONOS-OS UI (Next.js)         │   │
+│  │              localhost:9992                       │   │
+│  └────────────────────┬──────────────────────────────┘   │
+│                         │                                  │
+│                         ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │           KRONOS-OS Agent (NestJS)          │   │
+│  │           localhost:9991                        │   │
+│  │  ┌─────────────────────────────────────────────┐   │   │
+│  │  │  Task Orchestration & Model Routing     │   │   │
+│  │  │  • Routeway → Groq → OpenAI       │   │   │
+│  │  │  • Tool-Use Enforcement              │   │   │
+│  │  │  • Multi-Provider Support           │   │   │
+│  │  └─────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+│                         │                                  │
+│                         ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Virtual Desktop Containers            │   │
+│  │                                                     │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ │   │
+│  │  │ KRON-1   │ │ KRON-2   │ │ KRON-3   │ │ANDROID    │ │   │
+│  │  │ :9990    │ │ :9995    │ │ :9993    │ │emulator  │ │   │
+│  │  │ Ubuntu   │ │ Debian   │ │ Kali     │ │ :5555    │ │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ │   │
+│  │  ┌─────────┐                                  │   │
+│  │  │UI-TARS  │                                  │   │
+│  │  │ :8766   │                                  │   │
+│  │  │Browser   │                                  │   │
+│  │  └─────────┘                                  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Infrastructure Services               │   │
+│  │  • OS-AI Backend (:8765) - Local screen   │   │
+│  │  • PostgreSQL (:5432) - Task storage    │   │
+│  │  • Redis (:6379) - Caching & streams    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────────┘
 ```
-
-### Services Breakdown
-
-- **AI Agent (NestJS)**: Task orchestration, AI provider integration, WebSocket communication
-- **Web UI (Next.js)**: Task management interface, real-time desktop viewing, multi-workspace support
-- **Desktop Environments**: Containerized Linux environments with VNC/noVNC for remote access
-- **Android Workspace**: Multi-mode Android emulator with ADB control and mobile-mcp tools
-- **UI-TARS Workspace**: AI-powered browser automation via WebSocket
-- **Database (PostgreSQL)**: Task persistence, user data, configuration storage
 
 ---
 
-## ⚡ Quick Start (5 Minutes)
+## ⚡ Quick Start
 
-### Option 1: One-Command Docker Setup
-```bash
-git clone https://github.com/bytebot-ai/bytebot.git
-cd bytebot
-docker compose -f docker/docker-compose.full.yml up -d
-open http://localhost:9992
-```
+### Prerequisites
 
-### Option 2: Individual Services (Development)
+- **Node.js 18+** with npm or pnpm
+- **Docker & Docker Compose**
+- **4GB RAM** minimum (8GB+ recommended)
+- **10GB** free disk space
+
+### Installation
+
 ```bash
-# Start all services
-cd bytebot/packages/bytebotd && npm run start:dev &
-cd ../bytebot-agent && npm run start:dev &
+# Clone repository
+git clone https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem.git
+cd ai-emulators-ecosystem
+
+# Start platform
+docker compose -f docker-compose.ecosystem.yml up -d
+
+# Start development services
+cd bytebot/packages/bytebot-agent && npm run start:dev &
 cd ../bytebot-ui && npm run dev &
-cd ../../ && npm start &
 ```
 
-### Option 3: Railway (Cloud)
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/bytebot?referralCode=L9lKXQ)
+### Access KRONOS-OS
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **KRONOS-OS UI** | http://localhost:9992 | Main interface |
+| **Agent API** | http://localhost:9991/api/tasks | Task management |
+| **KRON-1 Desktop** | VNC on :9990 | Ubuntu workspace |
+| **KRON-2 Desktop** | VNC on :9995 | Debian workspace |
+| **KRON-3 Desktop** | Kali Linux on :9993 | Security testing |
+| **Android Workspace** | ADB on :5555 | Mobile automation |
+| **UI-TARS Browser** | WebSocket :8766 | AI browser control |
+| **OS-AI Panel** | Built into /desktop | Local screen capture |
 
 ---
 
-## 🎮 Using Bytebot
+## 🎮 Using KRONOS-OS
 
 ### 1. Access the Interface
-Open `http://localhost:9992` in your browser. You'll see the floating pill interface.
 
-### 2. Create Your First Workspace
-- Click the "+" button in the Desktop section
-- Choose your environment from available workspaces:
-  - **KRON-1/2/3**: Virtual Linux desktops (Debian, Kali, custom)
-  - **ANDROID**: Android emulator with multi-mode support
-  - **UI-TARS**: AI-powered browser automation
-- Each workspace connects to a different automation environment
+Open `http://localhost:9992` in your browser. You'll see the modern floating pill interface.
 
-### 3. Give Tasks to Your AI
+### 2. Choose Your Workspace
+
+Click the "+" button in the Desktop section and select from **5 available workspaces**:
+
+| Workspace | Use Case | Environment |
+|-----------|----------|-------------|
+| **KRON-1** | General automation, development, web tasks | Ubuntu Desktop (:9990) |
+| **KRON-2** | Testing, custom environments | Debian Desktop (:9995) |
+| **KRON-3** | Security research, penetration testing | Kali Linux (:9993) |
+| **ANDROID** | Mobile testing, app automation, mobile UI research | Android Emulator (:5555) |
+| **UI-TARS** | Web scraping, browser testing, automated browsing | AI Browser (:8766) |
+
+### 3. Give Your AI Agent Tasks
+
 ```
-"Download the latest security reports from NIST and create a summary"
-"Set up a development environment with Node.js, Python, and VS Code"
-"Research competitor pricing and create a comparison spreadsheet"
+"Download the latest 20 cybersecurity reports, extract key findings, and create a comprehensive comparison spreadsheet"
+"Set up a complete Node.js development environment with VS Code, dependencies, and testing framework"
+"Research competitor pricing across 5 websites and generate a detailed market analysis report"
+"Test the Android app APK on emulator, capture screenshots of 20 critical flows, and document any UI issues"
 ```
 
 ### 4. Watch Real-Time Automation
-- See the AI navigate browsers, install software, and complete tasks
+
+- See your AI navigate browsers, install software, and complete tasks
 - Take control anytime with "Takeover Mode"
 - View live screen updates via VNC streaming
+- Monitor task progress in real-time dashboard
 
 ---
 
-## 🛠️ Advanced Features
+## 🛠️ Workspace Deep-Dive
 
-### Multi-Desktop Environments
+### KRON-1 (Ubuntu Desktop)
 
-**Desktop 1 - Bytebot Desktop**: General-purpose Ubuntu environment
-- Pre-installed: Firefox, VS Code, LibreOffice, password managers
-- Best for: General automation, web tasks, document processing
+**Perfect for**: General-purpose automation, web browsing, document processing
 
-**Desktop 2 - Debian Desktop**: Clean Debian Linux environment
-- Minimal installation with essential tools
-- Best for: Development, testing, custom software installation
+- **Pre-installed**: Firefox, VS Code, LibreOffice, password managers
+- **Access**: Full GUI via VNC at localhost:9990
+- **Use cases**: Workflow automation, document generation, research tasks
 
- **Desktop 3 - Kali Desktop**: Cybersecurity-focused environment
-- Pre-installed: Security tools, penetration testing software
-- Best for: Security research, network analysis, ethical hacking
+### KRON-2 (Debian Desktop)
 
-**Android Workspace**: Multi-mode Android emulator with ADB control
-- Modes: Docker, Android Studio AVD, Physical Device
-- Tools: mobile-mcp server with 18 Android control tools
-- Best for: Mobile testing, Android app automation, mobile UI research
+**Perfect for**: Development, testing, custom software installation
 
-**UI-TARS Workspace**: AI-powered browser automation
-- WebSocket-based remote browser control
-- Features: Screenshot streaming, click/scroll/type actions, navigation
-- Best for: Web scraping, browser testing, automated browsing tasks
+- **Minimal**: Clean Debian installation with essential tools
+- **Access**: Full GUI via VNC at localhost:9995
+- **Use cases**: Dev environment testing, package validation, CI/CD testing
 
-### AI Provider Integration
+### KRON-3 (Kali Desktop)
 
-Bytebot works with all major AI providers:
+**Perfect for**: Security research, network analysis, ethical hacking
+
+- **Pre-installed**: Security tools, penetration testing software
+- **Access**: Full GUI via VNC at localhost:9993
+- **Use cases**: Security testing, vulnerability scanning, tool validation
+
+### ANDROID Workspace
+
+**Perfect for**: Mobile testing, Android app automation, mobile UI research
+
+**3 Connection Modes**:
+1. **Docker**: `localhost:5555` - Linux KVM-based emulator
+2. **Android Studio AVD**: `emulator-5554` - Development-friendly (recommended)
+3. **Physical Device**: `IP:5555` - Real device via WiFi ADB
+
+**Mobile-MCP Tools (18 total)**:
+- `device_screenshot`, `tap`, `input_text`, `swipe`, `home_button`, `back_button`
+- `scroll`, `open_app`, `close_app`, `list_apps`, `install_apk`, `uninstall_app`
+- `clear_cache`, `get_device_info`, `logcat`, `shell_command`, `file_operations`
+
+### UI-TARS Browser
+
+**Perfect for**: Web scraping, browser testing, automated browsing
+
+- **Control**: AI-powered browser via WebSocket at `ws://localhost:8766`
+- **Features**: Screenshot streaming, click/scroll/type actions, URL navigation
+- **Best for**: Dynamic web pages, complex form filling, data extraction
+
+---
+
+## 🤖 AI Provider Integration
+
+KRONOS-OS works with all major AI providers:
 
 ```bash
 # Environment variables for different providers
@@ -184,14 +242,37 @@ ANTHROPIC_API_KEY=sk-ant-...     # Claude (Recommended)
 OPENAI_API_KEY=sk-...            # GPT models
 GEMINI_API_KEY=...               # Google Gemini
 GROQ_API_KEY=...                 # Fast inference
+ROUTEWAY_API_KEY=...              # Primary provider with deepseek-v3.2
 ```
 
-### Real-Time Collaboration
+### Model Fallback Chain
 
-- **WebSocket Communication**: Live task updates and desktop streaming
-- **Multi-User Support**: JWT authentication with RBAC
-- **Audit Logging**: Complete action tracking and compliance
-- **Takeover Mode**: Human intervention when AI needs help
+```
+Requested Model
+     │
+     ├── ✅ Success → Use response
+     │
+     └── ❌ Error (422/429/5xx/timeout)
+              │
+              ▼
+     Routeway (deepseek-v3.2)
+              │
+              ├── ✅ Success → Use response
+              │
+              └── ❌ Error
+                       │
+                       ▼
+              Groq (llama-3.3-70b-versatile)
+                       │
+              ├── ✅ Success → Use response
+              │
+              └── ❌ Error
+                       │
+                       ▼
+              OpenAI (GPT-4o)
+                       │
+              [Continue to next provider...]
+```
 
 ---
 
@@ -254,19 +335,14 @@ requests.post('http://localhost:9991/tasks',
 
 ---
 
-## 🔧 Detailed Setup Guide
-
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 20+ (for development)
-- 4GB+ RAM, 10GB+ disk space
+## 🔧 Setup Guide
 
 ### Production Deployment
 
 1. **Clone and Configure**
 ```bash
-git clone https://github.com/bytebot-ai/bytebot.git
-cd bytebot
+git clone https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem.git
+cd ai-emulators-ecosystem
 cp docker/.env.example docker/.env.production
 ```
 
@@ -274,14 +350,14 @@ cp docker/.env.example docker/.env.production
 ```bash
 # docker/.env.production
 ANTHROPIC_API_KEY=sk-ant-...
-DATABASE_URL=postgresql://postgres:password@postgres:5432/bytebotdb
+DATABASE_URL=postgresql://postgres:password@postgres:5432/kronosdb
 BYTEBOT_AUTH_ENABLED=true
 BYTEBOT_AUTH_SECRET=your-secret-key
 ```
 
 3. **Deploy**
 ```bash
-docker compose -f docker/docker-compose.production.yml --env-file docker/.env.production up -d
+docker compose -f docker-compose.ecosystem.yml --env-file docker/.env.production up -d
 ```
 
 ### Development Setup
@@ -305,74 +381,6 @@ cd packages/bytebot-agent && npm run start:dev
 
 # Terminal 3: Web UI
 cd packages/bytebot-ui && npm run dev
-
-# Terminal 4: Electron (optional)
-cd ../../ && npm start
-```
-
-### Adding Custom Desktops
-
-1. **Create New Dockerfile**
-```dockerfile
-FROM ghcr.io/bytebot-ai/bytebot-desktop:edge
-# Add your customizations
-RUN apt-get update && apt-get install -y your-tools
-```
-
-2. **Add to docker-compose.full.yml**
-```yaml
-bytebot-desktop-custom:
-  build:
-    context: ../packages/
-    dockerfile: bytebotd/custom.Dockerfile
-  ports:
-    - "9994:9990"
-```
-
-### Adding Android Emulator
-
-1. **Start Android Emulator**
-```bash
-# Option 1: Docker-based emulator (Linux KVM)
-docker-compose -f docker-compose.android-emulators.yml up -d
-
-# Option 2: Android Studio AVD (recommended for development)
-export ANDROID_SDK_ROOT=~/Library/Android/sdk
-~/Library/Android/sdk/emulator/emulator -avd Medium_Phone_API_36.1 -no-window &
-
-# Wait for emulator to start
-adb devices
-```
-
-2. **Start Mobile-MCP Server**
-```bash
-cd android-emulator/mobile-mcp
-npm install
-npm start
-# Server starts on port 8765
-```
-
-3. **Configure Environment Variables**
-```bash
-# .env.local
-NEXT_PUBLIC_ANDROID_DESKTOP_VNC_URL=http://localhost:6083/android-vnc.html
-NEXT_PUBLIC_UI_TARS_WS_URL=ws://localhost:8766
-```
-
-### Adding UI-TARS Browser
-
-1. **Start UI-TARS Server**
-```bash
-# Clone and start UI-TARS
-git clone https://github.com/UI-TARS/UI-TARS.git
-cd UI-TARS
-python start_server.py --port 8766
-```
-
-2. **Configure WebSocket Proxy**
-```bash
-# Ensure server.js proxies WebSocket connections
-# Already configured in packages/bytebot-ui/server.js
 ```
 
 ---
@@ -414,21 +422,23 @@ ports:
   - "9995:9990"  # Change host port
 ```
 
-**Database Connection Issues**
+**Android Emulator Not Connecting**
 ```bash
-# Check PostgreSQL
-docker logs bytebot-postgres
+# Check ADB devices
+adb devices
 
-# Reset database
-docker compose down -v
-docker compose up -d
+# Check if emulator is running
+emulator -avd-list
+
+# Restart mobile-mcp server
+cd android-emulator/mobile-mcp && npm restart
 ```
 
 ### Debug Commands
 
 ```bash
 # View all logs
-docker compose -f docker/docker-compose.full.yml logs
+docker compose -f docker-compose.ecosystem.yml logs
 
 # Check container health
 docker stats
@@ -444,29 +454,39 @@ docker exec -it bytebot-agent sh
 
 ### Project Structure
 ```
-bytebot/
-├── packages/
-│   ├── bytebotd/          # Desktop service (VNC, computer use)
-│   ├── bytebot-agent/     # AI orchestration (NestJS)
-│   └── bytebot-ui/        # Web interface (Next.js)
-├── docker/                # Container configurations
-└── docs/                  # Documentation
+ai-emulators-ecosystem/
+├── bytebot/                      # Core platform
+│   ├── packages/
+│   │   ├── bytebotd/          # Desktop service (VNC, computer use)
+│   │   ├── bytebot-agent/     # AI orchestration (NestJS)
+│   │   └── bytebot-ui/        # Web interface (Next.js)
+│   └── docs/                    # Documentation
+├── docker/                      # Docker configurations
+│   ├── kali-desktop/            # Kali Linux container
+│   └── ...
+├── docker-compose.ecosystem.yml  # Full platform deployment
+└── README.md                    # This file
 ```
 
 ### Key Technologies
+
 - **Backend**: NestJS, TypeScript, Prisma
 - **Frontend**: Next.js, React, Tailwind CSS
 - **Desktop**: Ubuntu/Debian/Kali, VNC, noVNC
-- **AI**: Anthropic Claude, OpenAI, Google Gemini, Groq
+- **Android**: ADB, scrcpy, mobile-mcp
+- **Browser**: UI-TARS, WebSocket
+- **AI**: Anthropic Claude, OpenAI, Google Gemini, Groq, Routeway
 - **Database**: PostgreSQL
 - **Deployment**: Docker, Docker Compose
 
 ### Contributing
 
+**📌 Note**: This open-source version of KRONOS-OS will transition to a closed-source Enterprise Edition in Q2 2025. Contributions are welcome for the open-source version.
+
 1. **Fork and Clone**
 ```bash
-git clone https://github.com/your-username/bytebot.git
-cd bytebot
+git clone https://github.com/your-username/ai-emulators-ecosystem.git
+cd ai-emulators-ecosystem
 ```
 
 2. **Setup Development Environment**
@@ -479,10 +499,10 @@ cd ../bytebotd && npm install
 
 3. **Start Development Services**
 ```bash
-# Use the development docker setup
-docker compose -f docker/docker-compose.development.yml up -d
+# Use development docker setup
+docker compose -f docker-compose.ecosystem.yml up -d
 cd packages/bytebot-agent && npm run start:dev &
-cd ../bytebot-ui && npm run dev &
+cd ../bytebot-ui && npm dev &
 ```
 
 4. **Run Tests**
@@ -492,6 +512,7 @@ cd ../bytebot-ui && npm test
 ```
 
 ### Code Standards
+
 - **TypeScript**: Strict mode enabled
 - **Linting**: ESLint with auto-fix
 - **Formatting**: Prettier
@@ -503,69 +524,120 @@ cd ../bytebot-ui && npm test
 ## 🌟 Use Cases & Examples
 
 ### Business Automation
+
 - **Invoice Processing**: Download from vendor portals, extract data, create reports
 - **Data Synchronization**: Cross-reference systems, update records
 - **Compliance Monitoring**: Check multiple platforms, generate audit reports
+- **Document Generation**: Create formatted reports from data sources
 
 ### Development & Testing
+
 - **Environment Setup**: Install dependencies, configure tools, set up databases
 - **UI Testing**: Automated browser testing across different environments
 - **Documentation**: Generate screenshots, create setup guides
+- **Mobile Testing**: Test Android apps on emulator, capture screenshots
 
-### Research & Analysis
-- **Market Research**: Gather data from multiple sources, create comparisons
-- **Security Research**: Use Kali desktop for penetration testing automation
-- **Document Analysis**: Process PDFs, extract information, generate summaries
+### Security Research
 
-### Creative Tasks
-- **Content Creation**: Research topics, gather images, create presentations
-- **Data Visualization**: Process datasets, create charts and graphs
-- **Report Generation**: Compile information from multiple sources
+- **Vulnerability Scanning**: Use Kali desktop for penetration testing automation
+- **Network Analysis**: Automated tool execution and log collection
+- **Security Reports**: Generate comprehensive security assessment reports
+
+### Web Automation
+
+- **Web Scraping**: Extract data from dynamic websites using UI-TARS
+- **Form Filling**: Automated form submission across multiple sites
+- **Data Collection**: Gather and organize web data systematically
 
 ---
 
 ## 📈 Performance & Scaling
 
 ### Resource Requirements
-- **Minimum**: 4GB RAM, 10GB disk, 2 CPU cores
-- **Recommended**: 8GB RAM, 20GB disk, 4 CPU cores
-- **Production**: 16GB RAM, 50GB disk, 8 CPU cores
+
+| Level | RAM | Disk | CPU | Use Case |
+|--------|-----|-------|-----|-----------|
+| **Minimum** | 4GB | 10GB | 2 cores | Development, testing |
+| **Recommended** | 8GB | 20GB | 4 cores | Production, small teams |
+| **Production** | 16GB | 50GB | 8 cores | Enterprise, heavy workloads |
 
 ### Scaling Options
+
 - **Horizontal**: Multiple desktop containers for different tasks
 - **Vertical**: Larger containers for resource-intensive workloads
-- **Kubernetes**: Helm charts for enterprise deployment
+- **Kubernetes**: Helm charts for enterprise deployment (Enterprise Edition)
 
 ---
 
 ## 🤝 Community & Support
 
-- **📚 Documentation**: [docs.bytebot.ai](https://docs.bytebot.ai)
-- **💬 Discord**: [Join our community](https://discord.com/invite/d9ewZkWPTP)
-- **🐛 Issues**: [GitHub Issues](https://github.com/bytebot-ai/bytebot/issues)
-- **📰 Blog**: Updates and tutorials on [bytebot.ai/blog](https://bytebot.ai/blog)
+### 📚 Documentation
 
-### Contributing Guidelines
-- Check existing issues before creating new ones
-- Use conventional commits for PRs
-- Include tests for new features
-- Update documentation for API changes
+- **GitHub Repository**: [ai-emulators-ecosystem](https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem)
+- **Issues**: [GitHub Issues](https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem/discussions)
+
+### 💬 Community
+
+- **Waitlist**: [kronos-os.com](https://kronos-os.com) - Sign up for Enterprise Edition updates
+- **Twitter**: Follow [@KronosOS](https://twitter.com/KronosOS) for updates
+
+### 🐛 Support
+
+- **Bug Reports**: Use GitHub Issues with detailed reproduction steps
+- **Feature Requests**: Submit via GitHub Discussions
+- **Enterprise Support**: Available in Enterprise Edition (Q2 2025)
+
+---
+
+## 🔮 Roadmap
+
+### Q1 2025 (Open Source)
+- ✅ Multi-desktop virtualization (KRON-1/2/3)
+- ✅ Android workspace with multi-mode support
+- ✅ UI-TARS browser automation
+- ✅ Multi-provider AI fallback
+- ✅ Tool-use enforcement
+
+### Q2 2025 (Enterprise Edition - Closed Source)
+- 🔜 Enterprise-grade authentication (SSO, MFA)
+- 🔜 Advanced analytics dashboard
+- 🔜 Multi-tenant architecture
+- 🔜 Priority support SLAs
+- 🔜 Performance optimization profiles
+- 🔜 Security hardening (closed-source components)
+
+### Q3 2025+ (Enterprise Edition)
+- 🔜 Cloud-native deployment
+- 🔜 Advanced orchestration workflows
+- 🔜 Team collaboration features
+- 🔜 Custom integrations marketplace
 
 ---
 
 ## 📄 License
 
-Bytebot is open source under the **Apache 2.0 License**.
+**Open Source Edition**: MIT License - See [LICENSE](LICENSE) for details.
+
+**Enterprise Edition**: Commercial license with support SLAs - Coming Q2 2025.
 
 ---
 
 <div align="center">
 
-**Give your AI multiple computers. Watch what it can accomplish.**
+## 🚀 Start Automating Your Desktop Today
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/bytebot?referralCode=L9lKXQ)
+**Get the open-source version now:**
 
-<sub>Built by [Tantl Labs](https://tantl.com) and the open source community</sub>
+[![GitHub Repo](https://img.shields.io/badge/GitHub-View%20Repository-blue)](https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem)
+[![Docker Pulls](https://img.shields.io/docker/pulls/Ahmedalsadi-1/ai-emulators-ecosystem)](https://github.com/Ahmedalsadi-1/ai-emulators-ecosystem/pkgs/container/bytebot-desktop%2Flatest)
 
-</div></content>
-<parameter name="filePath">bytebot/README.md
+**Join the Enterprise Edition waitlist for closed-source features:**
+
+[🔗 Sign Up at kronos-os.com](https://kronos-os.com)
+
+---
+
+*KRONOS-OS - Empowering AI-Driven Desktop Automation Since 2025*
+
+</div>
