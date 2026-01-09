@@ -9,8 +9,9 @@ var http_proxy_1 = require("http-proxy");
 var next_1 = __importDefault(require("next"));
 var http_1 = require("http");
 var dotenv_1 = __importDefault(require("dotenv"));
-// Load environment variables
-dotenv_1.default.config();
+var path_1 = __importDefault(require("path"));
+// Load environment variables - .env.local takes precedence
+dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '.env.local') });
 var dev = process.env.NODE_ENV !== "production";
 var hostname = process.env.HOSTNAME || "0.0.0.0";
 var port = parseInt(process.env.PORT || "9992", 10);
@@ -55,7 +56,20 @@ if (!BYTEBOT_AGENT_BASE_URL) {
 var tasksHttpProxy = BYTEBOT_AGENT_BASE_URL ? (0, http_proxy_middleware_1.createProxyMiddleware)({
     target: BYTEBOT_AGENT_BASE_URL,
     changeOrigin: true,
-    pathRewrite: { "^/api/proxy/tasks": "/tasks" },
+    pathRewrite: function (path) {
+        // For /api/proxy/tasks/* → /tasks/*
+        if (path.startsWith('/api/proxy/tasks')) {
+            return path.replace('/api/proxy/tasks', '/tasks');
+        }
+        // For /api/tasks/* → /tasks/* (remainder path after mount point)
+        // Path here is the remainder after /api/tasks, e.g., /models, /?query
+        if (path === '/' || path.startsWith('/?')) {
+            // Root path /api/tasks → /tasks
+            return '/tasks' + path;
+        }
+        // For other paths like /models → /tasks/models
+        return '/tasks' + path;
+    },
 }) : null;
 // WebSocket proxy for Socket.IO connections to backend
 var tasksWsProxy = BYTEBOT_AGENT_BASE_URL
@@ -103,9 +117,14 @@ vncProxy.on("error", function (error, req, res) {
 // Apply HTTP proxies in correct order (specific routes before generic)
 if (tasksHttpProxy) {
     expressApp.use("/api/proxy/tasks", tasksHttpProxy);
+    // Also proxy /api/tasks (used by frontend directly)
+    expressApp.use("/api/tasks", tasksHttpProxy);
 }
 else {
     expressApp.use("/api/proxy/tasks", function (req, res) {
+        res.status(500).json({ error: "BYTEBOT_AGENT_BASE_URL not configured" });
+    });
+    expressApp.use("/api/tasks", function (req, res) {
         res.status(500).json({ error: "BYTEBOT_AGENT_BASE_URL not configured" });
     });
 }

@@ -6,7 +6,9 @@ import { UnifiedDock } from "@/components/layout/UnifiedDock";
 import { VncViewer } from "@/components/vnc/VncViewer";
 import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { LocalScreenViewer } from "@/components/local-screen/LocalScreenViewer";
-import { GboxDesktopView } from "@/components/gbox/GboxDesktopView";
+
+import { AndroidViewer } from "@/components/android/AndroidViewer";
+import { UITarsBrowserView } from "@/components/ui-tars/UITarsBrowserView";
 import { TracePanel } from "@/components/trace/TracePanel";
 import {
   fetchModels,
@@ -32,7 +34,9 @@ import {
   Pause,
   Play,
   MessageSquarePlus,
-  Square
+  Square,
+  Smartphone,
+  Globe2
 } from "lucide-react";
 import { KronosLogo } from "@/components/branding/KronosLogo";
 
@@ -50,7 +54,7 @@ type DesktopSession = {
 type WorkspaceOption = {
   id: string;
   label: string;
-  screen: 'bytebot' | 'debian' | 'kali' | 'custom' | 'bytebot-edge-1' | 'bytebot-edge-2' | 'bytebot-edge-3' | 'factif-ai' | 'gbox';
+  screen: 'bytebot' | 'debian' | 'kali' | 'custom' | 'bytebot-edge-1' | 'bytebot-edge-2' | 'bytebot-edge-3' | 'android' | 'ui-tars';
   directUrl?: string;
   sessionId?: string;
   sessionPort?: number | null;
@@ -148,28 +152,29 @@ function TaskStatusBadge({ status, count }: { status: string; count: number }) {
   );
 }
 
-const controllerOptions: ControllerOption[] = [
-  { id: "bytebot", label: "Bytebot" },
-  { id: "local-screen", label: "Local Screen" },
-  { id: "browseros", label: "BrowserOS" },
-  { id: "turix", label: "Turix" },
-  { id: "factif-ai", label: "Factif-AI" },
-  { id: "gbox", label: "Gbox" }, // Added Gbox
-  { id: "open-interface", label: "Open Interface" },
-];
+  // Controller options for multi-controller state
+  const controllerOptions: ControllerOption[] = [
+    { id: "bytebot", label: "Bytebot" },
+    { id: "local-screen", label: "Local Screen" },
+    { id: "browseros", label: "BrowserOS" },
+    { id: "turix", label: "Turix" },
+    { id: "android", label: "Android" },
+    { id: "ui-tars", label: "UI-TARS" },
+    { id: "open-interface", label: "Open Interface" },
+  ];
 
-const controllerWorkspaceMap: Record<string, string> = {
-  "factif-ai": "factif-ai",
-  gbox: "gbox",
-};
+  const controllerWorkspaceMap: Record<string, string> = {
+    android: "android",
+    "ui-tars": "ui-tars",
+  };
 
-const defaultWorkspaces: WorkspaceOption[] = [
-  { id: "bytebot-edge-1", label: "KRON-1", screen: "bytebot-edge-1", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_1 },
-  { id: "bytebot-edge-2", label: "KRON-2", screen: "bytebot-edge-2", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_2 },
-  { id: "bytebot-edge-3", label: "KRON-3", screen: "bytebot-edge-3", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_3 },
-  { id: "factif-ai", label: "FACTIF-AI", screen: "factif-ai", directUrl: process.env.NEXT_PUBLIC_FACTIFAI_VNC_URL || 'ws://localhost:6082/websockify' },
-  { id: "gbox", label: "GBOX", screen: "gbox", directUrl: process.env.NEXT_PUBLIC_GBOX_DESKTOP_VNC_URL }, // Gbox will use GboxDesktopView component
-];
+  const defaultWorkspaces: WorkspaceOption[] = [
+    { id: "bytebot-edge-1", label: "KRON-1", screen: "bytebot-edge-1", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_1 },
+    { id: "bytebot-edge-2", label: "KRON-2", screen: "bytebot-edge-2", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_2 },
+    { id: "bytebot-edge-3", label: "KRON-3", screen: "bytebot-edge-3", directUrl: process.env.NEXT_PUBLIC_BYTEBOT_DESKTOP_VNC_URL_3 },
+    { id: "android", label: "ANDROID", screen: "android", directUrl: process.env.NEXT_PUBLIC_ANDROID_DESKTOP_VNC_URL || 'http://localhost:6083' },
+    { id: "ui-tars", label: "UI-TARS", screen: "ui-tars", directUrl: process.env.NEXT_PUBLIC_UI_TARS_WS_URL || 'ws://localhost:8766' },
+  ];
 
 export default function DesktopPage() {
   const router = useRouter();
@@ -229,14 +234,6 @@ export default function DesktopPage() {
           process.env.NEXT_PUBLIC_BROWSEROS_CONTROL_ENDPOINT,
       ),
     },
-    {
-      id: 'gbox',
-      label: 'GBOX',
-      ready: Boolean(
-        process.env.NEXT_PUBLIC_GBOX_DESKTOP_VNC_URL ||
-          process.env.NEXT_PUBLIC_GBOX_ANDROID_URL,
-      ),
-    },
   ];
 
   // Derive current screen from active workspace
@@ -244,10 +241,19 @@ export default function DesktopPage() {
   const currentScreen = (currentWorkspace?.screen || 'bytebot-edge-1') as WorkspaceOption['screen'];
   const currentDirectUrl = currentWorkspace?.directUrl;
   const isCustomScreen = currentScreen === 'custom' || currentScreen.startsWith('bytebot-edge');
-  const vncControllerType =
-    isCustomScreen || currentScreen === 'factif-ai' || currentScreen === 'gbox'
-      ? undefined
-      : currentScreen;
+  const isAndroidScreen = currentScreen === 'android';
+  const isUiTarsScreen = currentScreen === 'ui-tars';
+  
+  // Define valid VNC controller types
+  type ValidVncType = 'bytebot' | 'debian' | 'kali' | 'browseros' | 'bytebot-edge-1' | 'bytebot-edge-2' | 'bytebot-edge-3';
+  const isValidVncType = (s: string): s is ValidVncType => 
+    ['bytebot', 'debian', 'kali', 'browseros', 'bytebot-edge-1', 'bytebot-edge-2', 'bytebot-edge-3'].includes(s);
+  
+  // Only pass valid VNC controller types (exclude android, ui-tars, custom screens)
+  const vncControllerType: ValidVncType | undefined = 
+    isCustomScreen || isAndroidScreen || isUiTarsScreen 
+      ? undefined 
+      : (isValidVncType(currentScreen) ? currentScreen : undefined);
 
   // Load workspaces and active workspace from localStorage
   useEffect(() => {
@@ -447,7 +453,7 @@ export default function DesktopPage() {
 
     const loadModels = async () => {
       try {
-        const result = await fetchModels({ toolCalling: true });
+        const result = await fetchModels();
         if (!isMounted) return;
 
         const allowedProviders = new Set([
@@ -823,18 +829,20 @@ export default function DesktopPage() {
               {/* Main Desktop Area */}
               <div className="flex-1 border border-white/10 bg-[#050508] relative overflow-hidden flex items-center justify-center group shadow-[inset_0_1px_0_rgba(255,255,255,0.04),_0_20px_60px_rgba(0,0,0,0.55)]">
                                 {isLocalScreen ? (
-                                  <LocalScreenViewer preferredBackend={localScreenBackend} />
-                                ) : currentScreen === 'gbox' ? (
-                                  <GboxDesktopView directUrl={currentDirectUrl} />
-                                ) : (
-                                  <div className="w-full h-full relative">
-                                     <VncViewer
-                                        viewOnly={false}
-                                        controllerType={vncControllerType}
-                                        directUrl={currentDirectUrl}
+                                   <LocalScreenViewer preferredBackend={localScreenBackend} />
+                                 ) : currentScreen === 'android' ? (
+                                   <AndroidViewer directUrl={currentDirectUrl} />
+                                 ) : currentScreen === 'ui-tars' ? (
+                                   <UITarsBrowserView initialUrl={currentDirectUrl || "https://www.google.com"} />
+                                 ) : (
+                                   <div className="w-full h-full relative">
+                                      <VncViewer
+                                         viewOnly={false}
+                                         controllerType={vncControllerType}
+                                         directUrl={currentDirectUrl}
                                       />
-                                     {/* Overlay when not connected or loading, or just for aesthetic when empty */}
-                                     {(!currentDirectUrl && !vncControllerType && currentScreen !== 'gbox') && (
+                                      {/* Overlay when not connected or loading, or just for aesthetic when empty */}
+                                      {(!currentDirectUrl && !vncControllerType) && (
                                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-20">
                                           <div className="text-center space-y-2">
                                             <div className="text-[14px] font-bold text-[#fff] tracking-widest">[ LIVE DESKTOP PREVIEW PLACEHOLDER AREA — LARGE ]</div>
