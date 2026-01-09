@@ -9,7 +9,7 @@
 
 services:
   android-emulator:
-    image: budtmo/docker-android:emulator_latest
+    image: budtmo/docker-android:emulator_14.0
     container_name: kronos-android-emulator
     hostname: android-emulator
     privileged: true  # Required for KVM/QEMU

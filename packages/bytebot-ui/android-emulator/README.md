@@ -1,214 +1,369 @@
-# KRONOS-OS Android Emulator
+# KRONOS-OS Android Control - Multi-Mode Setup
 
-This directory contains the Android emulator setup for KRONOS-OS, enabling AI agents to control an Android device via mobile-mcp.
+**Complete Android automation infrastructure supporting three connection methods:**
 
-## Overview
+| Mode | Description | Best For |
+|------|-------------|----------|
+| **Docker** | Full Android in container | Linux servers with KVM |
+| **Studio** | Android Studio AVD | Local development |
+| **Physical** | Real Android device | Testing on real hardware |
 
-The system uses **budtmo/docker-android** - a well-maintained Docker image that provides:
-- Full Android emulator (Android 13)
-- noVNC web interface for viewing
-- ADB access for device control
-- HTTP API for automation
-- WebSocket support for real-time communication
+---
 
 ## Quick Start
-
-### Prerequisites
-
-1. **Docker & Docker Compose** installed
-2. **KVM support** enabled (required for Android emulation)
-3. At least **4GB RAM** available
-
-### Starting the Emulator
 
 ```bash
 cd android-emulator
 
-# Start the emulator (builds images if needed)
+# Interactive mode selection
 ./start.sh
 
-# Or rebuild images first
-./start.sh --build
+# Or use specific mode
+./start.sh --docker --build   # Build & start Docker emulator
+./start.sh --studio           # Connect Android Studio AVD
+./start.sh --physical 192.168.1.100  # Connect physical device
+./start.sh --status           # Check all connections
+./start.sh --help             # Show help
 ```
 
-### Checking Status
+---
+
+## Option 1: Docker Emulator (Linux with KVM)
+
+### Prerequisites
+- Linux host with KVM enabled
+- Docker with KVM passthrough
+- 4GB+ RAM available
+
+### Setup
 
 ```bash
-./start.sh --status
+# Add KVM device to Docker
+docker run --device /dev/kvm:/dev/kvm ...
+
+# Or in docker-compose (already configured)
+devices:
+  - /dev/kvm:/dev/kvm
 ```
 
-### Stopping the Emulator
+### Start
 
 ```bash
-./start.sh --stop
+./start.sh --docker --build
 ```
 
-## Access Points
-
-Once running, the following services are available:
+### Access Points
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **VNC Web** | http://localhost:6083 | View and interact with Android screen |
-| **HTTP API** | http://localhost:8000 | REST API for automation |
-| **WebSocket** | ws://localhost:8001 | Real-time communication |
-| **ADB** | localhost:5555 | Android Debug Bridge |
-| **MCP Server** | localhost:3001 | Model Context Protocol for agents |
+| VNC | http://localhost:6083 | View Android screen |
+| HTTP API | http://localhost:8000/status | REST API |
+| ADB | localhost:5555 | Android Debug Bridge |
+| MCP | localhost:3001 | MCP Server |
 
-## Agent Integration
-
-### MCP Tools Available
-
-The mobile-mcp server provides these tools for AI agents:
-
-- `android_take_screenshot` - Capture screen
-- `android_tap` - Tap at coordinates (x, y)
-- `android_type` - Type text input
-- `android_swipe` - Swipe in direction
-- `android_press_button` - Press hardware button
-- `android_install_app` - Install APK
-- `android_open_app` - Launch app by package name
-- `android_get_screen_size` - Get screen dimensions
-- `android_list_apps` - List installed apps
-
-### Example Usage
-
-```typescript
-// Agent can call these tools:
-await mcp.callTool("android_tap", { x: 500, y: 800 });
-await mcp.callTool("android_type", { text: "Hello Android!" });
-await mcp.callTool("android_swipe", { direction: "up" });
-await mcp.callTool("android_open_app", { packageName: "com.android.settings" });
-```
-
-## Connecting to the Emulator
-
-### From Host Machine
+### Troubleshooting
 
 ```bash
-# Connect ADB
-adb connect localhost:5555
+# Check KVM
+ls -la /dev/kvm
 
-# List devices
-adb devices
+# If KVM missing
+sudo modprobe kvm_intel  # or kvm_amd
 
-# Install APK
-adb install app.apk
+# Check emulator logs
+./start.sh --logs android-emulator
+```
+
+---
+
+## Option 2: Android Studio AVD (Local)
+
+### Prerequisites
+- Android Studio installed
+- AVD created in Android Studio
+- OR `emulator` command available in PATH
+
+### Setup AVD (if needed)
+
+1. Open Android Studio
+2. Tools → AVD Manager
+3. Create Virtual Device (Pixel 5 recommended)
+4. Start the AVD
+
+### Connect
+
+```bash
+# Option A: Auto-detect and connect
+./start.sh --studio
+
+# Option B: Manual
+adb devices  # Check if AVD is running
+emulator -avd <avd_name> -no-window  # Start AVD
+```
+
+### Working with AVD
+
+```bash
+# List available AVDs
+emulator -list-avds
+
+# Start specific AVD
+emulator -avd Pixel_5_API_33 -no-window
+
+# Check boot status
+adb shell getprop sys.boot_completed
 
 # Take screenshot
 adb shell screencap -p /sdcard/screen.png
 adb pull /sdcard/screen.png
+
+# Install APK
+adb install app.apk
+
+# Record screen
+adb shell screenrecord /sdcard/video.mp4
+adb pull /sdcard/video.mp4
 ```
 
-### From Other Containers
+---
+
+## Option 3: Physical Device (Real Android)
+
+### Prerequisites
+- Android device (phone/tablet)
+- USB debugging enabled
+- Developer options unlocked
+
+### Enable USB Debugging
+
+1. Settings → About Phone → Tap "Build Number" 7 times
+2. Settings → System → Developer Options
+3. Enable "USB Debugging"
+4. Enable "Install via USB" (for APK installation)
+
+### Connect via USB
 
 ```bash
-# The mobile-mcp container connects automatically
-adb connect android-emulator:5555
-```
-
-## Environment Variables
-
-### Android Emulator Container
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEVICE` | `emulator_only` | Device type |
-| `ANDROID_VERSION` | `13` | Android version |
-| `SCREEN_WIDTH` | `1920` | Screen width |
-| `SCREEN_HEIGHT` | `1080` | Screen height |
-| `SCREEN_DENSITY` | `420` | Screen density (DPI) |
-| `WEBRTC` | `1` | Enable WebRTC for VNC |
-| `AUTO_START_EMULATOR` | `true` | Auto-start emulator |
-| `DISABLE_AUDIO` | `true` | Disable audio output |
-
-### Mobile-MCP Container
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ADB_HOST` | `android-emulator` | ADB connection host |
-| `ADB_PORT` | `5555` | ADB connection port |
-
-## Troubleshooting
-
-### KVM Not Found
-
-```
-ERROR: KVM is not supported on this machine
-```
-
-**Fix:** Enable virtualization in BIOS and ensure Docker has access to `/dev/kvm`.
-
-### Emulator Won't Start
-
-```bash
-# Check logs
-./start.sh --logs android-emulator
-
-# Common issues:
-# - Not enough RAM (needs 4GB+)
-# - KVM not enabled
-# - Port already in use
-```
-
-### ADB Not Connecting
-
-```bash
-# Check if emulator is running
+# Connect device via USB
 ./start.sh --status
 
-# Connect manually
-./start.sh --connect
-
-# Restart ADB server
-adb kill-server
-adb start-server
+# Authorize on device (if prompted)
+adb devices
+# Should show: <serial>    device
 ```
 
-### VNC Not Loading
+### Connect via WiFi
 
 ```bash
-# Check if noVNC service is running
-curl http://localhost:6083
+# First connect via USB
+adb tcpip 5555
 
-# View emulator logs
-./start.sh --logs android-emulator
+# Get device IP
+adb shell ip route | awk '{print $9}'
+
+# Disconnect USB and connect via WiFi
+adb connect <device-ip>:5555
+
+# Example
+adb connect 192.168.1.100:5555
+./start.sh --physical 192.168.1.100
 ```
+
+### Environment Variables
+
+```bash
+# Set device IP
+export ANDROID_DEVICE_IP=192.168.1.100
+export ANDROID_DEVICE_PORT=5555
+
+# Then connect
+./start.sh --physical
+```
+
+---
+
+## MCP Tools Available
+
+The mobile-mcp server provides these tools for AI agents:
+
+### Basic Controls
+- `android_tap` - Tap at coordinates (x, y)
+- `android_swipe` - Swipe in direction
+- `android_type` - Type text input
+- `android_press_button` - Press hardware button
+
+### Screen & Media
+- `android_take_screenshot` - Save screenshot to file
+- `android_screenshot_base64` - Return base64 image
+- `android_get_screen_size` - Get screen dimensions
+
+### App Management
+- `android_install_app` - Install APK
+- `android_uninstall_app` - Remove app
+- `android_open_app` - Launch app by package
+- `android_list_apps` - List installed apps
+
+### Device Info
+- `android_get_device_info` - Model, Android version
+- `android_shell` - Execute shell command
+
+### File Operations
+- `android_pull` - Download file from device
+- `android_push` - Upload file to device
+
+### Clipboard
+- `android_get_clipboard` - Read clipboard
+- `android_set_clipboard` - Set clipboard text
+
+### System
+- `android_wake` - Wake device (turn on screen)
+
+---
+
+## Usage Examples
+
+### Docker Mode
+
+```bash
+# Start Docker emulator
+./start.sh --docker --build
+
+# Install app
+./start.sh --install app.apk
+
+# View logs
+./start.sh --logs android-emulator
+
+# Stop
+./start.sh --stop
+```
+
+### Studio Mode
+
+```bash
+# Start AVD (in another terminal)
+emulator -avd Pixel_5_API_33 -no-window
+
+# Connect
+./start.sh --studio
+
+# Verify
+./start.sh --devices
+```
+
+### Physical Mode
+
+```bash
+# Connect by IP
+./start.sh --physical 192.168.1.100:5555
+
+# Or with environment
+export ANDROID_DEVICE_IP=192.168.1.100
+./start.sh --physical
+
+# Check connection
+./start.sh --devices
+```
+
+---
 
 ## File Structure
 
 ```
 android-emulator/
-├── docker-compose.yml      # Main Docker Compose configuration
-├── start.sh               # Startup/management script
-├── mobile-mcp/            # MCP server for agent control
+├── docker-compose.yml      # Docker configuration
+├── start.sh               # Multi-mode controller
+├── connect-android.sh     # Connection helper script
+├── mobile-mcp/            # MCP server
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
-│       └── index.ts       # MCP server implementation
+│       └── index.ts       # MCP tools (v1.1.0)
 └── README.md              # This file
 ```
 
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANDROID_MODE` | auto | Connection mode |
+| `ADB_HOST` | localhost | ADB server host |
+| `ADB_PORT` | 5555 | ADB server port |
+| `ANDROID_DEVICE_IP` | - | Physical device IP |
+| `ANDROID_DEVICE_PORT` | 5555 | Physical device port |
+| `MCP_SERVER_NAME` | kronos-android | MCP server name |
+
+### Docker Compose
+
+The `docker-compose.yml` configures:
+- `android-emulator` - budtmo/docker-android container
+- `mobile-mcp` - MCP server for agent control
+
+---
+
+## Troubleshooting
+
+### ADB Issues
+
+```bash
+# Restart ADB server
+adb kill-server
+adb start-server
+
+# Check devices
+adb devices
+
+# USB authorization
+adb revoke <device_serial>
+adb reconnect
+```
+
+### Docker Issues
+
+```bash
+# Check Docker status
+docker ps
+
+# View logs
+./start.sh --logs
+
+# Restart containers
+./start.sh --stop
+./start.sh --docker --build
+```
+
+### Performance Issues
+
+```bash
+# Reduce AVD RAM usage
+emulator -avd <name> -memory 2048 -no-window
+
+# Or in Docker
+environment:
+  - MEMORY=2GB
+```
+
+---
+
 ## Security Notes
 
-- The emulator runs with privileged access (required for KVM)
-- ADB is exposed on port 5555 - only expose to trusted networks
-- VNC access has no authentication by default
-- For production, add authentication and TLS encryption
+- ADB exposes device control - only connect trusted devices
+- VNC has no authentication by default
+- For production: add authentication and TLS
+- Physical devices: revoke USB debugging when not in use
 
-## Performance Tips
-
-1. Allocate at least 4GB RAM to Docker
-2. Use SSD storage for emulator images
-3. Disable audio (`DISABLE_AUDIO=true`) to reduce resource usage
-4. Adjust screen resolution if needed for better performance
+---
 
 ## References
 
 - **budtmo/docker-android**: https://github.com/budtmo/docker-android
-- **Android Emulator**: https://developer.android.com/studio/run/emulator
+- **Android Studio AVD**: https://developer.android.com/studio/run/emulator
 - **ADB**: https://developer.android.com/studio/command-line/adb
-- **noVNC**: https://github.com/novnc/noVNC
+- **MCP SDK**: https://github.com/modelcontextprotocol/sdk
 
 ---
 
