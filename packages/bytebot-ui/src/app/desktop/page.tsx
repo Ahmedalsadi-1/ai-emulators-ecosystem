@@ -445,11 +445,18 @@ export default function DesktopPage() {
         const result = await fetchModels();
         if (!isMounted) return;
 
-        const allowedProviders = new Set(["routeway", "groq", "openai", "proxy", "google", "ollama-local"]);
-        const filteredModels = result.filter(
-          (model) =>
-            model.capabilities?.toolCalling &&
-            allowedProviders.has(model.provider),
+        const allowedProviders = new Set([
+          "routeway",
+          "groq",
+          "openai",
+          "proxy",
+          "google",
+          "ollama-local",
+          "opencode-local",
+          "lm-studio",
+        ]);
+        const filteredModels = result.filter((model) =>
+          allowedProviders.has(model.provider),
         );
         setModels(filteredModels);
         setModelFetchError(null);
