@@ -33,7 +33,7 @@
 
 Bytebot is not just another AI assistant—it's an AI that owns and controls **multiple complete desktop environments**. Unlike browser-only agents or traditional RPA tools, Bytebot provides AI with full access to:
 
-- **Multiple Desktop Environments**: Debian Linux, Kali Linux, and custom environments
+ - **Multiple Desktop Environments**: Debian Linux, Kali Linux, custom environments, Android, and UI-TARS browser automation
 - **Real Applications**: Browsers, IDEs, office tools, password managers, email clients
 - **File System Access**: Download, organize, and process files autonomously
 - **Complex Workflows**: Multi-step processes across different applications and websites
@@ -91,6 +91,8 @@ Extract data from PDFs → Create consolidated report → Email results
 - **AI Agent (NestJS)**: Task orchestration, AI provider integration, WebSocket communication
 - **Web UI (Next.js)**: Task management interface, real-time desktop viewing, multi-workspace support
 - **Desktop Environments**: Containerized Linux environments with VNC/noVNC for remote access
+- **Android Workspace**: Multi-mode Android emulator with ADB control and mobile-mcp tools
+- **UI-TARS Workspace**: AI-powered browser automation via WebSocket
 - **Database (PostgreSQL)**: Task persistence, user data, configuration storage
 
 ---
@@ -126,8 +128,11 @@ Open `http://localhost:9992` in your browser. You'll see the floating pill inter
 
 ### 2. Create Your First Workspace
 - Click the "+" button in the Desktop section
-- Choose your environment: "Bytebot Desktop", "Debian Desktop", or "Kali Desktop"
-- Each workspace connects to a different VNC environment
+- Choose your environment from available workspaces:
+  - **KRON-1/2/3**: Virtual Linux desktops (Debian, Kali, custom)
+  - **ANDROID**: Android emulator with multi-mode support
+  - **UI-TARS**: AI-powered browser automation
+- Each workspace connects to a different automation environment
 
 ### 3. Give Tasks to Your AI
 ```
@@ -155,9 +160,19 @@ Open `http://localhost:9992` in your browser. You'll see the floating pill inter
 - Minimal installation with essential tools
 - Best for: Development, testing, custom software installation
 
-**Desktop 3 - Kali Desktop**: Cybersecurity-focused environment
+ **Desktop 3 - Kali Desktop**: Cybersecurity-focused environment
 - Pre-installed: Security tools, penetration testing software
 - Best for: Security research, network analysis, ethical hacking
+
+**Android Workspace**: Multi-mode Android emulator with ADB control
+- Modes: Docker, Android Studio AVD, Physical Device
+- Tools: mobile-mcp server with 18 Android control tools
+- Best for: Mobile testing, Android app automation, mobile UI research
+
+**UI-TARS Workspace**: AI-powered browser automation
+- WebSocket-based remote browser control
+- Features: Screenshot streaming, click/scroll/type actions, navigation
+- Best for: Web scraping, browser testing, automated browsing tasks
 
 ### AI Provider Integration
 
@@ -312,6 +327,52 @@ bytebot-desktop-custom:
     dockerfile: bytebotd/custom.Dockerfile
   ports:
     - "9994:9990"
+```
+
+### Adding Android Emulator
+
+1. **Start Android Emulator**
+```bash
+# Option 1: Docker-based emulator (Linux KVM)
+docker-compose -f docker-compose.android-emulators.yml up -d
+
+# Option 2: Android Studio AVD (recommended for development)
+export ANDROID_SDK_ROOT=~/Library/Android/sdk
+~/Library/Android/sdk/emulator/emulator -avd Medium_Phone_API_36.1 -no-window &
+
+# Wait for emulator to start
+adb devices
+```
+
+2. **Start Mobile-MCP Server**
+```bash
+cd android-emulator/mobile-mcp
+npm install
+npm start
+# Server starts on port 8765
+```
+
+3. **Configure Environment Variables**
+```bash
+# .env.local
+NEXT_PUBLIC_ANDROID_DESKTOP_VNC_URL=http://localhost:6083/android-vnc.html
+NEXT_PUBLIC_UI_TARS_WS_URL=ws://localhost:8766
+```
+
+### Adding UI-TARS Browser
+
+1. **Start UI-TARS Server**
+```bash
+# Clone and start UI-TARS
+git clone https://github.com/UI-TARS/UI-TARS.git
+cd UI-TARS
+python start_server.py --port 8766
+```
+
+2. **Configure WebSocket Proxy**
+```bash
+# Ensure server.js proxies WebSocket connections
+# Already configured in packages/bytebot-ui/server.js
 ```
 
 ---
