@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRONOS-OS Settings</title>
+    <link rel="stylesheet" href="side-panel.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="#6d28d9" stroke-width="2"/>
+                    <path d="M8 12 L16 12 M12 8 L16 12" stroke="#6d28d9" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h1>KRONOS-OS Settings</h1>
+        </div>
+
+        <!-- Connection Status -->
+        <div class="section">
+            <h2 class="section-title">Connection</h2>
+            <div class="connection-status" id="connectionStatus">
+                <div class="status-dot loading"></div>
+                <span class="status-text">Connecting...</span>
+            </div>
+            <div class="connection-info">
+                <div class="info-row">
+                    <span class="info-label">Backend URL:</span>
+                    <span class="info-value" id="backendUrl">http://localhost:9991</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">WebSocket:</span>
+                    <span class="info-value" id="wsUrl">ws://localhost:9991/tasks</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agents Configuration -->
+        <div class="section">
+            <h2 class="section-title">AI Agents</h2>
+            <div class="agents-list" id="agentsList">
+                <div class="agent-item">
+                    <div class="agent-header">
+                        <span class="agent-name">Agent 1</span>
+                        <span class="agent-status active">●</span>
+                    </div>
+                    <div class="agent-actions">
+                        <button class="action-btn" id="runAgent1">Run</button>
+                        <button class="action-btn secondary" id="stopAgent1">Stop</button>
+                    </div>
+                </div>
+                <div class="agent-item">
+                    <div class="agent-header">
+                        <span class="agent-name">Agent 2</span>
+                        <span class="agent-status inactive">○</span>
+                    </div>
+                    <div class="agent-actions">
+                        <button class="action-btn" id="runAgent2">Run</button>
+                        <button class="action-btn secondary" id="stopAgent2">Stop</button>
+                    </div>
+                </div>
+                <div class="agent-item">
+                    <div class="agent-header">
+                        <span class="agent-name">Agent 3</span>
+                        <span class="agent-status inactive">○</span>
+                    </div>
+                    <div class="agent-actions">
+                        <button class="action-btn" id="runAgent3">Run</button>
+                        <button class="action-btn secondary" id="stopAgent3">Stop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflows -->
+        <div class="section">
+            <h2 class="section-title">Workflows</h2>
+            <div class="workflows-list" id="workflowsList">
+                <div class="workflow-item">
+                    <div class="workflow-name">Auto-Login Workflow</div>
+                    <button class="workflow-actions">
+                        <button class="action-btn" id="runWorkflow1">▶ Run</button>
+                        <button class="action-btn secondary" id="editWorkflow1">✎ Edit</button>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LLM Settings -->
+        <div class="section">
+            <h2 class="section-title">Local LLM</h2>
+            <div class="llm-config">
+                <div class="config-row">
+                    <label class="config-label">Ollama URL:</label>
+                    <input type="text" class="config-input" id="ollamaUrl" placeholder="http://localhost:11434">
+                </div>
+                <div class="config-row">
+                    <label class="config-label">LM Studio URL:</label>
+                    <input type="text" class="config-input" id="lmStudioUrl" placeholder="http://localhost:1234/v1">
+                </div>
+                <div class="config-row">
+                    <label class="config-label">Custom Model API:</label>
+                    <input type="text" class="config-input" id="customModelUrl" placeholder="http://localhost:8080/v1">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="side-panel.js"></script>
+</body>
+</html>
