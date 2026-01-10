@@ -170,31 +170,33 @@ browser-extension/
 
 ## 🛠️ Installation
 
-### Development Mode
+### Option 1: Development Mode (Recommended for Testing)
 1. **Load Unpacked Extension**
    ```bash
-   # Chrome 142+
-   # Open: chrome://extensions/
-   # Enable Developer mode
-   # Click "Load unpacked"
-   # Navigate to extension folder
+   # Open Chrome: chrome://extensions/
+   # Enable Developer mode (toggle in top right)
+   # Click "Load unpacked" button
+   # Navigate to: /bytebot/browser-extension/
+   # Click "Select Folder"
    ```
 
-2. **Background Worker Auto-Load**
-   Chrome 142+ auto-loads background service worker
-   On first load, extension shows popup with extension path
+2. **Verify Installation**
+   - Extension icon should appear in Chrome toolbar
+   - Click icon to open popup
+   - Check DevTools Console for any errors
 
-**Manual Load Location**:
-- **Windows**: `C:\Users\<username>\AppData\Roaming\v\tools\vibesurf\Lib\site-packages\vibe_surf\chrome_extension`
-- **macOS**: `~/.local/share/uv/tools/vibesurf/lib/python3.<version>/site-packages/vibe_surf/chrome_extension`
-- **Linux**: `~/.local/share/uv/tools/vibesurf/lib/python3.<version>/site-packages/vibe_surf/chrome_extension`
-
-### Production Mode
-1. **Package Extension**
+3. **Start KRONOS-OS Backend**
    ```bash
-   cd browser-extension
-   zip -r kronos-os-extension.zip .
-   # Upload to Chrome Web Store
+   cd ../bytebot-agent
+   npm run start:dev
+   ```
+
+### Option 2: Production Mode (Packaged)
+1. **Use Pre-Packaged Extension**
+   ```bash
+   # Extension is packaged as: kronos-os-extension.zip
+   # Extract and load as unpacked (same as above)
+   # Or upload to Chrome Web Store for distribution
    ```
 
 2. **Enterprise Features**
@@ -202,6 +204,89 @@ browser-extension/
    - License-based feature access
    - Priority support channels
    - Closed-source security components
+
+## 🧪 Testing & Verification
+
+### Basic Extension Test
+1. **Load Extension** (follow installation steps above)
+2. **Check Popup**
+   - Click extension icon in toolbar
+   - Verify all 5 workspaces are shown (KRON-1/2/3, ANDROID, UI-TARS)
+   - Check connection status (should show "Connected to KRONOS-OS")
+
+3. **Test Backend Connection**
+   - Open DevTools (F12) on any webpage
+   - Check Console for WebSocket connection messages
+   - Look for: `[KRONOS-OS Extension] WebSocket Connected`
+
+4. **Test Workspace Switching**
+   - Click different workspace buttons in popup
+   - Check if active state updates correctly
+   - Verify no JavaScript errors in console
+
+### Advanced Feature Testing
+
+#### Multi-Agent Testing
+1. **Open Multiple Browser Tabs**
+2. **Right-click on page content**
+3. **Check Context Menu**
+   - Should show: "Run AI Agent Here", "Execute Workflow", workspace options
+4. **Test Agent Execution**
+   - Click "Run AI Agent Here"
+   - Should show agent overlay on page
+
+#### Workflow Testing
+1. **Open Side Panel**
+   - Click "Settings" in popup footer
+2. **Test Workflow Controls**
+   - Should show workflow list and controls
+   - Test LLM configuration inputs
+
+#### Skills Testing
+1. **Select Text on Any Webpage**
+2. **Right-click Selection**
+3. **Test Smart Search**
+   - Click "Smart Search" from context menu
+   - Should process selection and show results
+
+### Troubleshooting
+
+#### Extension Not Loading
+```
+Symptom: "Manifest file is missing or unreadable"
+Solution:
+1. Verify all files are present in extension folder
+2. Check manifest.json syntax (validate with JSON linter)
+3. Ensure no hidden files or incorrect file permissions
+```
+
+#### WebSocket Connection Failed
+```
+Symptom: Extension shows "Connection Error"
+Solution:
+1. Verify KRONOS-OS backend is running (localhost:9991)
+2. Check browser console for WebSocket errors
+3. Verify host_permissions in manifest.json
+4. Test backend API directly: curl http://localhost:9991/tasks/models
+```
+
+#### Context Menu Not Appearing
+```
+Symptom: Right-click menu missing
+Solution:
+1. Reload extension from chrome://extensions/
+2. Check manifest.json permissions for "contextMenus"
+3. Verify content script matches patterns
+```
+
+#### Agent Overlay Not Showing
+```
+Symptom: No visual feedback when running agents
+Solution:
+1. Check content script injection in DevTools
+2. Verify CSS styles are loading
+3. Check for JavaScript errors in content script
+```
 
 ---
 
