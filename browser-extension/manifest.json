@@ -3,18 +3,10 @@
   "name": "KRONOS-OS",
   "version": "1.0.0",
   "description": "AI-powered desktop automation platform with multi-workspace control and parallel AI agents",
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png",
-    "512": "icons/icon512.png"
-  },
+
   "action": {
     "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png"
-    }
+    "default_icon": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSIjNmQyOGQ5Ii8+CjxjaXJjbGUgY3g9IjgiIGN5PSI4IiByPSI0IiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4="
   },
   "permissions": [
     "storage",
