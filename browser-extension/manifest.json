@@ -21,11 +21,11 @@
     "tabs",
     "scripting",
     "activeTab",
-    "webNavigation",
-    "background"
+    "webNavigation"
   ],
   "host_permissions": [
-    "http://localhost:9991/*"
+    "http://localhost:9991/*",
+    "ws://localhost:9991/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -40,17 +40,5 @@
       "css": ["content/styles.css"],
       "run_at": "document_idle"
     }
-  ],
-  "web_accessible_resources": [
-    "popup/popup.html",
-    "side-panel/side-panel.html"
-  ],
-  "content_security_policy": {
-    "extension_pages": "none"
-  },
-  "key": "MIIBIICRJBLHEEPMIBMIICRJBLHEEPMIBMIICRJBLHEEP",
-  "oauth2": {
-    "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
-    "scopes": []
-  }
+  ]
 }
