@@ -322,14 +322,18 @@ Provide seamless switching between:
 | **Multi-User Support** | JWT + RBAC | P1 | ✅ Implemented |
 | **Enterprise Auth** | SSO, MFA (Enterprise Edition) | P0 | 🔜 Q2 2025 |
 
-#### 7. Developer Tools
+#### 7. Browser Extension
 
 | Feature | Description | Priority | Status |
 |----------|-------------|-----------|---------|
+| **Chrome Extension** | VibeSurf-inspired native browser integration | P0 | ✅ Implemented |
+| **Multi-Tab Agents** | Parallel AI agents across browser tabs | P0 | ✅ Implemented |
+| **Deterministic Workflows** | Zero-token workflow execution | P0 | ✅ Implemented |
+| **Local LLM Support** | Ollama, LM Studio, custom APIs | P0 | ✅ Implemented |
+| **Smart Skills System** | /search, /crawl, /code execution | P0 | ✅ Implemented |
 | **Terminal Integration** | In-app shell access | P0 | ✅ Implemented |
 | **Keyboard Shortcuts** | Power user commands | P1 | ✅ Implemented |
 | **Trace Panel** | Debug task execution | P2 | 🔄 Planned |
-| **Extension Popup** | Browser extension controls | P2 | 🔄 Planned |
 
 ---
 
@@ -337,6 +341,73 @@ Provide seamless switching between:
 
 ### System Architecture
 
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    KRONOS-OS Platform                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              KRONOS-OS UI (Next.js)         │   │
+│  │              localhost:9992                       │   │
+│  └────────────────────┬──────────────────────────────┘   │
+│                         │                                  │
+│                         ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │           KRONOS-OS Agent (NestJS)          │   │
+│  │           localhost:9991                        │   │
+│  │  ┌─────────────────────────────────────────────┐   │   │
+│  │  │  Task Orchestration & Model Routing     │   │   │
+│  │  │  • Routeway → Groq → OpenAI       │   │   │
+│  │  │  • Tool-Use Enforcement              │   │   │
+│  │  │  • Multi-Provider Support           │   │   │
+│  │  └─────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                         │                                  │
+│                         ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Virtual Desktop Containers            │   │
+│  │                                                     │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ │   │
+│  │  │ KRON-1   │ │ KRON-2   │ │ KRON-3   │ │ANDROID    │ │   │
+│  │  │ :9990    │ │ :9995    │ │ :9993    │ │emulator  │ │   │
+│  │  │ Ubuntu   │ │ Debian   │ │ Kali     │ │ :5555    │ │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ │   │
+│  │  ┌─────────┐                                  │   │
+│  │  │UI-TARS  │                                  │   │
+│  │  │ :8766   │                                  │   │
+│  │  │Browser   │                                  │   │
+│  │  └─────────┘                                  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │         Chrome Browser Extension Pack            │   │
+│  │  ┌─────────────────────────────────────────────┐   │   │
+│  │  │  Browser Extension (Manifest V3)         │   │   │
+│  │  │  • Popup: Workspace + Chat UI            │   │   │
+│  │  │  • Side Panel: Settings & Config          │   │   │
+│  │  │  • Background: API Hub & Tab Mgmt        │   │   │
+│  │  │  • Content: Page Interaction              │   │   │
+│  │  │  • VibeSurf-Inspired Features             │   │   │
+│  │  └────────────────────┬──────────────────────┘   │   │
+│  │                       │                           │   │
+│  │                       ▼                           │   │
+│  │  ┌─────────────────────────────────────────────┐   │   │
+│  │  │  Native Chrome Integration               │   │   │
+│  │  │  • Multi-Tab Parallel Agents             │   │   │
+│  │  │  • Deterministic Workflows               │   │   │
+│  │  │  • Local LLM Support                     │   │   │
+│  │  │  • Smart Skills (/search, /crawl)       │   │   │
+│  │  └─────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Infrastructure Services               │   │
+│  │  • OS-AI Backend (:8765) - Local screen   │   │
+│  │  • PostgreSQL (:5432) - Task storage    │   │
+│  │  • Redis (:6379) - Caching & streams    │   │
+│  │  • Chrome Extension APIs - Native browser integration │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    KRONOS-OS Platform                      │
@@ -390,6 +461,62 @@ Provide seamless switching between:
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Chrome Extension Architecture
+
+#### Extension Components (Manifest V3)
+
+```
+browser-extension/
+├── manifest.json                    # Extension manifest with permissions
+├── icons/                          # Extension icons (16, 48, 128, 512px)
+├── popup/
+│   ├── popup.html              # Main UI - workspace switcher + chat
+│   ├── popup.css               # Modern cyberpunk styling
+│   └── popup.js                # UI logic and background communication
+├── side-panel/
+│   ├── side-panel.html         # Settings - agents, workflows, LLM
+│   ├── side-panel.css          # Consistent styling
+│   └── side-panel.js           # Configuration logic
+├── background/
+│   └── service-worker.js      # WebSocket, API, tab orchestration
+├── content/
+│   ├── content-script.js        # Page interaction and agent execution
+│   └── styles.css            # Agent overlays and UI indicators
+└── README.md                     # Extension documentation
+```
+
+#### Key Extension Features
+
+**Multi-Tab Parallel Agents** (VibeSurf-Inspired):
+- Run multiple AI agents simultaneously across browser tabs
+- Massive efficiency gains for research tasks
+- Unified control interface
+
+**Deterministic Workflows**:
+- Drag-and-drop workflow builder
+- Conversation-based task definitions
+- Zero recurring token cost (execute once, run forever)
+- Fast, reliable, predictable results
+
+**Local LLM Support**:
+- Ollama, LM Studio, custom model APIs
+- Privacy-first (data stays local)
+- No external API rate limits
+- Reduced operational costs
+
+**Smart Skills System**:
+- `/search` - Quick information retrieval
+- `/crawl` - Automatic website data extraction
+- `/code` - Webpage JavaScript execution
+- Native API integrations (Xiaohongshu, Douyin, Weibo, YouTube)
+
+**Native Chrome Integration**:
+- Popup interface (workspace switcher + task chat)
+- Side panel (agent management, workflows, LLM settings)
+- Content scripts for page interaction
+- Background service worker (API hub)
+- Seamless browser integration
 
 ### Component Architecture
 
